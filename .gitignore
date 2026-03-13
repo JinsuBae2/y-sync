@@ -6,3 +6,5 @@
 # Env files
 .env
 
+backend/boot.log
+backend/cookies.txt
