@@ -42,6 +42,21 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     }
   }
 
+  Future<void> signup(String loginId, String password, String name) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/auth/signup', data: {
+        'loginId': loginId,
+        'password': password,
+        'name': name,
+      });
+      // Optionally login automatically here, or return to login screen
+      // We will handle return to login screen on the UI level
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     state = const AsyncValue.loading();
     try {

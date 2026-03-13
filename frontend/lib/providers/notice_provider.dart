@@ -6,6 +6,8 @@ final dioProvider = Provider<Dio>((ref) {
   return Dio(BaseOptions(
     // Android Emulator: 10.0.2.2, iOS/Web: localhost
     baseUrl: 'http://localhost:8080/api/v1',
+    // Enable sending cookies (JSESSIONID) for cross-origin requests on Web
+    extra: {'withCredentials': true},
   ));
 });
 

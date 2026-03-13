@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -80,6 +81,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? const CircularProgressIndicator() 
                         : const Text('로그인', style: TextStyle(fontSize: 16)),
                   ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                    );
+                  },
+                  child: const Text('계정이 없으신가요? 회원가입하기'),
                 ),
               ],
             ),
