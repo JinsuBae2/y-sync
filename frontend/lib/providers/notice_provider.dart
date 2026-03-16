@@ -24,15 +24,29 @@ class NoticeNotifier {
 
   NoticeNotifier(this.ref);
 
-  Future<void> createNotice(String title, String content, String author) async {
+  Future<void> createNotice(String title, String content, String noticeType) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/admin/notices', data: {
+    await dio.post('/notices', data: {
       'title': title,
       'content': content,
-      'author': author,
+      'noticeType': noticeType,
     });
-    
-    // Refresh the notices list
+    ref.invalidate(noticesProvider);
+  }
+
+  Future<void> updateNotice(int id, String title, String content, String noticeType) async {
+    final dio = ref.read(dioProvider);
+    await dio.put('/notices/$id', data: {
+      'title': title,
+      'content': content,
+      'noticeType': noticeType,
+    });
+    ref.invalidate(noticesProvider);
+  }
+
+  Future<void> deleteNotice(int id) async {
+    final dio = ref.read(dioProvider);
+    await dio.delete('/notices/$id');
     ref.invalidate(noticesProvider);
   }
 }
