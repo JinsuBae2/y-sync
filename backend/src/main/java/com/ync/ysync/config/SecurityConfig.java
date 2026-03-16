@@ -29,7 +29,8 @@ public class SecurityConfig {
                 .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED))
             )
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/v1/hello", "/api/v1/notices", "/api/v1/admin/notices", "/api/v1/auth/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/**").permitAll()
+                .requestMatchers("/api/v1/hello", "/api/v1/auth/**").permitAll()
                 .anyRequest().authenticated()
             );
 
