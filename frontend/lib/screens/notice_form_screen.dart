@@ -96,7 +96,20 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           children: [
             DropdownButtonFormField<String>(
               value: _noticeType,
-              decoration: const InputDecoration(labelText: '공지 타입', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: '공지 타입', 
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+              ),
               items: const [
                 DropdownMenuItem(value: 'INTERNAL', child: Text('일반 공지 (INTERNAL)')),
                 DropdownMenuItem(value: 'OFFICIAL', child: Text('학교 공지 (OFFICIAL)')),
@@ -110,7 +123,20 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: '제목', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: '제목', 
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -119,10 +145,20 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: '내용',
                   alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                  ),
                 ),
               ),
             ),

@@ -75,74 +75,102 @@ class NoticeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOfficial = notice.noticeType == 'OFFICIAL';
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => NoticeDetailScreen(notice: notice),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isOfficial ? Colors.red.shade100 : Colors.blue.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      notice.noticeType,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isOfficial ? Colors.red.shade900 : Colors.blue.shade900,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoticeDetailScreen(notice: notice),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isOfficial ? Colors.red.shade500 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        notice.noticeType,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                          color: isOfficial ? Colors.white : Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
+                    const Icon(Icons.chevron_right_rounded, color: Colors.black26, size: 24),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  notice.title,
+                  style: const TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.w800,
+                    height: 1.4,
+                    letterSpacing: -0.5,
+                    color: Colors.black87,
                   ),
-                  Text(
-                    _formatDate(notice.createdAt),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  notice.content,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15, 
+                    color: Colors.black54,
+                    height: 1.6,
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                notice.title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                notice.content,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.person, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    notice.authorName,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                      child: Icon(Icons.person_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      notice.authorName,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _formatDate(notice.createdAt),
+                      style: const TextStyle(fontSize: 13, color: Colors.black45, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -27,7 +27,6 @@ class AuthNotifier extends AsyncNotifier<Member?> {
   }
 
   Future<void> login(String loginId, String password) async {
-    state = const AsyncValue.loading();
     try {
       final dio = ref.read(dioProvider);
       await dio.post('/auth/login', data: {
@@ -36,8 +35,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       });
       final member = await _checkLoginStatus();
       state = AsyncValue.data(member);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+    } catch (e) {
       rethrow;
     }
   }

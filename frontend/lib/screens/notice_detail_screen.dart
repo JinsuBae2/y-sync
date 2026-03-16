@@ -48,7 +48,7 @@ class NoticeDetailScreen extends ConsumerWidget {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -56,47 +56,87 @@ class NoticeDetailScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: notice.noticeType == 'OFFICIAL' ? Colors.red.shade100 : Colors.blue.shade100,
-                            borderRadius: BorderRadius.circular(12),
+                            color: notice.noticeType == 'OFFICIAL' ? Colors.red.shade500 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             notice.noticeType,
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: notice.noticeType == 'OFFICIAL' ? Colors.red.shade900 : Colors.blue.shade900,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: notice.noticeType == 'OFFICIAL' ? Colors.white : Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),
                       Text(
                         _formatDate(notice.createdAt),
-                        style: const TextStyle(color: Colors.grey),
+                        style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
                     notice.title,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 26, 
+                      fontWeight: FontWeight.w900,
+                      height: 1.4,
+                      letterSpacing: -0.5,
+                      color: Colors.black87,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Icon(Icons.person, size: 16, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      Text('작성자: ${notice.authorName}', style: const TextStyle(color: Colors.grey)),
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                        child: Icon(Icons.person_rounded, size: 20, color: Theme.of(context).colorScheme.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        notice.authorName, 
+                        style: const TextStyle(
+                          color: Colors.black87, 
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        )
+                      ),
                     ],
                   ),
-                  const Divider(height: 48),
+                  const SizedBox(height: 32),
+                  const Divider(height: 1, color: Colors.black12),
+                  const SizedBox(height: 32),
                   Text(
                     notice.content,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 16, 
+                      height: 1.6,
+                      letterSpacing: -0.2,
+                      color: Colors.black87,
+                    ),
                   ),
-                  const SizedBox(height: 48),
-                  const Text('댓글', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const Divider(),
+                  const SizedBox(height: 56),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.chat_bubble_rounded, size: 18, color: Theme.of(context).colorScheme.secondary),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('댓글', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black87)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: Colors.black12),
+                  const SizedBox(height: 16),
                   _CommentList(noticeId: notice.id),
                 ],
               ),
@@ -169,42 +209,92 @@ class _CommentList extends ConsumerWidget {
     return commentsAsync.when(
       data: (comments) {
         if (comments.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text('첫 번째 댓글을 남겨보세요!')),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded, size: 48, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  const Text('첫 번째 댓글을 남겨보세요!', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
           );
         }
-        return ListView.builder(
+        return ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: comments.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
             final comment = comments[index];
-            final canDelete = currentMember != null && 
-                (currentMember.role == 'ADMIN' || currentMember.name == comment.authorName || currentMember.loginId == comment.authorName);
+            final isMyComment = currentMember != null && 
+                (currentMember.name == comment.authorName || currentMember.loginId == comment.authorName);
+            final canDelete = isMyComment || (currentMember?.role == 'ADMIN');
 
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Row(
-                children: [
-                  Text(comment.authorName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(
+                    comment.authorName.isNotEmpty ? comment.authorName.substring(0, 1).toUpperCase() : '?',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            comment.authorName, 
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.black87)
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDate(comment.createdAt),
+                            style: const TextStyle(color: Colors.black45, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isMyComment ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : Colors.grey.shade100,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.zero,
+                            topRight: const Radius.circular(16),
+                            bottomLeft: const Radius.circular(16),
+                            bottomRight: const Radius.circular(16),
+                          ),
+                        ),
+                        child: Text(
+                          comment.content, 
+                          style: const TextStyle(color: Colors.black87, height: 1.4, fontSize: 14)
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (canDelete) ...[
                   const SizedBox(width: 8),
-                  Text(
-                    _formatDate(comment.createdAt),
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.black45),
+                    onPressed: () => _confirmDeleteComment(context, ref, comment),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(comment.content, style: const TextStyle(color: Colors.black87)),
-              ),
-              trailing: canDelete
-                  ? IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                      onPressed: () => _confirmDeleteComment(context, ref, comment),
-                    )
-                  : null,
+              ],
             );
           },
         );
@@ -298,12 +388,21 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, -2),
+            blurRadius: 10,
+          ),
+        ],
+      ),
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
-        top: 8,
-        bottom: 8 + MediaQuery.of(context).padding.bottom,
+        top: 12,
+        bottom: 12 + MediaQuery.of(context).padding.bottom,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -313,28 +412,40 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
               controller: _controller,
               minLines: 1,
               maxLines: 4,
+              style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
                 hintText: '댓글을 입력하세요...',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
                 filled: true,
                 fillColor: Colors.grey.shade100,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           _isSubmitting
               ? const Padding(
                   padding: EdgeInsets.all(12),
                   child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
                 )
-              : IconButton(
-                  icon: const Icon(Icons.send),
-                  color: Theme.of(context).colorScheme.primary,
-                  onPressed: _submitComment,
+              : Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary, // Amber color for unified theme
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send_rounded),
+                    color: Colors.black87,
+                    iconSize: 20,
+                    onPressed: _submitComment,
+                  ),
                 ),
         ],
       ),

@@ -22,8 +22,27 @@ class YSyncApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Y-Sync',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E), // Deep Navy
+          primary: const Color(0xFF1A237E),
+          secondary: const Color(0xFFFFC107), // Amber
+        ),
         useMaterial3: true,
+        cardTheme: CardThemeData(
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          ),
+        ),
       ),
       home: authState.when(
         data: (member) {
