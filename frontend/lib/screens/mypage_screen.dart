@@ -7,7 +7,9 @@ import '../models/community_post.dart';
 import '../models/my_comment.dart';
 import '../models/notice.dart';
 import 'community_detail_screen.dart';
-import 'notice_detail_screen.dart'; // 💡 추가
+import 'notice_detail_screen.dart';
+import '../providers/admin_provider.dart'; // 💡 추가
+import '../models/admin_request.dart'; // 💡 추가
 
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
@@ -90,17 +92,17 @@ class MyPageScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      // 💡 역할 배지 (Amber Color)
+                      // 💡 역할 배지 (역할에 따라 색상 다르게 표시)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFC107), // 💡 Amber (#FFC107)
+                          color: _getRoleColor(member.role),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          member.role == 'ADMIN' ? '관리자' : '학생',
-                          style: const TextStyle(
-                            color: Color(0xFF0A192F),
+                          _getRoleDisplayName(member.role),
+                          style: TextStyle(
+                            color: member.role == 'USER' ? Colors.white : const Color(0xFF0A192F),
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                           ),
@@ -187,6 +189,62 @@ class MyPageScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 32),
+
+            // 💡 관리역역 (권한에 따라 노출)
+            if (member.role == 'SUPER_ADMIN' || member.role == 'ADMIN') ...[
+              const Text(
+                '관리자 도구',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0A192F)),
+              ),
+              const SizedBox(height: 16),
+              
+              // 💡 관리자 임명 관리 (SUPER_ADMIN 전용)
+              if (member.role == 'SUPER_ADMIN') ...[
+                ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_rounded, color: Colors.amber),
+                  title: const Text('관리자 임명 관리', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('접수된 관리자 신청 건을 검토합니다.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showAdminManagementList(context, ref),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              ListTile(
+                leading: const Icon(Icons.auto_stories_rounded, color: Colors.blue),
+                title: const Text('공식 공지사항 작성', style: TextStyle(fontWeight: FontWeight.w700)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  // TODO: 공식 공지 작성 페이지 이동
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_sweep_rounded, color: Colors.blue),
+                title: const Text('전체 게시글 관리', style: TextStyle(fontWeight: FontWeight.w700)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  // TODO: 전체 게시글 관리 페이지 이동
+                },
+              ),
+              const SizedBox(height: 32),
+            ],
+
+            // 💡 일반 유저 전용 메뉴 (관리자 신청)
+            if (member.role == 'USER') ...[
+              const Text(
+                '기타',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0A192F)),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.workspace_premium_rounded, color: Colors.indigo),
+                title: const Text('관리자 권한 신청', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('학부 조교 또는 운영진 권한을 신청합니다.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showAdminRequestDialog(context, ref),
+              ),
+              const SizedBox(height: 32),
+            ],
 
             // 💡 설정 및 기타
             const Text(
@@ -282,6 +340,137 @@ class MyPageScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Container(height: 60, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
           ],
+        ),
+      ),
+    );
+  }
+
+  // 💡 역할별 색상 정의
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'SUPER_ADMIN': return const Color(0xFFFFC107); // Amber
+      case 'ADMIN': return Colors.blue.shade600;
+      case 'USER': return Colors.grey.shade400;
+      default: return Colors.grey;
+    }
+  }
+
+  // 💡 역할별 표시 이름 정의
+  String _getRoleDisplayName(String role) {
+    switch (role) {
+      case 'SUPER_ADMIN': return '슈퍼 관리자';
+      case 'ADMIN': return '관리자';
+      case 'USER': return '학생';
+      default: return '알 수 없음';
+    }
+  }
+
+  // 💡 관리자 신청 다이얼로그
+  void _showAdminRequestDialog(BuildContext context, WidgetRef ref) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('관리자 권한 신청', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('학부 조교 또는 운영진 활동을 위해 권한이 필요한 사유를 입력해주세요.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: '신청 사유를 입력하세요 (예: 캡스톤 디자인 조교 활동 등)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
+          ElevatedButton(
+            onPressed: () async {
+              if (reasonController.text.trim().isEmpty) return;
+              try {
+                await ref.read(adminProvider.notifier).submitRequest(reasonController.text.trim());
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('관리자 신청이 완료되었습니다.')));
+                }
+              } catch (e) {
+                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('신청 실패: $e')));
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0A192F), foregroundColor: Colors.white),
+            child: const Text('신청하기'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 💡 관리자 승인 대기 리스트 다이얼로그 (SUPER_ADMIN용)
+  void _showAdminManagementList(BuildContext context, WidgetRef ref) {
+    ref.read(adminProvider.notifier).fetchPendingRequests();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, ref, _) {
+            final adminRequests = ref.watch(adminProvider);
+            
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('관리자 승인 대기 목록', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: adminRequests.when(
+                      data: (requests) => requests.isEmpty 
+                        ? const Center(child: Text('대기 중인 신청이 없습니다.'))
+                        : ListView.separated(
+                            controller: scrollController,
+                            itemCount: requests.length,
+                            separatorBuilder: (_, __) => const Divider(),
+                            itemBuilder: (context, index) {
+                              final req = requests[index];
+                              return ListTile(
+                                title: Text('${req.requesterName} (${req.loginId})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text('사유: ${req.reason}\n신청일: ${req.requestedAt.split('T')[0]}'),
+                                isThreeLine: true,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.check_circle_rounded, color: Colors.green),
+                                      onPressed: () => ref.read(adminProvider.notifier).approveRequest(req.id),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.cancel_rounded, color: Colors.red),
+                                      onPressed: () => ref.read(adminProvider.notifier).rejectRequest(req.id),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, __) => Center(child: Text('에러: $e')),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

@@ -1,5 +1,5 @@
 package com.ync.ysync.domain;
 
 public enum MemberRole {
-    USER, ADMIN
+    USER, ADMIN, SUPER_ADMIN
 }

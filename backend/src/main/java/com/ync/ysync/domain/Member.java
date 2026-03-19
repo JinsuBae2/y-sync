@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter; // 💡 추가
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -31,6 +32,7 @@ public class Member {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Setter // 💡 권한 변경을 위해 세터 추가
     private MemberRole role;
 
     @CreatedDate

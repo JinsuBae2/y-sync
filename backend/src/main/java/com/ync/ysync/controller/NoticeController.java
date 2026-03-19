@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // 💡 추가
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,6 +51,7 @@ public class NoticeController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> createNotice(@RequestBody NoticeRequest request, HttpSession session) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
@@ -65,6 +67,7 @@ public class NoticeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> updateNotice(@PathVariable Long id, @RequestBody NoticeRequest request, HttpSession session) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         String roleStr = (String) session.getAttribute("loginMemberRole");
@@ -87,6 +90,7 @@ public class NoticeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> deleteNotice(@PathVariable Long id, HttpSession session) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         String roleStr = (String) session.getAttribute("loginMemberRole");

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notice.dart';
 import '../providers/notice_provider.dart';
+import '../providers/mypage_provider.dart'; // 💡 추가
 import '../providers/auth_provider.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
@@ -31,6 +32,14 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
   Widget build(BuildContext context) {
     // noticesAsync는 searchKeywordProvider의 상태 변경을 감지하여 자동으로 다시 fetch 합니다.
     final noticesAsync = ref.watch(noticesProvider);
+
+    // 💡 관리자 권한 확인 (ADMIN 또는 SUPER_ADMIN만 글쓰기 가능)
+    final myPageAsync = ref.watch(myPageProvider);
+    final bool isAdmin = myPageAsync.when(
+      data: (data) => data.member.role == 'ADMIN' || data.member.role == 'SUPER_ADMIN',
+      loading: () => false,
+      error: (_, __) => false,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -78,7 +87,6 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
                   icon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary),
                   onPressed: _performSearch, // 아이콘 클릭 시 검색
                 ),
-                /* 검색어 초기화 버튼 (Optional: 텍스트가 있을 때만 보이게 구현 가능) */
                 prefixIcon: const Icon(Icons.article_outlined, color: Colors.grey),
               ),
             ),
@@ -118,7 +126,6 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () async {
-                    // 새로고침 시 검색어도 초기화할지 여부는 기획에 따라 다름. 여기서는 유지하며 리프레시.
                     ref.invalidate(noticesProvider);
                   },
                   child: ListView.builder(
@@ -139,7 +146,7 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: isAdmin ? FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
@@ -150,7 +157,7 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
         },
         icon: const Icon(Icons.edit),
         label: const Text('글쓰기'),
-      ),
+      ) : null,
     );
   }
 }
