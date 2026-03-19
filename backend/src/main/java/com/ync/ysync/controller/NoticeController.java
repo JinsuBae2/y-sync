@@ -23,9 +23,21 @@ public class NoticeController {
 
     private final NoticeService noticeService;
 
+    // 전체 공지사항 목록 조회
     @GetMapping
     public ResponseEntity<List<NoticeResponse>> getNotices() {
         List<NoticeResponse> responses = noticeService.getAllNotices().stream()
+                .map(NoticeResponse::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
+    // 💡 키워드를 통한 공지사항 검색 (제목 또는 내용 매칭)
+    // - SecurityConfig에서 GET /api/v1/notices/** 패턴이 permitAll로 설정되어 있어 로그인 없이 접근 가능합니다.
+    // - URL: GET /api/v1/notices/search?keyword=검색어
+    @GetMapping("/search")
+    public ResponseEntity<List<NoticeResponse>> searchNotices(@RequestParam(required = false) String keyword) {
+        List<NoticeResponse> responses = noticeService.searchNotices(keyword).stream()
                 .map(NoticeResponse::from)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);

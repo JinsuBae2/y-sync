@@ -20,9 +20,20 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final MemberRepository memberRepository;
 
+    // 전체 공지사항을 최신순으로 가져옵니다.
     public List<Notice> getAllNotices() {
         return noticeRepository.findAllByOrderByCreatedAtDesc();
     }
+
+    // 💡 키워드를 이용해 공지사항의 제목이나 내용을 검색합니다.
+    // 키워드가 없거나(null) 공백일 경우 전체 목록을 반환하여 유연한 대응이 가능하게 합니다.
+    public List<Notice> searchNotices(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllNotices();
+        }
+        return noticeRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByCreatedAtDesc(keyword, keyword);
+    }
+
 
     public Notice getNotice(Long id) {
         return noticeRepository.findById(id)

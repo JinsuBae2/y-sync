@@ -6,11 +6,30 @@ import '../providers/auth_provider.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
 
-class NoticeListScreen extends ConsumerWidget {
+class NoticeListScreen extends ConsumerStatefulWidget {
   const NoticeListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NoticeListScreen> createState() => _NoticeListScreenState();
+}
+
+class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // 💡 검색 실행 함수: 엔터키를 누르거나 돋보기 아이콘을 눌렀을 때 호출됩니다.
+  void _performSearch() {
+    ref.read(searchKeywordProvider.notifier).updateKeyword(_searchController.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // noticesAsync는 searchKeywordProvider의 상태 변경을 감지하여 자동으로 다시 fetch 합니다.
     final noticesAsync = ref.watch(noticesProvider);
 
     return Scaffold(
@@ -27,29 +46,98 @@ class NoticeListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: noticesAsync.when(
-        data: (notices) {
-          if (notices.isEmpty) {
-            return const Center(child: Text('등록된 공지사항이 없습니다.'));
-          }
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(noticesProvider);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: notices.length,
-              itemBuilder: (context, index) {
-                final notice = notices[index];
-                return NoticeCard(notice: notice);
-              },
+      body: Column(
+        children: [
+          // 💡 공지사항 검색 바 (Search Bar) UI
+          Container(
+            color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.3),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: (_) => _performSearch(), // 엔터키 입력 시 검색
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: '공지 제목이나 내용 검색...',
+                hintStyle: TextStyle(color: Colors.grey.shade500),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary),
+                  onPressed: _performSearch, // 아이콘 클릭 시 검색
+                ),
+                /* 검색어 초기화 버튼 (Optional: 텍스트가 있을 때만 보이게 구현 가능) */
+                prefixIcon: const Icon(Icons.article_outlined, color: Colors.grey),
+              ),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text('에러가 발생했습니다:\n$error', textAlign: TextAlign.center),
-        ),
+          ),
+          // 💡 공지사항 리스트 영역
+          Expanded(
+            child: noticesAsync.when(
+              data: (notices) {
+                if (notices.isEmpty) {
+                  // 검색 결과 없음 (Empty State) UI
+                  final keyword = ref.read(searchKeywordProvider);
+                  final isSearch = keyword.isNotEmpty;
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      padding: const EdgeInsets.only(top: 80),
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(isSearch ? Icons.search_off_rounded : Icons.inbox_rounded, 
+                               size: 80, color: Colors.grey.shade300),
+                          const SizedBox(height: 24),
+                          Text(
+                            isSearch ? "'$keyword' 검색 결과가 없습니다." : '등록된 공지사항이 없습니다.',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            isSearch ? '다른 키워드로 다시 검색해보세요.' : '새로운 공지사항을 작성해보세요.',
+                            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    // 새로고침 시 검색어도 초기화할지 여부는 기획에 따라 다름. 여기서는 유지하며 리프레시.
+                    ref.invalidate(noticesProvider);
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: notices.length,
+                    itemBuilder: (context, index) {
+                      final notice = notices[index];
+                      return NoticeCard(notice: notice);
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Text('에러가 발생했습니다:\n$error', textAlign: TextAlign.center),
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
