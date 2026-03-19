@@ -31,6 +31,15 @@ public class CommentController {
         return ResponseEntity.ok(responses);
     }
 
+    // 💡 커뮤니티 게시글 별 댓글 조회
+    @GetMapping("/community/{postId}/comments")
+    public ResponseEntity<List<CommentResponse>> getCommunityComments(@PathVariable Long postId) {
+        List<CommentResponse> responses = commentService.getCommentsByCommunityPostId(postId).stream()
+                .map(CommentResponse::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
     // 댓글 작성
     @PostMapping("/notices/{noticeId}/comments")
     public ResponseEntity<?> createComment(
@@ -47,6 +56,25 @@ public class CommentController {
         }
 
         Comment comment = commentService.createComment(noticeId, memberId, request.getContent().trim());
+        return ResponseEntity.ok(CommentResponse.from(comment));
+    }
+
+    // 💡 커뮤니티 게시글 댓글 작성
+    @PostMapping("/community/{postId}/comments")
+    public ResponseEntity<?> createCommunityComment(
+            @PathVariable Long postId,
+            @RequestBody CommentRequest request,
+            HttpSession session) {
+        
+        Long memberId = (Long) session.getAttribute("loginMemberId");
+        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+
+        // 빈 내용 검증
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("댓글 내용을 입력해주세요.");
+        }
+
+        Comment comment = commentService.createCommunityComment(postId, memberId, request.getContent().trim());
         return ResponseEntity.ok(CommentResponse.from(comment));
     }
 

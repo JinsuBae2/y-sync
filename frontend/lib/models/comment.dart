@@ -1,7 +1,8 @@
 class Comment {
   final int id;
   final String content;
-  final int noticeId;
+  final int? noticeId; // 💡 공지사항 ID (nullable)
+  final int? communityPostId; // 💡 커뮤니티 게시글 ID (nullable)
   final int memberId;
   final String authorName;
   final String createdAt;
@@ -10,7 +11,8 @@ class Comment {
   Comment({
     required this.id,
     required this.content,
-    required this.noticeId,
+    this.noticeId,
+    this.communityPostId,
     required this.memberId,
     required this.authorName,
     required this.createdAt,
@@ -19,12 +21,13 @@ class Comment {
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
-      id: json['id'],
-      content: json['content'],
+      id: json['id'] ?? 0,
+      content: json['content'] ?? '',
       noticeId: json['noticeId'],
-      memberId: json['memberId'],
-      authorName: json['authorName'],
-      createdAt: json['createdAt'],
+      communityPostId: json['communityPostId'],
+      memberId: json['memberId'] ?? 0,
+      authorName: json['authorName'] ?? '',
+      createdAt: json['createdAt'] ?? '',
       updatedAt: json['updatedAt'],
     );
   }

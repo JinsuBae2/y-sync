@@ -28,13 +28,14 @@ public class MemberProfileController {
         }
 
         return memberRepository.findById(memberId)
-                .map(member -> ResponseEntity.ok(new MemberResponse(member.getLoginId(), member.getName(), member.getRole().name())))
+                .map(member -> ResponseEntity.ok(new MemberResponse(member.getId(), member.getLoginId(), member.getName(), member.getRole().name())))
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
     @Data
     @AllArgsConstructor
     public static class MemberResponse {
+        private Long id; // 💡 회원의 PK ID를 추가합니다 (삭제 권한 체크용)
         private String loginId;
         private String name;
         private String role;

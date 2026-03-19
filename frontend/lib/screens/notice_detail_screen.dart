@@ -137,12 +137,12 @@ class NoticeDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   const Divider(height: 1, color: Colors.black12),
                   const SizedBox(height: 16),
-                  _CommentList(noticeId: notice.id),
+                  _CommentList(source: CommentSource.notice, id: notice.id),
                 ],
               ),
             ),
           ),
-          _CommentInputArea(noticeId: notice.id),
+          _CommentInputArea(source: CommentSource.notice, id: notice.id),
         ],
       ),
     );
@@ -196,13 +196,14 @@ class NoticeDetailScreen extends ConsumerWidget {
 }
 
 class _CommentList extends ConsumerWidget {
-  final int noticeId;
+  final CommentSource source;
+  final int id;
 
-  const _CommentList({required this.noticeId});
+  const _CommentList({required this.source, required this.id});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final commentsAsync = ref.watch(commentsProvider(noticeId));
+    final commentsAsync = ref.watch(commentsProvider((source: source, id: id)));
     final authState = ref.watch(authProvider);
     final currentMember = authState.asData?.value;
 
@@ -319,7 +320,7 @@ class _CommentList extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(commentNotifierProvider).deleteComment(noticeId, comment.id);
+                await ref.read(commentNotifierProvider).deleteComment(source, id, comment.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('댓글이 삭제되었습니다.')),
@@ -351,9 +352,10 @@ class _CommentList extends ConsumerWidget {
 }
 
 class _CommentInputArea extends ConsumerStatefulWidget {
-  final int noticeId;
+  final CommentSource source;
+  final int id;
 
-  const _CommentInputArea({required this.noticeId});
+  const _CommentInputArea({required this.source, required this.id});
 
   @override
   ConsumerState<_CommentInputArea> createState() => _CommentInputAreaState();
@@ -369,7 +371,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(commentNotifierProvider).createComment(widget.noticeId, text);
+      await ref.read(commentNotifierProvider).createComment(widget.source, widget.id, text);
       _controller.clear();
       FocusScope.of(context).unfocus(); // Close keyboard
     } catch (e) {

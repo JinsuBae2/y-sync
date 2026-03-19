@@ -1,0 +1,67 @@
+package com.ync.ysync.domain;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
+
+// 💡 커뮤니티(자유게시판) 게시물 엔티티입니다.
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EntityListeners(AuditingEntityListener.class)
+public class CommunityPost {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // 💡 게시물 카테고리: Q&A, 팀원모집, 자유 등 Enum으로 관리 혹은 String으로 관리 가능.
+    // 여기서는 편리한 확장을 위해 String으로 선언합니다.
+    @Column(nullable = false)
+    private String category;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String content;
+
+    // 💡 익명 작성 여부 플래그입니다. true일 경우 프론트엔드에서 닉네임을 노출하지 않습니다.
+    @Column(nullable = false)
+    private boolean anonymous;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
+    private Member member;
+
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+
+    @Builder
+    public CommunityPost(String category, String title, String content, boolean anonymous, Member member) {
+        this.category = category;
+        this.title = title;
+        this.content = content;
+        this.anonymous = anonymous;
+        this.member = member;
+    }
+
+    // 💡 작성된 글을 수정하는 메서드
+    public void update(String category, String title, String content, boolean anonymous) {
+        this.category = category;
+        this.title = title;
+        this.content = content;
+        this.anonymous = anonymous;
+    }
+}

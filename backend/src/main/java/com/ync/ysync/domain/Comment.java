@@ -25,8 +25,12 @@ public class Comment {
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "notice_id", nullable = false)
+    @JoinColumn(name = "notice_id", nullable = true) // 💡 공지사항 댓글일 경우 값이 들어갑니다. (커뮤니티 글일 경우 null)
     private Notice notice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "community_post_id", nullable = true) // 💡 커뮤니티 게시글 댓글일 경우 값이 들어갑니다. (공지사항 글일 경우 null)
+    private CommunityPost communityPost;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -40,9 +44,10 @@ public class Comment {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Comment(String content, Notice notice, Member member) {
+    public Comment(String content, Notice notice, CommunityPost communityPost, Member member) {
         this.content = content;
         this.notice = notice;
+        this.communityPost = communityPost;
         this.member = member;
     }
 }

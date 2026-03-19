@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
-import 'screens/notice_list_screen.dart';
+import 'screens/main_tab_screen.dart';
 
 void main() {
   runApp(
@@ -49,7 +49,7 @@ class YSyncApp extends ConsumerWidget {
           if (member == null) {
             return const LoginScreen();
           }
-          return const NoticeListScreen();
+          return const MainTabScreen();
         },
         loading: () => const Scaffold(
           body: Center(child: CircularProgressIndicator()),

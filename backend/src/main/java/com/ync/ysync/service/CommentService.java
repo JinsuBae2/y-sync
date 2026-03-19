@@ -1,10 +1,12 @@
 package com.ync.ysync.service;
 
 import com.ync.ysync.domain.Comment;
+import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.domain.Notice;
 import com.ync.ysync.repository.CommentRepository;
+import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +22,15 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final NoticeRepository noticeRepository;
+    private final CommunityPostRepository communityPostRepository;
     private final MemberRepository memberRepository;
 
     public List<Comment> getCommentsByNoticeId(Long noticeId) {
         return commentRepository.findAllByNoticeIdOrderByCreatedAtAsc(noticeId);
+    }
+
+    public List<Comment> getCommentsByCommunityPostId(Long communityPostId) {
+        return commentRepository.findAllByCommunityPostIdOrderByCreatedAtAsc(communityPostId);
     }
 
     public Comment getComment(Long commentId) {
@@ -41,6 +48,22 @@ public class CommentService {
         Comment comment = Comment.builder()
                 .content(content)
                 .notice(notice)
+                .member(member)
+                .build();
+
+        return commentRepository.save(comment);
+    }
+
+    @Transactional
+    public Comment createCommunityComment(Long communityPostId, Long memberId, String content) {
+        CommunityPost post = communityPostRepository.findById(communityPostId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다."));
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
+
+        Comment comment = Comment.builder()
+                .content(content)
+                .communityPost(post)
                 .member(member)
                 .build();
 
