@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'notice_list_screen.dart';
 import 'community_list_screen.dart';
+import 'mypage_screen.dart'; // 💡 추가
 import '../providers/auth_provider.dart';
 
 // 💡 공지사항과 커뮤니티를 탭으로 전환할 수 있는 메인 화면입니다.
@@ -19,6 +20,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
   final List<Widget> _screens = [
     const NoticeListScreen(),
     const CommunityListScreen(),
+    const MyPageScreen(), // 💡 추가
   ];
 
   @override
@@ -57,6 +59,11 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
               icon: Icon(Icons.forum_outlined),
               activeIcon: Icon(Icons.forum),
               label: '커뮤니티',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded),
+              activeIcon: Icon(Icons.person_rounded),
+              label: '마이페이지',
             ),
           ],
         ),

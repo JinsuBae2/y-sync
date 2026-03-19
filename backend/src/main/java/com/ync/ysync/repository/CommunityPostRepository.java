@@ -13,4 +13,7 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
 
     // 💡 전체 목록을 최신순으로 조회합니다.
     List<CommunityPost> findAllByOrderByCreatedAtDesc();
+
+    // 💡 특정 회원이 작성한 게시글을 최신순으로 조회합니다.
+    List<CommunityPost> findAllByMemberIdOrderByCreatedAtDesc(Long memberId);
 }

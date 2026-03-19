@@ -122,7 +122,7 @@ public class DataInitializer implements CommandLineRunner {
                 .title("자바 환경 변수 설정 질문이요!")
                 .content("맥북에서 JAVA_HOME 설정을 했는데도 terminal에서 인식이 안 됩니다. zshrc 문제일까요?")
                 .anonymous(false)
-                .member(student1)
+                .member(admin) // 💡 관리자도 글을 쓸 수 있도록 변경
                 .build());
 
         posts.add(CommunityPost.builder()
@@ -164,7 +164,7 @@ public class DataInitializer implements CommandLineRunner {
                 .title("오늘 학식 메뉴 뭔가요?")
                 .content("배고픈데 메뉴 확인하기 귀찮네요... 아시는 분?")
                 .anonymous(true)
-                .member(student1)
+                .member(admin) // 💡 관리자도 글을 쓸 수 있도록 변경
                 .build());
 
         posts.add(CommunityPost.builder()
@@ -246,7 +246,7 @@ public class DataInitializer implements CommandLineRunner {
         comments.add(Comment.builder()
                 .content("정문 앞에 '영남식당' 국밥 진짜 맛있어요.")
                 .communityPost(posts.get(4))
-                .member(student1)
+                .member(admin) // 💡 관리자 댓글
                 .build());
 
         comments.add(Comment.builder()
@@ -258,7 +258,7 @@ public class DataInitializer implements CommandLineRunner {
         comments.add(Comment.builder()
                 .content("도서관 3층에 자리 좀 남아있어요 지금 오셔도 될 듯요.")
                 .communityPost(posts.get(6))
-                .member(student1)
+                .member(admin) // 💡 관리자 댓글
                 .build());
 
         comments.add(Comment.builder()
