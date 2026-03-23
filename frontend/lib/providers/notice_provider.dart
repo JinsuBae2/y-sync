@@ -2,13 +2,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/notice.dart';
 
+// Global variable to store session ID in memory
+String? _sessionId;
+
 final dioProvider = Provider<Dio>((ref) {
-  return Dio(BaseOptions(
+  final dio = Dio(BaseOptions(
     // Android Emulator: 10.0.2.2, iOS/Web: localhost
-    baseUrl: 'http://localhost:8080/api/v1',
+    baseUrl: 'http://10.0.2.2:8080/api/v1',
     // Enable sending cookies (JSESSIONID) for cross-origin requests on Web
     extra: {'withCredentials': true},
   ));
+
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) {
+      if (_sessionId != null) {
+        options.headers['Cookie'] = 'JSESSIONID=$_sessionId';
+      }
+      return handler.next(options);
+    },
+    onResponse: (response, handler) {
+      final cookies = response.headers['set-cookie'];
+      if (cookies != null) {
+        for (var cookie in cookies) {
+          if (cookie.contains('JSESSIONID=')) {
+            final parts = cookie.split(';');
+            for (var part in parts) {
+              if (part.trim().startsWith('JSESSIONID=')) {
+                _sessionId = part.trim().substring('JSESSIONID='.length);
+                break;
+              }
+            }
+          }
+        }
+      }
+      return handler.next(response);
+    },
+  ));
+
+  return dio;
 });
 
 // 💡 현재 검색어를 관리하는 Provider입니다. (Riverpod 3.x 호환 Notifier 사용)
@@ -49,7 +80,7 @@ class NoticeNotifier {
 
   Future<void> createNotice(String title, String content, String noticeType) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/notices', data: {
+    await dio.post('/admin/notices', data: {
       'title': title,
       'content': content,
       'noticeType': noticeType,
@@ -59,7 +90,7 @@ class NoticeNotifier {
 
   Future<void> updateNotice(int id, String title, String content, String noticeType) async {
     final dio = ref.read(dioProvider);
-    await dio.put('/notices/$id', data: {
+    await dio.put('/admin/notices/$id', data: {
       'title': title,
       'content': content,
       'noticeType': noticeType,
@@ -69,7 +100,7 @@ class NoticeNotifier {
 
   Future<void> deleteNotice(int id) async {
     final dio = ref.read(dioProvider);
-    await dio.delete('/notices/$id');
+    await dio.delete('/admin/notices/$id');
     ref.invalidate(noticesProvider);
   }
 }

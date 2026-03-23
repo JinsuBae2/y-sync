@@ -7,6 +7,8 @@ class Comment {
   final String authorName;
   final String createdAt;
   final String? updatedAt;
+  final bool isDeleted;
+  final String? deletionReason;
 
   Comment({
     required this.id,
@@ -17,6 +19,8 @@ class Comment {
     required this.authorName,
     required this.createdAt,
     this.updatedAt,
+    this.isDeleted = false,
+    this.deletionReason,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class Comment {
       authorName: json['authorName'] ?? '',
       createdAt: json['createdAt'] ?? '',
       updatedAt: json['updatedAt'],
+      isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
+      deletionReason: json['deletionReason'],
     );
   }
 }

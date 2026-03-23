@@ -8,6 +8,8 @@ class CommunityPost {
   final String authorName;
   final int memberId;
   final String createdAt;
+  final bool isDeleted;
+  final String? deletionReason;
 
   CommunityPost({
     required this.id,
@@ -18,6 +20,8 @@ class CommunityPost {
     required this.authorName,
     required this.memberId,
     required this.createdAt,
+    this.isDeleted = false,
+    this.deletionReason,
   });
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
@@ -30,6 +34,8 @@ class CommunityPost {
       authorName: json['authorName'],
       memberId: json['memberId'],
       createdAt: json['createdAt'],
+      isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
+      deletionReason: json['deletionReason'],
     );
   }
 }

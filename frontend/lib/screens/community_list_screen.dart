@@ -7,7 +7,9 @@ import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
 
 class CommunityListScreen extends ConsumerWidget {
-  const CommunityListScreen({super.key});
+  final bool isAdminMode; // 💡 관리자 모드 플래그 추가
+
+  const CommunityListScreen({super.key, this.isAdminMode = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +45,10 @@ class CommunityListScreen extends ConsumerWidget {
           // 💡 커뮤니티 게시글 리스트
           Expanded(
             child: postsAsync.when(
-              data: (posts) {
+              data: (allPosts) {
+                // 💡 관리자 모드가 아닐 때만 삭제된 게시글 숨김 처리
+                final posts = isAdminMode ? allPosts : allPosts.where((p) => !p.isDeleted).toList();
+
                 if (posts.isEmpty) {
                   return const Center(child: Text('게시글이 없습니다. 첫 글을 작성해보세요!'));
                 }

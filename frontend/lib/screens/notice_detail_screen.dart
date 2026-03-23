@@ -6,6 +6,7 @@ import '../providers/notice_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
 import 'notice_form_screen.dart';
+import '../widgets/deletion_reason_dialog.dart';
 
 class NoticeDetailScreen extends ConsumerWidget {
   final Notice notice;
@@ -230,18 +231,19 @@ class _CommentList extends ConsumerWidget {
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
             final comment = comments[index];
+            final isAdmin = currentMember?.role == 'ADMIN' || currentMember?.role == 'SUPER_ADMIN';
             final isMyComment = currentMember != null && 
                 (currentMember.name == comment.authorName || currentMember.loginId == comment.authorName);
-            final canDelete = isMyComment || (currentMember?.role == 'ADMIN');
+            final canDelete = (isMyComment || isAdmin) && !comment.isDeleted;
 
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  backgroundColor: comment.isDeleted ? Colors.grey.shade200 : Theme.of(context).colorScheme.primaryContainer,
                   child: Text(
-                    comment.authorName.isNotEmpty ? comment.authorName.substring(0, 1).toUpperCase() : '?',
+                    comment.isDeleted ? '-' : (comment.authorName.isNotEmpty ? comment.authorName.substring(0, 1).toUpperCase() : '?'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
@@ -256,7 +258,7 @@ class _CommentList extends ConsumerWidget {
                       Row(
                         children: [
                           Text(
-                            comment.authorName, 
+                            comment.isDeleted ? '익명' : comment.authorName, 
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.black87)
                           ),
                           const SizedBox(width: 8),
@@ -279,8 +281,13 @@ class _CommentList extends ConsumerWidget {
                           ),
                         ),
                         child: Text(
-                          comment.content, 
-                          style: const TextStyle(color: Colors.black87, height: 1.4, fontSize: 14)
+                          comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content, 
+                          style: TextStyle(
+                            color: comment.isDeleted ? Colors.red.shade300 : Colors.black87, 
+                            height: 1.4, 
+                            fontSize: 14,
+                            fontStyle: comment.isDeleted ? FontStyle.italic : FontStyle.normal,
+                          )
                         ),
                       ),
                     ],
@@ -290,7 +297,7 @@ class _CommentList extends ConsumerWidget {
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20, color: Colors.black45),
-                    onPressed: () => _confirmDeleteComment(context, ref, comment),
+                    onPressed: () => _confirmDeleteComment(context, ref, comment, isAdmin),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -305,40 +312,46 @@ class _CommentList extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteComment(BuildContext context, WidgetRef ref, Comment comment) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('댓글 삭제'),
-        content: const Text('이 댓글을 삭제할까요?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await ref.read(commentNotifierProvider).deleteComment(source, id, comment.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('댓글이 삭제되었습니다.')),
-                  );
+  void _confirmDeleteComment(BuildContext context, WidgetRef ref, Comment comment, bool isAdmin) async {
+    if (isAdmin) {
+      final reason = await showDialog<String>(
+        context: context,
+        builder: (context) => const DeletionReasonDialog(),
+      );
+      if (reason == null) return;
+
+      try {
+        await ref.read(commentNotifierProvider).deleteCommentByAdmin(source, id, comment.id, reason);
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('관리자 권한으로 삭제되었습니다.')));
+      } catch (e) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+      }
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('댓글 삭제'),
+          content: const Text('정말로 삭제하시겠습니까?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소', style: TextStyle(color: Colors.grey))),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  await ref.read(commentNotifierProvider).deleteComment(source, id, comment.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('삭제되었습니다.')));
+                  }
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
                 }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('삭제 실패: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+              },
+              child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   String _formatDate(String isoString) {

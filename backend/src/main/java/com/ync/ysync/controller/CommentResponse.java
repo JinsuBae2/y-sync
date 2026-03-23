@@ -19,9 +19,11 @@ public class CommentResponse {
     private String authorName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean isDeleted;
+    private String deletionReason;
 
     @Builder
-    public CommentResponse(Long id, String content, Long noticeId, Long communityPostId, Long memberId, String authorName, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public CommentResponse(Long id, String content, Long noticeId, Long communityPostId, Long memberId, String authorName, LocalDateTime createdAt, LocalDateTime updatedAt, boolean isDeleted, String deletionReason) {
         this.id = id;
         this.content = content;
         this.noticeId = noticeId;
@@ -30,6 +32,8 @@ public class CommentResponse {
         this.authorName = authorName;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.isDeleted = isDeleted;
+        this.deletionReason = deletionReason;
     }
 
     public static CommentResponse from(Comment comment) {
@@ -42,6 +46,8 @@ public class CommentResponse {
                 .authorName(comment.getMember().getName())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
+                .isDeleted(comment.isDeleted())
+                .deletionReason(comment.getDeletionReason())
                 .build();
     }
 }

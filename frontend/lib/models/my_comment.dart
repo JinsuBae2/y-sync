@@ -6,6 +6,8 @@ class MyComment {
   final String category;
   final int postId;
   final String createdAt;
+  final bool isDeleted;
+  final String? deletionReason;
 
   MyComment({
     required this.id,
@@ -14,6 +16,8 @@ class MyComment {
     required this.category,
     required this.postId,
     required this.createdAt,
+    this.isDeleted = false,
+    this.deletionReason,
   });
 
   factory MyComment.fromJson(Map<String, dynamic> json) {
@@ -24,6 +28,8 @@ class MyComment {
       category: json['category'],
       postId: json['postId'],
       createdAt: json['createdAt'],
+      isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
+      deletionReason: json['deletionReason'],
     );
   }
 }

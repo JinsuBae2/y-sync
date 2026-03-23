@@ -28,13 +28,22 @@ final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
   );
   
   final List<dynamic> data = response.data;
-  return data.map((json) => CommunityPost.fromJson(json)).toList();
+  return data
+      .map((json) => CommunityPost.fromJson(json))
+      .toList();
 });
 
 class CommunityNotifier {
   final Ref ref;
 
   CommunityNotifier(this.ref);
+
+  // 💡 단건 게시글 조회
+  Future<CommunityPost> getPost(int id) async {
+    final dio = ref.read(dioProvider);
+    final response = await dio.get('/community/$id');
+    return CommunityPost.fromJson(response.data);
+  }
 
   // 💡 게시글 작성
   Future<void> createPost({
@@ -57,6 +66,13 @@ class CommunityNotifier {
   Future<void> deletePost(int id) async {
     final dio = ref.read(dioProvider);
     await dio.delete('/community/$id');
+    ref.invalidate(communityPostsProvider);
+  }
+
+  // 💡 관리자용 게시글 삭제 (소프트 딜리트)
+  Future<void> deletePostByAdmin(int id, String reason) async {
+    final dio = ref.read(dioProvider);
+    await dio.delete('/admin/posts/$id', data: {'reason': reason});
     ref.invalidate(communityPostsProvider);
   }
 }

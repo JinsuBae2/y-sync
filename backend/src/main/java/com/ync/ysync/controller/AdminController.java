@@ -4,6 +4,10 @@ import com.ync.ysync.domain.AdminRequest;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.repository.AdminRequestRepository;
+import com.ync.ysync.repository.CommunityPostRepository;
+import com.ync.ysync.repository.CommentRepository;
+import com.ync.ysync.domain.CommunityPost;
+import com.ync.ysync.domain.Comment;
 import com.ync.ysync.repository.MemberRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.AllArgsConstructor;
@@ -26,6 +30,8 @@ public class AdminController {
 
     private final AdminRequestRepository adminRequestRepository;
     private final MemberRepository memberRepository;
+    private final CommunityPostRepository communityPostRepository;
+    private final CommentRepository commentRepository;
 
     // 💡 관리자 권한 신청 (일반 유저용)
     @PostMapping("/requests")
@@ -92,6 +98,32 @@ public class AdminController {
         adminRequestRepository.save(adminRequest);
         
         return ResponseEntity.ok("신청이 거절되었습니다.");
+    }
+
+    // 💡 관리자 게시물 삭제 (소프트 딜리트)
+    @DeleteMapping("/posts/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> deletePostByAdmin(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
+        String reason = body.get("reason");
+        CommunityPost post = communityPostRepository.findById(id).orElse(null);
+        if (post == null) return ResponseEntity.notFound().build();
+
+        post.deleteByAdmin(reason);
+        communityPostRepository.save(post);
+        return ResponseEntity.ok("게시글이 관리자에 의해 삭제되었습니다.");
+    }
+
+    // 💡 관리자 댓글 삭제 (소프트 딜리트)
+    @DeleteMapping("/comments/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> deleteCommentByAdmin(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
+        String reason = body.get("reason");
+        Comment comment = commentRepository.findById(id).orElse(null);
+        if (comment == null) return ResponseEntity.notFound().build();
+
+        comment.deleteByAdmin(reason);
+        commentRepository.save(comment);
+        return ResponseEntity.ok("댓글이 관리자에 의해 삭제되었습니다.");
     }
 
     // 💡 통계 및 DTO 클래스들

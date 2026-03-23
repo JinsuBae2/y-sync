@@ -96,18 +96,22 @@ public class CommunityController {
         private String authorName;
         private Long memberId;
         private LocalDateTime createdAt;
+        private boolean isDeleted;
+        private String deletionReason;
 
         public static CommunityResponse from(CommunityPost post) {
             return CommunityResponse.builder()
                     .id(post.getId())
                     .category(post.getCategory())
                     .title(post.getTitle())
+                    // 삭제된 경우 프론트에서 마스킹하거나 여기서 바로 가릴 수 있습니다
                     .content(post.getContent())
                     .anonymous(post.isAnonymous())
-                    // 💡 익명일 경우 이름을 필터링하여 프론트로 보냄 (혹은 프론트에서 처리 가능)
                     .authorName(post.isAnonymous() ? "익명의 학생" : post.getMember().getName())
                     .memberId(post.getMember().getId())
                     .createdAt(post.getCreatedAt())
+                    .isDeleted(post.isDeleted())
+                    .deletionReason(post.getDeletionReason())
                     .build();
         }
     }

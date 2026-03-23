@@ -91,7 +91,9 @@ public class MemberProfileController {
                             postTitle,
                             category,
                             postId,
-                            comment.getCreatedAt().toString()
+                            comment.getCreatedAt().toString(),
+                            comment.isDeleted(),
+                            comment.getDeletionReason()
                     );
                 })
                 .collect(Collectors.toList());
@@ -116,5 +118,7 @@ public class MemberProfileController {
         private String category;
         private Long postId;
         private String createdAt;
+        private boolean isDeleted;
+        private String deletionReason;
     }
 }

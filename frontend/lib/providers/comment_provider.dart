@@ -48,6 +48,14 @@ class CommentNotifier {
     // 해당 게시물의 댓글 목록 새로고침
     ref.invalidate(commentsProvider((source: source, id: id)));
   }
+
+  // 💡 관리자용 댓글 삭제 (소프트 딜리트)
+  Future<void> deleteCommentByAdmin(CommentSource source, int id, int commentId, String reason) async {
+    final dio = ref.read(dioProvider);
+    await dio.delete('/admin/comments/$commentId', data: {'reason': reason});
+    
+    ref.invalidate(commentsProvider((source: source, id: id)));
+  }
 }
 
 final commentNotifierProvider = Provider((ref) => CommentNotifier(ref));

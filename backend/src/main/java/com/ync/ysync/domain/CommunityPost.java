@@ -64,4 +64,16 @@ public class CommunityPost {
         this.content = content;
         this.anonymous = anonymous;
     }
+
+    // 관리자 삭제 필드
+    @Column(nullable = false)
+    private boolean isDeleted = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String deletionReason;
+
+    public void deleteByAdmin(String reason) {
+        this.isDeleted = true;
+        this.deletionReason = reason;
+    }
 }
