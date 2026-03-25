@@ -92,6 +92,12 @@ class NoticeNotifier {
 
   NoticeNotifier(this.ref);
 
+  Future<Notice> getNotice(int id) async {
+    final dio = ref.read(dioProvider);
+    final response = await dio.get('/notices/$id');
+    return Notice.fromJson(response.data);
+  }
+
   Future<void> createNotice(String title, String content, String noticeType) async {
     final dio = ref.read(dioProvider);
     await dio.post('/admin/notices', data: {

@@ -13,6 +13,7 @@ import '../providers/admin_provider.dart';
 import '../models/admin_request.dart';
 import 'notice_form_screen.dart';
 import 'community_list_screen.dart';
+import 'scrap_list_screen.dart'; // 💡 추가
 import '../providers/community_provider.dart'; // 💡 추가
 
 class MyPageScreen extends ConsumerWidget {
@@ -148,6 +149,28 @@ class MyPageScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // 💡 내가 스크랩한 글 (새 화면 진입용 타일)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.bookmarks_rounded, color: Color(0xFF164687)),
+                title: const Text('내가 스크랩한 글', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                trailing: const Icon(Icons.chevron_right),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ScrapListScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
 
             // 💡 내가 쓴 공지사항 (관리자 전용)
             if (member.role == 'ADMIN' && notices != null) ...[

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notice.dart';
 import '../providers/notice_provider.dart';
 import '../providers/mypage_provider.dart'; // 💡 추가
+import '../providers/scrap_provider.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
 
@@ -197,6 +198,12 @@ class NoticeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scrapsAsync = ref.watch(scrapsProvider);
+    final isScrapped = scrapsAsync.maybeWhen(
+      data: (scraps) => scraps.any((s) => s.targetType == 'NOTICE' && s.targetId == notice.id),
+      orElse: () => false,
+    );
+
     final isOfficial = notice.noticeType == 'OFFICIAL';
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -249,6 +256,19 @@ class NoticeCard extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    const Spacer(),
+                    // 💡 북마크 아이콘 (토글)
+                    InkWell(
+                      onTap: () {
+                        ref.read(scrapNotifierProvider).toggleScrap('NOTICE', notice.id);
+                      },
+                      child: Icon(
+                        isScrapped ? Icons.bookmark : Icons.bookmark_border,
+                        size: 24,
+                        color: const Color(0xFF164687),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     const Icon(Icons.chevron_right_rounded, color: Colors.black26, size: 24),
                   ],
                 ),

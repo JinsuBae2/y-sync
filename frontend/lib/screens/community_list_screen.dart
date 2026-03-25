@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/community_post.dart';
 import '../providers/community_provider.dart';
+import '../providers/scrap_provider.dart';
 import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
 
@@ -237,6 +238,12 @@ class CommunityPostCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scrapsAsync = ref.watch(scrapsProvider);
+    final isScrapped = scrapsAsync.maybeWhen(
+      data: (scraps) => scraps.any((s) => s.targetType == 'COMMUNITY' && s.targetId == post.id),
+      orElse: () => false,
+    );
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -283,6 +290,18 @@ class CommunityPostCard extends ConsumerWidget {
                   Text(
                     post.createdAt.split('T')[0], // 간단한 날짜 표시
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 8),
+                  // 💡 북마크 아이콘 (토글)
+                  InkWell(
+                    onTap: () {
+                      ref.read(scrapNotifierProvider).toggleScrap('COMMUNITY', post.id);
+                    },
+                    child: Icon(
+                      isScrapped ? Icons.bookmark : Icons.bookmark_border,
+                      size: 20,
+                      color: const Color(0xFF164687),
+                    ),
                   ),
                 ],
               ),
