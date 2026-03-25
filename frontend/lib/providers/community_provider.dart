@@ -17,6 +17,20 @@ final communityCategoryProvider = NotifierProvider<CommunityCategoryNotifier, St
   return CommunityCategoryNotifier();
 });
 
+// 💡 현재 선택된 학년 탭을 관리합니다.
+class CommunityGradeNotifier extends Notifier<String> {
+  @override
+  String build() => 'ALL';
+
+  void updateGrade(String grade) {
+    state = grade;
+  }
+}
+
+final communityGradeProvider = NotifierProvider<CommunityGradeNotifier, String>(() {
+  return CommunityGradeNotifier();
+});
+
 // 💡 커뮤니티 게시글 목록을 가져오는 Provider입니다.
 final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
   final dio = ref.watch(dioProvider);

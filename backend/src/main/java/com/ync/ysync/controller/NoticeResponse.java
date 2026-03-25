@@ -1,5 +1,6 @@
 package com.ync.ysync.controller;
 
+import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.Notice;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -18,9 +19,13 @@ public class NoticeResponse {
     private String noticeType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String targetGrade;
+    private boolean isPinned;
+    private long viewCount;
+    private long commentCount;
 
     @Builder
-    public NoticeResponse(Long id, String title, String content, String authorName, String noticeType, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public NoticeResponse(Long id, String title, String content, String authorName, String noticeType, LocalDateTime createdAt, LocalDateTime updatedAt, String targetGrade, boolean isPinned, long viewCount, long commentCount) {
         this.id = id;
         this.title = title;
         this.content = content;
@@ -28,6 +33,10 @@ public class NoticeResponse {
         this.noticeType = noticeType;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.targetGrade = targetGrade;
+        this.isPinned = isPinned;
+        this.viewCount = viewCount;
+        this.commentCount = commentCount;
     }
 
     public static NoticeResponse from(Notice notice) {
@@ -39,6 +48,10 @@ public class NoticeResponse {
                 .noticeType(notice.getNoticeType().name())
                 .createdAt(notice.getCreatedAt())
                 .updatedAt(notice.getUpdatedAt())
+                .targetGrade(notice.getTargetGrade() != null ? notice.getTargetGrade().name() : Grade.ALL.name())
+                .isPinned(notice.isPinned())
+                .viewCount(notice.getViewCount())
+                .commentCount(notice.getCommentCount())
                 .build();
     }
 }

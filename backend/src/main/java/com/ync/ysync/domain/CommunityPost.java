@@ -48,13 +48,43 @@ public class CommunityPost {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Grade targetGrade = Grade.ALL;
+
+    @Column(nullable = false)
+    private boolean isPinned = false;
+
+    @Column(nullable = false)
+    private long viewCount = 0L;
+
+    @Column(nullable = false)
+    private long commentCount = 0L;
+
+    public void incrementViewCount() {
+        this.viewCount++;
+    }
+
+    public void incrementCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decrementCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
+    }
+
     @Builder
-    public CommunityPost(String category, String title, String content, boolean anonymous, Member member) {
+    public CommunityPost(String category, String title, String content, boolean anonymous, Member member,
+            Grade targetGrade, boolean isPinned) {
         this.category = category;
         this.title = title;
         this.content = content;
         this.anonymous = anonymous;
         this.member = member;
+        this.targetGrade = targetGrade != null ? targetGrade : Grade.ALL;
+        this.isPinned = isPinned;
     }
 
     // 💡 작성된 글을 수정하는 메서드

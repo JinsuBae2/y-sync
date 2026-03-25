@@ -55,7 +55,7 @@ public class MemberProfileController {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        List<NoticeResponse> responses = noticeRepository.findAllByAuthorIdOrderByCreatedAtDesc(memberId).stream()
+        List<NoticeResponse> responses = noticeRepository.findAllByAuthorIdOrderByIsPinnedDescCreatedAtDesc(memberId).stream()
                 .map(NoticeResponse::from)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);

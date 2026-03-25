@@ -10,6 +10,11 @@ class CommunityPost {
   final String createdAt;
   final bool isDeleted;
   final String? deletionReason;
+  // 💡 새로 추가된 필드들
+  final String targetGrade;
+  final bool isPinned;
+  final int viewCount;
+  final int commentCount;
 
   CommunityPost({
     required this.id,
@@ -22,6 +27,10 @@ class CommunityPost {
     required this.createdAt,
     this.isDeleted = false,
     this.deletionReason,
+    this.targetGrade = 'ALL',
+    this.isPinned = false,
+    this.viewCount = 0,
+    this.commentCount = 0,
   });
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
@@ -36,6 +45,10 @@ class CommunityPost {
       createdAt: json['createdAt'],
       isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
       deletionReason: json['deletionReason'],
+      targetGrade: json['targetGrade'] ?? 'ALL',
+      isPinned: json['isPinned'] ?? false,
+      viewCount: json['viewCount'] ?? 0,
+      commentCount: json['commentCount'] ?? 0,
     );
   }
 }

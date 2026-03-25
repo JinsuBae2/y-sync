@@ -1,5 +1,6 @@
 package com.ync.ysync.controller;
 
+import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.domain.Notice;
 import com.ync.ysync.domain.NoticeType;
@@ -62,7 +63,7 @@ public class NoticeController {
             type = NoticeType.valueOf(request.getNoticeType());
         }
 
-        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, memberId);
+        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId);
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
@@ -79,7 +80,7 @@ public class NoticeController {
         }
 
         try {
-            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, memberId, MemberRole.valueOf(roleStr));
+            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId, MemberRole.valueOf(roleStr));
             return ResponseEntity.ok(NoticeResponse.from(notice));
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("권한이 없습니다")) {
@@ -114,5 +115,7 @@ public class NoticeController {
         private String title;
         private String content;
         private String noticeType; // Optional, can be null
+        private Grade targetGrade;
+        private boolean isPinned;
     }
 }

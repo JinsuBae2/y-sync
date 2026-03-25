@@ -9,6 +9,8 @@ import com.ync.ysync.repository.CommentRepository;
 import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Comment;
 import com.ync.ysync.repository.MemberRepository;
+import com.ync.ysync.domain.Notice;
+import com.ync.ysync.repository.NoticeRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.AllArgsConstructor;
 import lombok.Builder; // 💡 추가
@@ -31,6 +33,7 @@ public class AdminController {
     private final AdminRequestRepository adminRequestRepository;
     private final MemberRepository memberRepository;
     private final CommunityPostRepository communityPostRepository;
+    private final NoticeRepository noticeRepository;
     private final CommentRepository commentRepository;
 
     // 💡 관리자 권한 신청 (일반 유저용)
@@ -122,6 +125,15 @@ public class AdminController {
         if (comment == null) return ResponseEntity.notFound().build();
 
         comment.deleteByAdmin(reason);
+        if (comment.getCommunityPost() != null) {
+            CommunityPost post = comment.getCommunityPost();
+            post.decrementCommentCount();
+            communityPostRepository.save(post);
+        } else if (comment.getNotice() != null) {
+            Notice notice = comment.getNotice();
+            notice.decrementCommentCount();
+            noticeRepository.save(notice);
+        }
         commentRepository.save(comment);
         return ResponseEntity.ok("댓글이 관리자에 의해 삭제되었습니다.");
     }

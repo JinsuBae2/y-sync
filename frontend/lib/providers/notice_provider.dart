@@ -56,6 +56,20 @@ final searchKeywordProvider = NotifierProvider<SearchKeywordNotifier, String>(()
   return SearchKeywordNotifier();
 });
 
+// 💡 현재 선택된 공지사항 학년 탭을 관리합니다.
+class NoticeGradeNotifier extends Notifier<String> {
+  @override
+  String build() => 'ALL';
+
+  void updateGrade(String grade) {
+    state = grade;
+  }
+}
+
+final noticeGradeProvider = NotifierProvider<NoticeGradeNotifier, String>(() {
+  return NoticeGradeNotifier();
+});
+
 // 💡 공지사항 목록 데이터를 가져오는 Provider입니다.
 // 검색어가 있을 경우 검색 API를, 없을 경우 전체 목록 API를 호출합니다.
 final noticesProvider = FutureProvider<List<Notice>>((ref) async {

@@ -51,6 +51,7 @@ public class CommentService {
                 .member(member)
                 .build();
 
+        notice.incrementCommentCount(); // 💡 댓글 수 증가
         return commentRepository.save(comment);
     }
 
@@ -67,6 +68,7 @@ public class CommentService {
                 .member(member)
                 .build();
 
+        post.incrementCommentCount(); // 💡 댓글 수 증가
         return commentRepository.save(comment);
     }
 
@@ -79,6 +81,11 @@ public class CommentService {
             throw new IllegalArgumentException("해당 댓글에 대한 권한이 없습니다.");
         }
         
+        if (comment.getCommunityPost() != null) {
+            comment.getCommunityPost().decrementCommentCount(); // 💡 게시글 댓글 수 감소
+        } else if (comment.getNotice() != null) {
+            comment.getNotice().decrementCommentCount(); // 💡 공지사항 댓글 수 감소
+        }
         commentRepository.delete(comment);
     }
 }

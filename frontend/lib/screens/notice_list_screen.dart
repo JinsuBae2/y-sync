@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notice.dart';
 import '../providers/notice_provider.dart';
 import '../providers/mypage_provider.dart'; // 💡 추가
-import '../providers/auth_provider.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
 
@@ -32,6 +31,7 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
   Widget build(BuildContext context) {
     // noticesAsync는 searchKeywordProvider의 상태 변경을 감지하여 자동으로 다시 fetch 합니다.
     final noticesAsync = ref.watch(noticesProvider);
+    final selectedGrade = ref.watch(noticeGradeProvider); // 💡 추가된 학년 상태
 
     // 💡 관리자 권한 확인 (ADMIN 또는 SUPER_ADMIN만 글쓰기 가능)
     final myPageAsync = ref.watch(myPageProvider);
@@ -44,23 +44,13 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: '로그아웃',
-            onPressed: () {
-              ref.read(authProvider.notifier).logout();
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [
           // 💡 공지사항 검색 바 (Search Bar) UI
           Container(
-            color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.3),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.1),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: TextField(
               controller: _searchController,
               onSubmitted: (_) => _performSearch(), // 엔터키 입력 시 검색
@@ -91,11 +81,29 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
               ),
             ),
           ),
+          // 💡 학년 필터링 칩 (Grade Filter Chips) - 검색창 아래로 이동
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                _buildGradeChip(context, ref, '전체', 'ALL', selectedGrade),
+                _buildGradeChip(context, ref, '1학년', 'GRADE_1', selectedGrade),
+                _buildGradeChip(context, ref, '2학년', 'GRADE_2', selectedGrade),
+                _buildGradeChip(context, ref, '3학년', 'GRADE_3', selectedGrade),
+              ],
+            ),
+          ),
           // 💡 공지사항 리스트 영역
           Expanded(
             child: noticesAsync.when(
               data: (notices) {
-                if (notices.isEmpty) {
+                // 💡 학년 필터링 추가
+                final filteredNotices = selectedGrade == 'ALL' 
+                    ? notices 
+                    : notices.where((n) => n.targetGrade == 'ALL' || n.targetGrade == selectedGrade).toList();
+
+                if (filteredNotices.isEmpty) {
                   // 검색 결과 없음 (Empty State) UI
                   final keyword = ref.read(searchKeywordProvider);
                   final isSearch = keyword.isNotEmpty;
@@ -130,9 +138,9 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
                   },
                   child: ListView.builder(
                     padding: const EdgeInsets.all(12),
-                    itemCount: notices.length,
+                    itemCount: filteredNotices.length,
                     itemBuilder: (context, index) {
-                      final notice = notices[index];
+                      final notice = filteredNotices[index];
                       return NoticeCard(notice: notice);
                     },
                   ),
@@ -160,20 +168,40 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
       ) : null,
     );
   }
+
+  Widget _buildGradeChip(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
+    final isSelected = value == selectedValue;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (selected) {
+          ref.read(noticeGradeProvider.notifier).updateGrade(selected ? value : 'ALL');
+        },
+        selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+        checkmarkColor: Theme.of(context).colorScheme.primary,
+        labelStyle: TextStyle(
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+    );
+  }
 }
 
-class NoticeCard extends StatelessWidget {
+class NoticeCard extends ConsumerWidget {
   final Notice notice;
 
   const NoticeCard({super.key, required this.notice});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isOfficial = notice.noticeType == 'OFFICIAL';
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: notice.isPinned ? const Color(0xFF164687).withOpacity(0.05) : Colors.white, // 💡 상단 고정 글은 브랜드 컬러 연하게
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -187,13 +215,15 @@ class NoticeCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => NoticeDetailScreen(notice: notice),
               ),
             );
+            // 💡 상세 화면에서 돌아올 때 조회수 증가를 반영하기 위해 리스트 새로고침
+            ref.invalidate(noticesProvider);
           },
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -223,15 +253,28 @@ class NoticeCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  notice.title,
-                  style: const TextStyle(
-                    fontSize: 20, 
-                    fontWeight: FontWeight.w800,
-                    height: 1.4,
-                    letterSpacing: -0.5,
-                    color: Colors.black87,
-                  ),
+                Row(
+                  children: [
+                    if (notice.isPinned) // 💡 핀 고정 아이콘
+                      const Padding(
+                        padding: EdgeInsets.only(right: 6),
+                        child: Text('📌', style: TextStyle(fontSize: 18)),
+                      ),
+                    Expanded(
+                      child: Text(
+                        notice.title,
+                        style: const TextStyle(
+                          fontSize: 20, 
+                          fontWeight: FontWeight.w800,
+                          height: 1.4,
+                          letterSpacing: -0.5,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -258,6 +301,11 @@ class NoticeCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
                     ),
                     const Spacer(),
+                    // 💡 댓글수 및 날짜 표시 (조회수 제거)
+                    Icon(Icons.chat_bubble_outline, size: 16, color: Colors.grey.shade400),
+                    const SizedBox(width: 4),
+                    Text('${notice.commentCount}', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                    const SizedBox(width: 12),
                     Text(
                       _formatDate(notice.createdAt),
                       style: const TextStyle(fontSize: 13, color: Colors.black45, fontWeight: FontWeight.w500),

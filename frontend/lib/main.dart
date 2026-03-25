@@ -23,11 +23,16 @@ class YSyncApp extends ConsumerWidget {
       title: 'Y-Sync',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A237E), // Deep Navy
-          primary: const Color(0xFF1A237E),
+          seedColor: const Color(0xFF164687), // 브랜드 컬러 #164687
+          primary: const Color(0xFF164687),
           secondary: const Color(0xFFFFC107), // Amber
         ),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF164687),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
         cardTheme: CardThemeData(
           elevation: 4,
           shadowColor: Colors.black.withOpacity(0.1),

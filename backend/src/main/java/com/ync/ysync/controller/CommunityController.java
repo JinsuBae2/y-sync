@@ -1,6 +1,7 @@
 package com.ync.ysync.controller;
 
 import com.ync.ysync.domain.CommunityPost;
+import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.service.CommunityService;
 import jakarta.servlet.http.HttpSession;
@@ -51,6 +52,8 @@ public class CommunityController {
                 request.getTitle(),
                 request.getContent(),
                 request.isAnonymous(),
+                request.getTargetGrade(),
+                request.isPinned(),
                 memberId
         );
         return ResponseEntity.ok(CommunityResponse.from(post));
@@ -81,6 +84,8 @@ public class CommunityController {
         private String title;
         private String content;
         private boolean anonymous;
+        private Grade targetGrade;
+        private boolean isPinned;
     }
 
     @Data
@@ -98,6 +103,10 @@ public class CommunityController {
         private LocalDateTime createdAt;
         private boolean isDeleted;
         private String deletionReason;
+        private String targetGrade;
+        private boolean isPinned;
+        private long viewCount;
+        private long commentCount;
 
         public static CommunityResponse from(CommunityPost post) {
             return CommunityResponse.builder()
@@ -112,6 +121,10 @@ public class CommunityController {
                     .createdAt(post.getCreatedAt())
                     .isDeleted(post.isDeleted())
                     .deletionReason(post.getDeletionReason())
+                    .targetGrade(post.getTargetGrade() != null ? post.getTargetGrade().name() : Grade.ALL.name())
+                    .isPinned(post.isPinned())
+                    .viewCount(post.getViewCount())
+                    .commentCount(post.getCommentCount())
                     .build();
         }
     }

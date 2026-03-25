@@ -1,5 +1,6 @@
 package com.ync.ysync.service;
 
+import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.domain.Notice;
@@ -22,7 +23,7 @@ public class NoticeService {
 
     // 전체 공지사항을 최신순으로 가져옵니다.
     public List<Notice> getAllNotices() {
-        return noticeRepository.findAllByOrderByCreatedAtDesc();
+        return noticeRepository.findAllByOrderByIsPinnedDescCreatedAtDesc();
     }
 
     // 💡 키워드를 이용해 공지사항의 제목이나 내용을 검색합니다.
@@ -31,17 +32,20 @@ public class NoticeService {
         if (keyword == null || keyword.trim().isEmpty()) {
             return getAllNotices();
         }
-        return noticeRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByCreatedAtDesc(keyword, keyword);
+        return noticeRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByIsPinnedDescCreatedAtDesc(keyword, keyword);
     }
 
 
+    @Transactional
     public Notice getNotice(Long id) {
-        return noticeRepository.findById(id)
+        Notice notice = noticeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 공지사항이 존재하지 않습니다."));
+        notice.incrementViewCount();
+        return notice;
     }
 
     @Transactional
-    public Notice createNotice(String title, String content, NoticeType noticeType, Long memberId) {
+    public Notice createNotice(String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, Long memberId) {
         Member author = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
@@ -50,17 +54,19 @@ public class NoticeService {
                 .content(content)
                 .author(author)
                 .noticeType(noticeType)
+                .targetGrade(targetGrade)
+                .isPinned(isPinned)
                 .build();
 
         return noticeRepository.save(notice);
     }
 
     @Transactional
-    public Notice updateNotice(Long id, String title, String content, NoticeType noticeType, Long memberId, MemberRole role) {
+    public Notice updateNotice(Long id, String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, Long memberId, MemberRole role) {
         Notice notice = getNotice(id);
         validateAuthorOrAdmin(notice, memberId, role);
         
-        notice.update(title, content, noticeType);
+        notice.update(title, content, noticeType, targetGrade, isPinned);
         return notice;
     }
 
