@@ -28,6 +28,14 @@ public class CommunityService {
         return communityPostRepository.findByCategoryOrderByIsPinnedDescCreatedAtDesc(category);
     }
 
+    // 💡 커뮤니티 게시글 검색 (키워드 + 카테고리 조합)
+    public List<CommunityPost> searchPosts(String keyword, String category) {
+        if (category == null || category.equals("ALL") || category.isEmpty()) {
+            return communityPostRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByIsPinnedDescCreatedAtDesc(keyword, keyword);
+        }
+        return communityPostRepository.searchByCategoryAndKeyword(category, keyword);
+    }
+
     @Transactional
     public CommunityPost getPost(Long id) {
         CommunityPost post = communityPostRepository.findById(id)

@@ -5,13 +5,31 @@ import '../providers/community_provider.dart';
 import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
 
-class CommunityListScreen extends ConsumerWidget {
+class CommunityListScreen extends ConsumerStatefulWidget {
   final bool isAdminMode; // 💡 관리자 모드 플래그 추가
 
   const CommunityListScreen({super.key, this.isAdminMode = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommunityListScreen> createState() => _CommunityListScreenState();
+}
+
+class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // 💡 검색 실행 함수: 엔터키를 누르거나 돋보기 아이콘을 눌렀을 때 호출됩니다.
+  void _performSearch() {
+    ref.read(communitySearchKeywordProvider.notifier).updateKeyword(_searchController.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final postsAsync = ref.watch(communityPostsProvider);
     final selectedCategory = ref.watch(communityCategoryProvider);
     final selectedGrade = ref.watch(communityGradeProvider); // 💡 추가된 학년 상태
@@ -22,6 +40,58 @@ class CommunityListScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          // 💡 커뮤니티 검색 바 (Search Bar) UI
+          Container(
+            color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.1),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: (_) => _performSearch(), // 엔터키 입력 시 검색
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: '커뮤니티 제목이나 내용 검색...',
+                hintStyle: TextStyle(color: Colors.grey.shade500),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: Color(0xFF164687), width: 2),
+                ),
+                suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _searchController,
+                  builder: (context, value, child) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (value.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear_rounded, color: Colors.grey, size: 20),
+                            onPressed: () {
+                              _searchController.clear();
+                              _performSearch();
+                            },
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.search_rounded, color: Color(0xFF164687)),
+                          onPressed: _performSearch,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                prefixIcon: const Icon(Icons.article_outlined, color: Colors.grey),
+              ),
+            ),
+          ),
           // 💡 상단 (Grade Filter): 학년 필터링 칩
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -53,7 +123,7 @@ class CommunityListScreen extends ConsumerWidget {
             child: postsAsync.when(
               data: (allPosts) {
                 // 💡 관리자 모드가 아닐 때만 삭제된 게시글 숨김 처리
-                final posts = isAdminMode ? allPosts : allPosts.where((p) => !p.isDeleted).toList();
+                final posts = widget.isAdminMode ? allPosts : allPosts.where((p) => !p.isDeleted).toList();
 
                 // 💡 학년 필터링 추가 (전체이거나, 타겟 학년이 ALL이거나 일치하는 경우)
                 final filteredPosts = selectedGrade == 'ALL' 
@@ -61,7 +131,33 @@ class CommunityListScreen extends ConsumerWidget {
                     : posts.where((p) => p.targetGrade == 'ALL' || p.targetGrade == selectedGrade).toList();
 
                 if (filteredPosts.isEmpty) {
-                  return const Center(child: Text('게시글이 없습니다. 첫 글을 작성해보세요!'));
+                  // 검색 결과 없음 (Empty State) UI
+                  final keyword = ref.read(communitySearchKeywordProvider);
+                  final isSearch = keyword.isNotEmpty;
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      padding: const EdgeInsets.only(top: 80),
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(isSearch ? Icons.search_off_rounded : Icons.inbox_rounded, 
+                               size: 80, color: Colors.grey.shade300),
+                          const SizedBox(height: 24),
+                          Text(
+                            isSearch ? "'$keyword' 검색 결과가 없습니다." : '게시글이 없습니다. 첫 글을 작성해보세요!',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            isSearch ? '다른 키워드로 다시 검색해보세요.' : '새로운 게시글을 작성해보세요.',
+                            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(communityPostsProvider),

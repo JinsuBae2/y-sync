@@ -34,6 +34,17 @@ public class CommunityController {
         return ResponseEntity.ok(responses);
     }
 
+    // 💡 키워드 기반 게시글 검색 API (카테고리와 조합 가능)
+    @GetMapping("/search")
+    public ResponseEntity<List<CommunityResponse>> searchPosts(
+            @RequestParam String keyword,
+            @RequestParam(required = false) String category) {
+        List<CommunityResponse> responses = communityService.searchPosts(keyword, category).stream()
+                .map(CommunityResponse::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
     // 💡 게시글 단건 상세 조회
     @GetMapping("/{id}")
     public ResponseEntity<CommunityResponse> getPost(@PathVariable Long id) {

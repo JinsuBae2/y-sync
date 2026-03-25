@@ -17,6 +17,20 @@ final communityCategoryProvider = NotifierProvider<CommunityCategoryNotifier, St
   return CommunityCategoryNotifier();
 });
 
+// 💡 현재 검색어를 관리하는 Provider입니다.
+class CommunitySearchKeywordNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void updateKeyword(String keyword) {
+    state = keyword;
+  }
+}
+
+final communitySearchKeywordProvider = NotifierProvider<CommunitySearchKeywordNotifier, String>(() {
+  return CommunitySearchKeywordNotifier();
+});
+
 // 💡 현재 선택된 학년 탭을 관리합니다.
 class CommunityGradeNotifier extends Notifier<String> {
   @override
@@ -31,14 +45,25 @@ final communityGradeProvider = NotifierProvider<CommunityGradeNotifier, String>(
   return CommunityGradeNotifier();
 });
 
-// 💡 커뮤니티 게시글 목록을 가져오는 Provider입니다.
 final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
   final dio = ref.watch(dioProvider);
   final category = ref.watch(communityCategoryProvider);
+  final keyword = ref.watch(communitySearchKeywordProvider);
+  
+  String path = '/community';
+  Map<String, dynamic> queryParams = {};
+  
+  if (category != 'ALL') {
+    queryParams['category'] = category;
+  }
+  if (keyword.trim().isNotEmpty) {
+    path = '/community/search';
+    queryParams['keyword'] = keyword.trim();
+  }
   
   final response = await dio.get(
-    '/community', 
-    queryParameters: category == 'ALL' ? null : {'category': category}
+    path, 
+    queryParameters: queryParams.isEmpty ? null : queryParams
   );
   
   final List<dynamic> data = response.data;
