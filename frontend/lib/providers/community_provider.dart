@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import '../models/community_post.dart';
 import 'notice_provider.dart';
 
@@ -90,14 +92,40 @@ class CommunityNotifier {
     required String title,
     required String content,
     required bool anonymous,
+    required String targetGrade,
+    List<String>? imagePaths,
   }) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/community', data: {
-      'category': category,
-      'title': title,
-      'content': content,
-      'anonymous': anonymous,
-    });
+    
+    final formData = FormData();
+    
+    // JSON 데이터 파트 추가
+    formData.files.add(MapEntry(
+      'request',
+      MultipartFile.fromString(
+        jsonEncode({
+          'category': category,
+          'title': title,
+          'content': content,
+          'anonymous': anonymous,
+          'targetGrade': targetGrade,
+          'isPinned': false,
+        }),
+        contentType: MediaType('application', 'json'),
+      ),
+    ));
+
+    // 이미지 파일 파트 추가
+    if (imagePaths != null && imagePaths.isNotEmpty) {
+      for (String path in imagePaths) {
+        formData.files.add(MapEntry(
+          'images',
+          await MultipartFile.fromFile(path),
+        ));
+      }
+    }
+
+    await dio.post('/community', data: formData);
     ref.invalidate(communityPostsProvider);
   }
 

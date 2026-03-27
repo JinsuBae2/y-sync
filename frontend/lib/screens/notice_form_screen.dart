@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/notice.dart';
 import '../providers/notice_provider.dart';
 
@@ -16,7 +18,27 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
   String _noticeType = 'INTERNAL';
+  String _targetGrade = 'ALL';
   bool _isLoading = false;
+  List<XFile> _images = [];
+
+  // 💡 기기에서 이미지를 여러 장 선택하는 함수
+  Future<void> _pickImages() async {
+    final ImagePicker picker = ImagePicker();
+    final List<XFile> selectedImages = await picker.pickMultiImage();
+    if (selectedImages.isNotEmpty) {
+      setState(() {
+        _images.addAll(selectedImages);
+      });
+    }
+  }
+
+  // 💡 선택된 이미지 삭제 함수
+  void _removeImage(int index) {
+    setState(() {
+      _images.removeAt(index);
+    });
+  }
 
   @override
   void initState() {
@@ -26,6 +48,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     _contentController = TextEditingController(text: isEdit ? widget.notice!.content : '');
     if (isEdit) {
       _noticeType = widget.notice!.noticeType;
+      _targetGrade = widget.notice!.targetGrade;
     }
   }
 
@@ -51,15 +74,16 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
 
     try {
       final notifier = ref.read(noticeNotifierProvider);
+      final List<String> paths = _images.map((e) => e.path).toList();
       if (widget.notice == null) {
-        await notifier.createNotice(title, content, _noticeType);
+        await notifier.createNotice(title, content, _noticeType, targetGrade: _targetGrade, imagePaths: paths);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('공지사항이 등록되었습니다.')),
           );
         }
       } else {
-        await notifier.updateNotice(widget.notice!.id, title, content, _noticeType);
+        await notifier.updateNotice(widget.notice!.id, title, content, _noticeType, targetGrade: _targetGrade, imagePaths: paths);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('공지사항이 수정되었습니다.')),
@@ -89,6 +113,13 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? '공지사항 수정' : '새 공지사항 쓰기'),
+        actions: [
+          TextButton.icon(
+            onPressed: _isLoading ? null : _submit,
+            icon: const Icon(Icons.check, color: Color(0xFF164687)),
+            label: const Text('등록', style: TextStyle(color: Color(0xFF164687), fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -96,19 +127,10 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           children: [
             DropdownButtonFormField<String>(
               value: _noticeType,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '공지 타입', 
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               items: const [
                 DropdownMenuItem(value: 'INTERNAL', child: Text('일반 공지 (INTERNAL)')),
@@ -120,57 +142,149 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 }
               },
             ),
+            const Divider(color: Colors.black12, thickness: 1, height: 1),
             const SizedBox(height: 16),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: '제목', 
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+            // 💡 대상 학년 칩 필터
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('대상 학년 필터', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8.0,
+                  children: ['ALL', 'GRADE_1', 'GRADE_2', 'GRADE_3'].map((grade) {
+                    final Map<String, String> gradeLabels = {
+                      'ALL': '전체',
+                      'GRADE_1': '1학년',
+                      'GRADE_2': '2학년',
+                      'GRADE_3': '3학년',
+                    };
+                    final isSelected = _targetGrade == grade;
+                    return ChoiceChip(
+                      label: Text(gradeLabels[grade]!),
+                      selected: isSelected,
+                      selectedColor: const Color(0xFF164687),
+                      backgroundColor: Colors.grey.shade200,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      onSelected: (selected) {
+                        if (selected) setState(() => _targetGrade = grade);
+                      },
+                    );
+                  }).toList(),
                 ),
               ),
             ),
             const SizedBox(height: 16),
+            const Divider(color: Colors.black12, thickness: 1, height: 1),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(
+                labelText: '제목', 
+                hintText: '제목을 입력하세요',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+            ),
+            const Divider(color: Colors.black12, thickness: 1, height: 1),
             Expanded(
               child: TextField(
                 controller: _contentController,
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '내용',
+                  hintText: '내용을 입력하세요',
                   alignLabelWithHint: true,
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-                  ),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 ),
               ),
             ),
+            const Divider(color: Colors.black12, thickness: 1, height: 1),
+            const SizedBox(height: 16),
+            const SizedBox(height: 16),
+            // 💡 -------------------------
+            // 이미지 추가 버튼 및 가로 스크롤 미리보기 영역
+            Row(
+              children: [
+                IconButton(
+                  onPressed: _pickImages,
+                  icon: const Icon(Icons.camera_alt),
+                  color: const Color(0xFF164687), // 💡 테마 컬러 #164687
+                  iconSize: 32,
+                ),
+                const Text('사진 추가', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF164687))),
+              ],
+            ),
+            if (_images.isNotEmpty)
+              Container(
+                height: 100,
+                margin: const EdgeInsets.only(top: 10, bottom: 20),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _images.length,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                            image: DecorationImage(
+                              image: FileImage(File(_images[index].path)),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 16,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            // -------------------------
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 50,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF164687),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 onPressed: _isLoading ? null : _submit,
                 child: _isLoading 
-                    ? const CircularProgressIndicator()
-                    : Text(isEdit ? '수정하기' : '등록하기', style: const TextStyle(fontSize: 16)),
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(isEdit ? '수정하기' : '등록하기', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

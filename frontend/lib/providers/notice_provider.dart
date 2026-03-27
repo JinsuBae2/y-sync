@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import '../models/notice.dart';
 
 // Global variable to store session ID in memory
@@ -98,29 +100,71 @@ class NoticeNotifier {
     return Notice.fromJson(response.data);
   }
 
-  Future<void> createNotice(String title, String content, String noticeType) async {
+  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths}) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/admin/notices', data: {
-      'title': title,
-      'content': content,
-      'noticeType': noticeType,
-    });
+    final formData = FormData();
+    
+    formData.files.add(MapEntry(
+      'request',
+      MultipartFile.fromString(
+        jsonEncode({
+          'title': title,
+          'content': content,
+          'noticeType': noticeType,
+          'targetGrade': targetGrade,
+          'isPinned': false,
+        }),
+        contentType: MediaType('application', 'json'),
+      ),
+    ));
+
+    if (imagePaths != null && imagePaths.isNotEmpty) {
+      for (String path in imagePaths) {
+        formData.files.add(MapEntry(
+          'images',
+          await MultipartFile.fromFile(path),
+        ));
+      }
+    }
+
+    await dio.post('/notices', data: formData);
     ref.invalidate(noticesProvider);
   }
 
-  Future<void> updateNotice(int id, String title, String content, String noticeType) async {
+  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths}) async {
     final dio = ref.read(dioProvider);
-    await dio.put('/admin/notices/$id', data: {
-      'title': title,
-      'content': content,
-      'noticeType': noticeType,
-    });
+    final formData = FormData();
+    
+    formData.files.add(MapEntry(
+      'request',
+      MultipartFile.fromString(
+        jsonEncode({
+          'title': title,
+          'content': content,
+          'noticeType': noticeType,
+          'targetGrade': targetGrade,
+          'isPinned': false,
+        }),
+        contentType: MediaType('application', 'json'),
+      ),
+    ));
+
+    if (imagePaths != null && imagePaths.isNotEmpty) {
+      for (String path in imagePaths) {
+        formData.files.add(MapEntry(
+          'images',
+          await MultipartFile.fromFile(path),
+        ));
+      }
+    }
+
+    await dio.put('/notices/$id', data: formData);
     ref.invalidate(noticesProvider);
   }
 
   Future<void> deleteNotice(int id) async {
     final dio = ref.read(dioProvider);
-    await dio.delete('/admin/notices/$id');
+    await dio.delete('/notices/$id');
     ref.invalidate(noticesProvider);
   }
 }

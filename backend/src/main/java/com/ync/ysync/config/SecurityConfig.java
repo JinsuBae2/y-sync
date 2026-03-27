@@ -31,7 +31,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/**").permitAll()
-                .requestMatchers("/api/v1/hello", "/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/hello", "/api/v1/auth/**", "/uploads/**").permitAll()
                 .anyRequest().authenticated()
             );
 

@@ -58,6 +58,10 @@ public class Notice {
     @Column(nullable = false)
     private long commentCount = 0L;
 
+    // 💡 공지사항에 첨부된 이미지 목록 (1:N 양방향 매핑, 부모 엔티티 삭제시 고아 객체 함께 삭제)
+    @OneToMany(mappedBy = "notice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<NoticeImage> images = new java.util.ArrayList<>();
+
     public void incrementViewCount() {
         this.viewCount++;
     }

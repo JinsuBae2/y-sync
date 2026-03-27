@@ -15,6 +15,7 @@ class CommunityPost {
   final bool isPinned;
   final int viewCount;
   final int commentCount;
+  final List<String>? imageUrls; // 💡 이미지 URL 목록 추가
 
   CommunityPost({
     required this.id,
@@ -31,6 +32,7 @@ class CommunityPost {
     this.isPinned = false,
     this.viewCount = 0,
     this.commentCount = 0,
+    this.imageUrls,
   });
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class CommunityPost {
       isPinned: json['isPinned'] ?? false,
       viewCount: json['viewCount'] ?? 0,
       commentCount: json['commentCount'] ?? 0,
+      imageUrls: json['imageUrls'] != null ? List<String>.from(json['imageUrls']) : null,
     );
   }
 }

@@ -146,7 +146,49 @@ class CommunityDetailScreen extends ConsumerWidget {
                     post.content,
                     style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 24),
+                  if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
+                    ...post.imageUrls!.map((url) {
+                      final imageUrl = url.startsWith('/') 
+                          ? 'http://10.0.2.2:8080$url' 
+                          : url.replaceAll('localhost', '10.0.2.2');
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                width: double.infinity,
+                                height: 200,
+                                color: Colors.grey.shade100,
+                                child: const Center(child: CircularProgressIndicator()),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: double.infinity,
+                              height: 150,
+                              color: Colors.grey.shade100,
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                                  SizedBox(height: 8),
+                                  Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 24),
+                  ],
+                  const SizedBox(height: 24),
                   const Row(
                     children: [
                       Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.black54),

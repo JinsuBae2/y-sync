@@ -12,6 +12,7 @@ class Notice {
   final bool isPinned;
   final int viewCount;
   final int commentCount;
+  final List<String>? imageUrls; // 💡 이미지 URL 목록 추가
 
   Notice({
     required this.id,
@@ -26,6 +27,7 @@ class Notice {
     this.isPinned = false,
     this.viewCount = 0,
     this.commentCount = 0,
+    this.imageUrls,
   });
 
   factory Notice.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,7 @@ class Notice {
       isPinned: json['isPinned'] ?? false,
       viewCount: json['viewCount'] ?? 0,
       commentCount: json['commentCount'] ?? 0,
+      imageUrls: json['imageUrls'] != null ? List<String>.from(json['imageUrls']) : null,
     );
   }
 }

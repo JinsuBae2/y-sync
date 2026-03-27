@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize; // 💡 추가
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile; // 💡 추가
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -51,9 +52,12 @@ public class NoticeController {
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
-    @PostMapping
+    @PostMapping(consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
-    public ResponseEntity<?> createNotice(@RequestBody NoticeRequest request, HttpSession session) {
+    public ResponseEntity<?> createNotice(
+            @RequestPart("request") NoticeRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            HttpSession session) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
@@ -63,13 +67,17 @@ public class NoticeController {
             type = NoticeType.valueOf(request.getNoticeType());
         }
 
-        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId);
+        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId, images);
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
-    public ResponseEntity<?> updateNotice(@PathVariable Long id, @RequestBody NoticeRequest request, HttpSession session) {
+    public ResponseEntity<?> updateNotice(
+            @PathVariable Long id,
+            @RequestPart("request") NoticeRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            HttpSession session) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         String roleStr = (String) session.getAttribute("loginMemberRole");
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
@@ -80,7 +88,7 @@ public class NoticeController {
         }
 
         try {
-            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId, MemberRole.valueOf(roleStr));
+            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId, MemberRole.valueOf(roleStr), images);
             return ResponseEntity.ok(NoticeResponse.from(notice));
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("권한이 없습니다")) {

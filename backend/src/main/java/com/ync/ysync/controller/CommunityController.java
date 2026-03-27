@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -53,19 +54,23 @@ public class CommunityController {
     }
 
     // 💡 게시글 작성
-    @PostMapping
-    public ResponseEntity<?> createPost(@RequestBody CommunityRequest request, HttpSession session) {
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<?> createPost(
+            @RequestPart("request") CommunityRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            HttpSession session) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
-        CommunityPost post = communityService.createPost(
+        CommunityPost post = communityService.createPostWithImages(
                 request.getCategory(),
                 request.getTitle(),
                 request.getContent(),
                 request.isAnonymous(),
                 request.getTargetGrade(),
                 request.isPinned(),
-                memberId
+                memberId,
+                images
         );
         return ResponseEntity.ok(CommunityResponse.from(post));
     }
@@ -118,6 +123,7 @@ public class CommunityController {
         private boolean isPinned;
         private long viewCount;
         private long commentCount;
+        private List<String> imageUrls;
 
         public static CommunityResponse from(CommunityPost post) {
             return CommunityResponse.builder()
@@ -136,6 +142,7 @@ public class CommunityController {
                     .isPinned(post.isPinned())
                     .viewCount(post.getViewCount())
                     .commentCount(post.getCommentCount())
+                    .imageUrls(post.getImages().stream().map(com.ync.ysync.domain.PostImage::getImageUrl).collect(Collectors.toList()))
                     .build();
         }
     }

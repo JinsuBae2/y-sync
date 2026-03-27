@@ -4,12 +4,15 @@ import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
+import com.ync.ysync.domain.PostImage;
 import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -19,6 +22,7 @@ public class CommunityService {
 
     private final CommunityPostRepository communityPostRepository;
     private final MemberRepository memberRepository;
+    private final FileService fileService;
 
     // 💡 카테고리별 혹은 전체 목록 조회 (고정글 우선, 최신순 필터링)
     public List<CommunityPost> getPosts(String category) {
@@ -44,9 +48,9 @@ public class CommunityService {
         return post;
     }
 
-    // 💡 게시글 작성을 처리합니다.
+    // 💡 파일 이미지를 포함한 게시글 작성을 처리합니다.
     @Transactional
-    public CommunityPost createPost(String category, String title, String content, boolean anonymous, Grade targetGrade, boolean isPinned, Long memberId) {
+    public CommunityPost createPostWithImages(String category, String title, String content, boolean anonymous, Grade targetGrade, boolean isPinned, Long memberId, List<MultipartFile> images) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
@@ -59,6 +63,23 @@ public class CommunityService {
                 .targetGrade(targetGrade)
                 .isPinned(isPinned)
                 .build();
+
+        if (images != null && !images.isEmpty()) {
+            for (MultipartFile file : images) {
+                try {
+                    String fileUrl = fileService.uploadFile(file);
+                    if (fileUrl != null) {
+                        PostImage postImage = PostImage.builder()
+                                .imageUrl(fileUrl)
+                                .communityPost(post)
+                                .build();
+                        post.getImages().add(postImage);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.", e);
+                }
+            }
+        }
 
         return communityPostRepository.save(post);
     }

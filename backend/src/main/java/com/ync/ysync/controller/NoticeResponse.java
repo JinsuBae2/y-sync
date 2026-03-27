@@ -23,9 +23,10 @@ public class NoticeResponse {
     private boolean isPinned;
     private long viewCount;
     private long commentCount;
+    private java.util.List<String> imageUrls; // 💡 추가
 
     @Builder
-    public NoticeResponse(Long id, String title, String content, String authorName, String noticeType, LocalDateTime createdAt, LocalDateTime updatedAt, String targetGrade, boolean isPinned, long viewCount, long commentCount) {
+    public NoticeResponse(Long id, String title, String content, String authorName, String noticeType, LocalDateTime createdAt, LocalDateTime updatedAt, String targetGrade, boolean isPinned, long viewCount, long commentCount, java.util.List<String> imageUrls) {
         this.id = id;
         this.title = title;
         this.content = content;
@@ -37,6 +38,7 @@ public class NoticeResponse {
         this.isPinned = isPinned;
         this.viewCount = viewCount;
         this.commentCount = commentCount;
+        this.imageUrls = imageUrls;
     }
 
     public static NoticeResponse from(Notice notice) {
@@ -52,6 +54,7 @@ public class NoticeResponse {
                 .isPinned(notice.isPinned())
                 .viewCount(notice.getViewCount())
                 .commentCount(notice.getCommentCount())
+                .imageUrls(notice.getImages().stream().map(com.ync.ysync.domain.NoticeImage::getImageUrl).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 }
