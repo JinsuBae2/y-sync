@@ -74,6 +74,20 @@ public class MemberController {
         return ResponseEntity.ok("로그아웃 성공");
     }
 
+    // 💡 FCM 토큰을 저장하는 API 추가
+    @PostMapping("/fcm-token")
+    public ResponseEntity<String> updateFcmToken(
+            @RequestBody FCMTokenRequest request, 
+            @SessionAttribute(name = "loginMemberId", required = false) Long loginMemberId) {
+        
+        if (loginMemberId == null) {
+            return ResponseEntity.status(401).body("로그인이 필요합니다.");
+        }
+        memberService.updateFcmToken(loginMemberId, request.getFcmToken());
+        log.info("FCM 토큰 업데이트 완료 - MemberID: {}", loginMemberId);
+        return ResponseEntity.ok("FCM 토큰이 저장되었습니다.");
+    }
+
     @Data
     public static class SignupRequest {
         private String loginId;

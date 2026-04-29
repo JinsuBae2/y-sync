@@ -24,6 +24,7 @@ public class CommentService {
     private final NoticeRepository noticeRepository;
     private final CommunityPostRepository communityPostRepository;
     private final MemberRepository memberRepository;
+    private final FCMService fcmService; // 💡 FCM 추가
 
     public List<Comment> getCommentsByNoticeId(Long noticeId) {
         return commentRepository.findAllByNoticeIdOrderByCreatedAtAsc(noticeId);
@@ -51,8 +52,17 @@ public class CommentService {
                 .member(member)
                 .build();
 
-        notice.incrementCommentCount(); // 💡 댓글 수 증가
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+
+        // 💡 게시글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
+        if (notice.getAuthor().getFcmToken() != null && !notice.getAuthor().getId().equals(memberId)) {
+            java.util.Map<String, String> data = new java.util.HashMap<>();
+            data.put("targetType", "NOTICE");
+            data.put("targetId", String.valueOf(notice.getId()));
+            fcmService.sendNotificationToToken(notice.getAuthor().getFcmToken(), "내 작성글에 새로운 댓글", "방금 누군가 댓글을 남겼어요!", data);
+        }
+
+        return savedComment;
     }
 
     @Transactional
@@ -68,8 +78,17 @@ public class CommentService {
                 .member(member)
                 .build();
 
-        post.incrementCommentCount(); // 💡 댓글 수 증가
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+
+        // 💡 커뮤니티 글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
+        if (post.getMember().getFcmToken() != null && !post.getMember().getId().equals(memberId)) {
+            java.util.Map<String, String> data = new java.util.HashMap<>();
+            data.put("targetType", "COMMUNITY");
+            data.put("targetId", String.valueOf(post.getId()));
+            fcmService.sendNotificationToToken(post.getMember().getFcmToken(), "내 게시글에 새로운 댓글", "방금 누군가 댓글을 남겼어요!", data);
+        }
+
+        return savedComment;
     }
 
     @Transactional

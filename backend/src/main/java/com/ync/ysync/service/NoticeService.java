@@ -24,6 +24,7 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final MemberRepository memberRepository;
     private final FileService fileService; // 💡 추가
+    private final FCMService fcmService;   // 💡 FCM 추가
 
     // 전체 공지사항을 최신순으로 가져옵니다.
     public List<Notice> getAllNotices() {
@@ -78,8 +79,15 @@ public class NoticeService {
                 }
             }
         }
+        Notice savedNotice = noticeRepository.save(notice);
 
-        return noticeRepository.save(notice);
+        // 💡 모든 사용자에게 새 공지사항 작성 알림 발송 ('all' 토픽)
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        data.put("targetType", "NOTICE");
+        data.put("targetId", String.valueOf(savedNotice.getId()));
+        fcmService.sendNotificationToTopic("all", "[새 공지사항] " + title, "새로운 공지사항이 등록되었습니다.", data);
+
+        return savedNotice;
     }
 
     @Transactional

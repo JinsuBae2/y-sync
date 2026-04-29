@@ -35,6 +35,11 @@ public class Member {
     @Setter // 💡 권한 변경을 위해 세터 추가
     private MemberRole role;
 
+    // 💡 푸시 알림 전송을 위한 FCM 디바이스 토큰
+    @Setter
+    @Column(length = 500)
+    private String fcmToken;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

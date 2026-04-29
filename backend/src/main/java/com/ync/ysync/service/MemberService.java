@@ -48,4 +48,11 @@ public class MemberService {
         return memberRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
     }
+
+    // 💡 FCM 토큰 업데이트
+    @Transactional
+    public void updateFcmToken(Long memberId, String fcmToken) {
+        Member member = findById(memberId);
+        member.setFcmToken(fcmToken);
+    }
 }

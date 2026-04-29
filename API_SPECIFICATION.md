@@ -2,8 +2,9 @@
 
 ## 1. 문서 기본 정보
 - **프로젝트명**: Y-Sync (Yeungnam University College Sync)
-- **버전**: v1.2 (Search & Scrap Update)
+- **버전**: v1.3 (Image Upload & Target Grade Update)
 - **기본 URL**: `http://localhost:8080/api/v1` (개발 환경)
+- **정적 파일 제공 URL**: `http://localhost:8080/uploads/**` (업로드된 로컬 이미지 등 외부 서빙 용도)
 
 ### 공통 처리 (응답/에러 구조)
 모든 API 응답은 HTTP Status Code(200, 400, 401, 403, 500 등)와 함께 DTO 클래스 구조로 JSON을 직렬화하여 반환합니다. 클라이언트는 상태 코드를 확인하고 데이터를 파싱합니다. 에러 시엔 문자열 에러 메시지가 Body에 담겨 반환됩니다.
@@ -72,6 +73,10 @@
       "isPinned": false,
       "viewCount": 240,
       "commentCount": 3,
+      "imageUrls": [
+        "/uploads/abc-def.jpg",
+        "/uploads/123-456.png"
+      ],
       "createdAt": "2026-03-25T15:30:00.000",
       "updatedAt": "2026-03-25T15:35:00.000"
     }
@@ -84,16 +89,19 @@
   *(단일 공지사항 객체 반환. 위 목록과 동일한 JSON DTO 형식이며 `viewCount`가 1 상승합니다.)*
 
 #### 3. 공지 작성/수정 (`POST /admin/notices`, `PUT /admin/notices/{id}`) - **ADMIN / SUPER_ADMIN 전용**
-- **Request Body**
-  ```json
-  {
-    "title": "[안내] 도서관 연장 운영",
-    "content": "시험기간 도서관 운영시간을 연장합니다.",
-    "noticeType": "INTERNAL",
-    "targetGrade": "ALL",
-    "isPinned": true
-  }
-  ```
+- **Content-Type**: `multipart/form-data`
+- **Request Body (Parts)**:
+  - `request` (application/json):
+    ```json
+    {
+      "title": "[안내] 도서관 연장 운영",
+      "content": "시험기간 도서관 운영시간을 연장합니다.",
+      "noticeType": "INTERNAL",
+      "targetGrade": "ALL",
+      "isPinned": true
+    }
+    ```
+  - `images` (List<MultipartFile>): 파일 배열 (Optional)
 - **Response (200 OK)**
   *(저장 완료된 공지사항 DTO)*
 
@@ -110,16 +118,20 @@
   *(공지사항 배열과 거의 동일한 JSON DTO Array를 Response 함)*
 
 #### 2. 게시글 작성/수정 (`POST /community`, `PUT /community/{id}`)
-- **Request Body**
-  ```json
-  {
-    "title": "안드로이드 스튜디오 실행 오류 질문",
-    "content": "이 에러 어떻게 고치나요?",
-    "category": "QNA",
-    "targetGrade": "GRADE_1",
-    "isPinned": false
-  }
-  ```
+- **Content-Type**: `multipart/form-data`
+- **Request Body (Parts)**:
+  - `request` (application/json):
+    ```json
+    {
+      "title": "안드로이드 스튜디오 실행 오류 질문",
+      "content": "이 에러 어떻게 고치나요?",
+      "category": "QNA",
+      "targetGrade": "GRADE_1",
+      "anonymous": false,
+      "isPinned": false
+    }
+    ```
+  - `images` (List<MultipartFile>): 파일 배열 (Optional)
 - **Response (200 OK)**
   *(저장 완료된 커뮤니티 상세 DTO)*
 

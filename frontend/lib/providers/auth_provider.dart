@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import '../models/member.dart';
 import 'notice_provider.dart';
 
+import '../services/push_notification_service.dart'; // 💡 FCM 추가
+
 final authProvider = AsyncNotifierProvider<AuthNotifier, Member?>(() {
   return AuthNotifier();
 });
@@ -13,10 +15,26 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     return _checkLoginStatus();
   }
 
+  Future<void> _sendFcmToken(Dio dio) async {
+    try {
+      final token = await PushNotificationService().getToken();
+      if (token != null) {
+        await dio.post('/auth/fcm-token', data: {'fcmToken': token});
+        print('FCM Token sent successfully');
+      }
+    } catch (e) {
+      print('Failed to send FCM token to backend: $e');
+    }
+  }
+
   Future<Member?> _checkLoginStatus() async {
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.get('/members/me');
+      
+      // 💡 로그인 상태가 확인되면 FCM 토큰을 서버로 전송
+      await _sendFcmToken(dio);
+
       return Member.fromJson(response.data);
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) {

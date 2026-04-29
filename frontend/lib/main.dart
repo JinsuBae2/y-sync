@@ -1,10 +1,21 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_tab_screen.dart';
+import 'services/push_notification_service.dart'; // 💡 FCM 추가
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 💡 Firebase 환경 초기화 및 알림 서비스 실행
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await PushNotificationService().initialize();
+
   runApp(
     const ProviderScope(
       child: YSyncApp(),
@@ -20,6 +31,7 @@ class YSyncApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
+      navigatorKey: PushNotificationService.navigatorKey, // 💡 전역 라우팅을 위한 네비게이터 키 등록
       title: 'Y-Sync',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
