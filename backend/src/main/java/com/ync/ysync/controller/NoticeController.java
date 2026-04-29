@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize; // 💡 추가
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile; // 💡 추가
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,6 +53,7 @@ public class NoticeController {
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
+    @Operation(summary = "공지사항 생성 (이미지 업로드 지원)", description = "관리자가 새로운 공지사항을 생성합니다. 첨부 이미지가 있을 경우 다중 업로드(Multipart)를 지원하며 전체 사용자에게 알림이 발송됩니다.")
     @PostMapping(consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> createNotice(
@@ -71,6 +73,7 @@ public class NoticeController {
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
+    @Operation(summary = "공지사항 수정 (이미지 포함)", description = "관리자가 기존 공지사항을 수정합니다. 텍스트와 이미지 정보를 업데이트할 수 있습니다.")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> updateNotice(

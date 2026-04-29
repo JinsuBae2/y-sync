@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import io.swagger.v3.oas.annotations.Operation;
 
 @Slf4j
 @RestController
@@ -75,6 +76,7 @@ public class MemberController {
     }
 
     // 💡 FCM 토큰을 저장하는 API 추가
+    @Operation(summary = "기기 FCM 토큰 발급/수정", description = "프론트엔드에서 발급받은 푸시 알림용 디바이스 토큰(FCM)을 서버에 저장합니다.")
     @PostMapping("/fcm-token")
     public ResponseEntity<String> updateFcmToken(
             @RequestBody FCMTokenRequest request, 

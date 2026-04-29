@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,6 +55,7 @@ public class CommunityController {
     }
 
     // 💡 게시글 작성
+    @Operation(summary = "커뮤니티 게시글 생성 (이미지 업로드 지원)", description = "학생이 새로운 게시글을 작성합니다. 첨부 이미지가 있을 경우 다중 업로드(Multipart)를 지원합니다.")
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createPost(
             @RequestPart("request") CommunityRequest request,

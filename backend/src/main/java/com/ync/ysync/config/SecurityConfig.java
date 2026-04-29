@@ -31,7 +31,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/**").permitAll()
-                .requestMatchers("/api/v1/hello", "/api/v1/auth/**", "/uploads/**").permitAll()
+                .requestMatchers("/api/v1/hello", "/api/v1/auth/**", "/uploads/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             );
 
