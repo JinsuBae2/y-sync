@@ -101,7 +101,14 @@ final noticesProvider = FutureProvider<List<Notice>>((ref) async {
       
   final response = await dio.get(path);
   
-  final List<dynamic> data = response.data;
+  // 💡 백엔드 페이징 API 적용으로 인해, 전체 조회의 경우 Page<NoticeResponse> 형식(Map)으로 반환됩니다.
+  final List<dynamic> data;
+  if (keyword.trim().isEmpty) {
+    data = response.data['content'] as List<dynamic>;
+  } else {
+    data = response.data as List<dynamic>;
+  }
+  
   return data.map((json) => Notice.fromJson(json)).toList();
 });
 
