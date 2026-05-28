@@ -1,19 +1,58 @@
 version: '3.8'
 
 services:
-  mysql:
+  ysync-mysql:
     image: mysql:8.0
     container_name: ysync-mysql
     ports:
       - "3306:3306"
     environment:
       MYSQL_DATABASE: ysync_db
-      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-1234}
     volumes:
       - mysql-data:/var/lib/mysql
+    # 💡 1GB RAM 환경 맞춤 MySQL 메모리 극한 다이어트 설정
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --performance_schema=OFF           # 성능 스키마 비활성화 (약 150MB~200MB 메모리 즉시 절약)
+      - --innodb_buffer_pool_size=64M       # InnoDB 버퍼 풀을 64MB로 삭감 (기본 128MB)
+      - --innodb_log_buffer_size=8M         # 로그 버퍼 8MB로 제한
+      - --max_connections=30                # 최대 연결 수 30개로 제약 (세션당 오버헤드 억제)
+      - --key_buffer_size=8M                # MyISAM 인덱스 버퍼 8MB로 설정
+      - --thread_cache_size=4               # 스레드 캐시 크기 최적화
+    deploy:
+      resources:
+        limits:
+          memory: 350M                      # MySQL 컨테이너가 사용할 수 있는 최대 물리 메모리 강제 제한
+    networks:
+      - ysync-network
+
+  ysync-backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: ysync-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:mysql://ysync-mysql:3306/ysync_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - DB_USERNAME=root
+      - DB_PASSWORD=${DB_PASSWORD:-1234}
+      - JWT_SECRET=${JWT_SECRET:-YSyncSuperSecretKeyYSyncSuperSecretKeyYSyncSuperSecretKeyYSyncSuperSecretKey}
+    depends_on:
+      - ysync-mysql
+    deploy:
+      resources:
+        limits:
+          memory: 450M                      # 백엔드 컨테이너의 물리 메모리를 450MB로 강제 제한하여 OS 셧다운 방지
+    networks:
+      - ysync-network
 
 volumes:
   mysql-data:
+
+networks:
+  ysync-network:
+    driver: bridge
