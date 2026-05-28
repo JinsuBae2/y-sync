@@ -28,13 +28,18 @@ public class NoticeController {
     private final NoticeService noticeService;
     private final AuthUtil authUtil;
 
-    // 전체 공지사항 목록 조회
+    // 💡 전체 공지사항 목록 조회 (Pageable 기반 무한 스크롤 및 검색 조합 지원)
     @GetMapping
-    public ResponseEntity<List<NoticeResponse>> getNotices() {
-        List<NoticeResponse> responses = noticeService.getAllNotices().stream()
-                .map(NoticeResponse::from)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<org.springframework.data.domain.Page<NoticeResponse>> getNotices(
+            @RequestParam(required = false) String keyword,
+            org.springframework.data.domain.Pageable pageable) {
+        
+        org.springframework.data.domain.Page<Notice> noticePage = (keyword != null && !keyword.trim().isEmpty())
+                ? noticeService.searchNotices(keyword, pageable)
+                : noticeService.getAllNotices(pageable);
+                
+        org.springframework.data.domain.Page<NoticeResponse> responsePage = noticePage.map(NoticeResponse::from);
+        return ResponseEntity.ok(responsePage);
     }
 
     // 💡 키워드를 통한 공지사항 검색 (제목 또는 내용 매칭)
@@ -56,7 +61,7 @@ public class NoticeController {
 
     @Operation(summary = "공지사항 생성 (이미지 업로드 지원)", description = "관리자가 새로운 공지사항을 생성합니다. 첨부 이미지가 있을 경우 다중 업로드(Multipart)를 지원하며 전체 사용자에게 알림이 발송됩니다.")
     @PostMapping(consumes = {"multipart/form-data"})
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
+    @PreAuthorize("hasRole('ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> createNotice(
             @RequestPart("request") NoticeRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
@@ -75,7 +80,7 @@ public class NoticeController {
 
     @Operation(summary = "공지사항 수정 (이미지 포함)", description = "관리자가 기존 공지사항을 수정합니다. 텍스트와 이미지 정보를 업데이트할 수 있습니다.")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
+    @PreAuthorize("hasRole('ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> updateNotice(
             @PathVariable Long id,
             @RequestPart("request") NoticeRequest request,
@@ -101,7 +106,7 @@ public class NoticeController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
+    @PreAuthorize("hasRole('ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> deleteNotice(@PathVariable Long id) {
         Long memberId = authUtil.getLoginMemberId();
         String roleStr = authUtil.getLoginMemberRole();

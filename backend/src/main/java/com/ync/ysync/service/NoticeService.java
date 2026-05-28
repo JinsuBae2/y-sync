@@ -6,9 +6,11 @@ import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.domain.Notice;
 import com.ync.ysync.domain.NoticeType;
 import com.ync.ysync.domain.NoticeImage; // 💡 추가
+import com.ync.ysync.event.NoticeCreatedEvent;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile; // 💡 추가
@@ -24,11 +26,16 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final MemberRepository memberRepository;
     private final FileService fileService; // 💡 추가
-    private final FCMService fcmService;   // 💡 FCM 추가
+    private final ApplicationEventPublisher eventPublisher;
 
     // 전체 공지사항을 최신순으로 가져옵니다.
     public List<Notice> getAllNotices() {
         return noticeRepository.findAllByOrderByIsPinnedDescCreatedAtDesc();
+    }
+
+    // 💡 전체 공지사항을 페이징하여 가져옵니다.
+    public org.springframework.data.domain.Page<Notice> getAllNotices(org.springframework.data.domain.Pageable pageable) {
+        return noticeRepository.findAllByOrderByIsPinnedDescCreatedAtDesc(pageable);
     }
 
     // 💡 키워드를 이용해 공지사항의 제목이나 내용을 검색합니다.
@@ -38,6 +45,14 @@ public class NoticeService {
             return getAllNotices();
         }
         return noticeRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByIsPinnedDescCreatedAtDesc(keyword, keyword);
+    }
+
+    // 💡 키워드를 이용해 공지사항의 제목이나 내용을 페이징 검색합니다.
+    public org.springframework.data.domain.Page<Notice> searchNotices(String keyword, org.springframework.data.domain.Pageable pageable) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getAllNotices(pageable);
+        }
+        return noticeRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByIsPinnedDescCreatedAtDesc(keyword, keyword, pageable);
     }
 
 
@@ -81,11 +96,8 @@ public class NoticeService {
         }
         Notice savedNotice = noticeRepository.save(notice);
 
-        // 💡 모든 사용자에게 새 공지사항 작성 알림 발송 ('all' 토픽)
-        java.util.Map<String, String> data = new java.util.HashMap<>();
-        data.put("targetType", "NOTICE");
-        data.put("targetId", String.valueOf(savedNotice.getId()));
-        fcmService.sendNotificationToTopic("all", "[새 공지사항] " + title, "새로운 공지사항이 등록되었습니다.", data);
+        // 💡 비동기 이벤트를 발행하여 FCM 알림 발송 (Loose Coupling)
+        eventPublisher.publishEvent(new NoticeCreatedEvent(this, savedNotice));
 
         return savedNotice;
     }
