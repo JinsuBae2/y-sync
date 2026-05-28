@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/community_post.dart';
 import '../models/comment.dart';
 import '../providers/community_provider.dart';
+import '../providers/notice_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
 import '../widgets/deletion_reason_dialog.dart';
@@ -149,9 +150,10 @@ class CommunityDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
                     ...post.imageUrls!.map((url) {
+                      final cleanImageBase = imageBaseUrl.replaceAll('http://', '').replaceAll('https://', '');
                       final imageUrl = url.startsWith('/') 
-                          ? 'http://10.0.2.2:8080$url' 
-                          : url.replaceAll('localhost', '10.0.2.2');
+                          ? '$imageBaseUrl$url' 
+                          : url.replaceAll('localhost:8080', cleanImageBase).replaceAll('localhost', cleanImageBase);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: ClipRRect(

@@ -5,22 +5,17 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_tab_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart'; // 💡 FCM 추가
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 💡 Firebase 환경 초기화 및 알림 서비스 실행
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await PushNotificationService().initialize();
 
-  runApp(
-    const ProviderScope(
-      child: YSyncApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: YSyncApp()));
 }
 
 class YSyncApp extends ConsumerWidget {
@@ -31,7 +26,8 @@ class YSyncApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
-      navigatorKey: PushNotificationService.navigatorKey, // 💡 전역 라우팅을 위한 네비게이터 키 등록
+      navigatorKey:
+          PushNotificationService.navigatorKey, // 💡 전역 라우팅을 위한 네비게이터 키 등록
       title: 'Y-Sync',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -61,20 +57,7 @@ class YSyncApp extends ConsumerWidget {
           ),
         ),
       ),
-      home: authState.when(
-        data: (member) {
-          if (member == null) {
-            return const LoginScreen();
-          }
-          return const MainTabScreen();
-        },
-        loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-        error: (error, stack) => Scaffold(
-          body: Center(child: Text('에러가 발생했습니다:\n$error')),
-        ),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
