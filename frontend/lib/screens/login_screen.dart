@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'splash_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +17,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _showLocalLogin = false;
 
   Future<void> _login() async {
     final loginId = _loginIdController.text.trim();
@@ -25,29 +29,214 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref.read(authProvider.notifier).login(loginId, password);
-    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.error_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Text('아이디 또는 비밀번호를 다시 확인해주세요.', style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            backgroundColor: Colors.redAccent.shade400,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const SplashScreen()),
         );
       }
+    } catch (e) {
+      _showErrorSnackBar('아이디 또는 비밀번호를 다시 확인해주세요.');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _loginWithKakao() async {
+    try {
+      setState(() => _isLoading = true);
+      OAuthToken token;
+      if (await isKakaoTalkInstalled()) {
+        try {
+          token = await UserApi.instance.loginWithKakaoTalk();
+        } catch (error) {
+          token = await UserApi.instance.loginWithKakaoAccount();
+        }
+      } else {
+        token = await UserApi.instance.loginWithKakaoAccount();
+      }
+      
+      await _handleSocialLoginResult(token.accessToken, 'KAKAO');
+    } catch (e) {
+      _showErrorSnackBar('카카오 로그인에 실패했습니다.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    try {
+      setState(() => _isLoading = true);
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // User canceled
+      
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String token = googleAuth.idToken ?? googleAuth.accessToken ?? '';
+      if (token.isEmpty) throw Exception('No Token');
+      
+      await _handleSocialLoginResult(token, 'GOOGLE');
+    } catch (e) {
+      _showErrorSnackBar('구글 로그인에 실패했습니다.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleSocialLoginResult(String accessToken, String provider) async {
+    try {
+      final result = await ref.read(authProvider.notifier).socialLogin(accessToken, provider);
+      if (result != null) {
+        // 202 Accepted: 미가입자, 추가 정보 입력 필요
+        if (mounted) {
+          _showSocialSignupBottomSheet(result['socialId'], result['provider']);
+        }
+      } else {
+        if (mounted) {
+          Navigator.of(this.context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const SplashScreen()),
+          );
+        }
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  void _showSocialSignupBottomSheet(String socialId, String provider) {
+    final studentIdController = TextEditingController();
+    final nameController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool isSubmitting = false;
+    bool requirePassword = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24, right: 24, top: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '${provider == "KAKAO" ? "카카오" : "구글"} 계정 연결',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    requirePassword ? '본인 확인을 위해 기존 계정의 비밀번호를 입력해주세요.' : 'Y-Sync 서비스 이용을 위해 학번과 이름을 입력해주세요.', 
+                    style: TextStyle(color: requirePassword ? Colors.redAccent : Colors.grey)
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: studentIdController,
+                    enabled: !requirePassword,
+                    decoration: InputDecoration(
+                      labelText: '학번',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    enabled: !requirePassword,
+                    decoration: InputDecoration(
+                      labelText: '이름',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  if (requirePassword) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: '비밀번호',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: isSubmitting ? null : () async {
+                      if (studentIdController.text.isEmpty || nameController.text.isEmpty) return;
+                      if (requirePassword && passwordController.text.isEmpty) return;
+                      
+                      final navigator = Navigator.of(context);
+                      final parentNavigator = Navigator.of(this.context);
+                      
+                      setSheetState(() => isSubmitting = true);
+                      try {
+                        await ref.read(authProvider.notifier).socialSignup(
+                          studentIdController.text.trim(),
+                          nameController.text.trim(),
+                          socialId,
+                          provider,
+                          password: requirePassword ? passwordController.text : null,
+                        );
+                        if (mounted) {
+                          navigator.pop(); // close bottom sheet
+                          parentNavigator.pushReplacement(
+                            MaterialPageRoute(builder: (_) => const SplashScreen()),
+                          );
+                        }
+                      } catch (e) {
+                        if (e.toString().contains('REQUIRE_PASSWORD')) {
+                          setSheetState(() => requirePassword = true);
+                        } else {
+                          String errorMsg = e.toString().replaceAll('Exception: ', '');
+                          if (errorMsg == 'Exception') errorMsg = '가입 처리 중 오류가 발생했습니다.';
+                          _showErrorSnackBar(errorMsg);
+                        }
+                      } finally {
+                        setSheetState(() => isSubmitting = false);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isSubmitting 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('가입 완료 및 로그인', style: TextStyle(fontSize: 16)),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          }
+        );
+      }
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(message, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        backgroundColor: Colors.redAccent.shade400,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
   }
 
   @override
@@ -69,7 +258,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -101,71 +290,157 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '영남이공대 소프트웨어융합과 전용 커뮤니티',
+                      '영남이공대 소프트웨어융합과 커뮤니티',
                       style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
+
+                    // Social Login Buttons
+                    _buildSocialButton(
+                      iconPath: 'assets/images/kakao_logo.png', // 카카오 로고가 필요함 (없으면 기본 아이콘 표시)
+                      label: '카카오로 시작하기',
+                      color: const Color(0xFFFEE500),
+                      textColor: Colors.black87,
+                      onPressed: _loginWithKakao,
+                      iconFallback: Icons.chat_bubble_rounded,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSocialButton(
+                      iconPath: 'assets/images/google_logo.png',
+                      label: '구글로 시작하기',
+                      color: Colors.white,
+                      textColor: Colors.black87,
+                      borderColor: Colors.grey.shade300,
+                      onPressed: _loginWithGoogle,
+                      iconFallback: Icons.g_mobiledata_rounded,
+                    ),
                     
-                    // Input Area
-                    _buildInputField(
-                      controller: _loginIdController,
-                      label: '아이디',
-                      hint: '학번을 입력해주세요',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildInputField(
-                      controller: _passwordController,
-                      label: '비밀번호',
-                      hint: '비밀번호를 입력해주세요',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                    ),
                     const SizedBox(height: 32),
                     
-                    // Button Area
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.secondary, // Amber
-                          foregroundColor: Colors.black87,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    // Local Login Toggle
+                    InkWell(
+                      onTap: () => setState(() => _showLocalLogin = !_showLocalLogin),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '일반 학번으로 로그인',
+                              style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                            ),
+                            Icon(_showLocalLogin ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                          ],
                         ),
-                        onPressed: _isLoading ? null : _login,
-                        child: _isLoading 
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87)) 
-                            : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('계정이 없으신가요?', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const SignupScreen()),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.primary,
-                            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          child: const Text('회원가입하기'),
-                        ),
-                      ],
+                    
+                    // Collapsible Local Login Area
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      height: _showLocalLogin ? null : 0,
+                      curve: Curves.easeInOut,
+                      child: ClipRect(
+                        child: _showLocalLogin ? Column(
+                          children: [
+                            const SizedBox(height: 16),
+                            _buildInputField(
+                              controller: _loginIdController,
+                              label: '아이디',
+                              hint: '학번을 입력해주세요',
+                              icon: Icons.person_outline,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildInputField(
+                              controller: _passwordController,
+                              label: '비밀번호',
+                              hint: '비밀번호를 입력해주세요',
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                ),
+                                onPressed: _isLoading ? null : _login,
+                                child: _isLoading 
+                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                                    : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('계정이 없으신가요?', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Theme.of(context).colorScheme.primary,
+                                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  child: const Text('회원가입하기'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ) : const SizedBox(),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required String iconPath,
+    required String label,
+    required Color color,
+    required Color textColor,
+    Color? borderColor,
+    required VoidCallback onPressed,
+    required IconData iconFallback,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: borderColor != null ? BorderSide(color: borderColor) : BorderSide.none,
+          ),
+        ),
+        onPressed: _isLoading ? null : onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 실제 로고 이미지가 없을 수 있으므로 대비책 사용
+            Icon(iconFallback, color: textColor, size: 24),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+          ],
         ),
       ),
     );

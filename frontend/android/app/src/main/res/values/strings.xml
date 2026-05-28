@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 여기에 카카오 네이티브 앱 키 앞 부분에 'kakao'를 붙여서 넣어주세요. (예: kakao123456789abcdefg) -->
+    <string name="kakao_scheme">kakao45ffef17dd96803ad2eeab4174ad197b</string>
+</resources>

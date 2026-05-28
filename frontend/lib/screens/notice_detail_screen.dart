@@ -123,9 +123,10 @@ class NoticeDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   if (notice.imageUrls != null && notice.imageUrls!.isNotEmpty) ...[
                     ...notice.imageUrls!.map((url) {
+                      final cleanImageBase = imageBaseUrl.replaceAll('http://', '').replaceAll('https://', '');
                       final imageUrl = url.startsWith('/') 
-                          ? 'http://10.0.2.2:8080$url' 
-                          : url.replaceAll('localhost', '10.0.2.2');
+                          ? '$imageBaseUrl$url' 
+                          : url.replaceAll('localhost:8080', cleanImageBase).replaceAll('localhost', cleanImageBase);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: ClipRRect(

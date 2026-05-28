@@ -8,13 +8,12 @@ import '../models/my_comment.dart';
 import '../models/notice.dart';
 import 'community_detail_screen.dart';
 import 'notice_detail_screen.dart';
-import '../providers/admin_provider.dart'; // 💡 추가
 import '../providers/admin_provider.dart';
-import '../models/admin_request.dart';
 import 'notice_form_screen.dart';
 import 'community_list_screen.dart';
 import 'scrap_list_screen.dart'; // 💡 추가
 import '../providers/community_provider.dart'; // 💡 추가
+import 'auth_settings_screen.dart';
 
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
@@ -414,6 +413,23 @@ class MyPageScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(
+                Icons.security_rounded,
+                color: Colors.blueGrey,
+              ),
+              title: const Text(
+                '보안 및 간편 로그인',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AuthSettingsScreen()),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(
                 Icons.logout_rounded,

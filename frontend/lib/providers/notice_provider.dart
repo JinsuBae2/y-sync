@@ -3,41 +3,56 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/notice.dart';
+import '../services/push_notification_service.dart';
+import '../screens/login_screen.dart';
 
-// Global variable to store session ID in memory
-String? _sessionId;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+// Secure storage instance
+final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
+
+const String apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://10.0.2.2:8080/api/v1',
+);
+
+const String imageBaseUrl = String.fromEnvironment(
+  'IMAGE_BASE_URL',
+  defaultValue: 'http://10.0.2.2:8080',
+);
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
-    // Android Emulator: 10.0.2.2, iOS/Web: localhost
-    baseUrl: 'http://10.0.2.2:8080/api/v1',
-    // Enable sending cookies (JSESSIONID) for cross-origin requests on Web
-    extra: {'withCredentials': true},
+    baseUrl: apiBaseUrl,
   ));
 
   dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (options, handler) {
-      if (_sessionId != null) {
-        options.headers['Cookie'] = 'JSESSIONID=$_sessionId';
+    onRequest: (options, handler) async {
+      // 💡 매 요청마다 SecureStorage에서 JWT 토큰을 읽어와 Authorization 헤더에 추가합니다.
+      final storage = ref.read(secureStorageProvider);
+      final token = await storage.read(key: 'jwt_token');
+      
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
       }
       return handler.next(options);
     },
     onResponse: (response, handler) {
-      final cookies = response.headers['set-cookie'];
-      if (cookies != null) {
-        for (var cookie in cookies) {
-          if (cookie.contains('JSESSIONID=')) {
-            final parts = cookie.split(';');
-            for (var part in parts) {
-              if (part.trim().startsWith('JSESSIONID=')) {
-                _sessionId = part.trim().substring('JSESSIONID='.length);
-                break;
-              }
-            }
-          }
-        }
-      }
       return handler.next(response);
+    },
+    onError: (DioException e, handler) async {
+      if (e.response?.statusCode == 401) {
+        // 💡 401 Unauthorized 발생 시 좀비 토큰일 수 있으므로 로컬 세션(토큰) 삭제 및 강제 로그인 창 이동
+        final storage = ref.read(secureStorageProvider);
+        await storage.delete(key: 'jwt_token');
+        
+        // 순환 참조(Circular Dependency) 방지를 위해 authProvider 대신 전역 네비게이터를 사용합니다.
+        PushNotificationService.navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+      return handler.next(e);
     },
   ));
 
