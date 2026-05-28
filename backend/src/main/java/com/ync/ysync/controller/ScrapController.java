@@ -2,7 +2,7 @@ package com.ync.ysync.controller;
 
 import com.ync.ysync.domain.TargetType;
 import com.ync.ysync.service.ScrapService;
-import jakarta.servlet.http.HttpSession;
+import com.ync.ysync.config.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +16,15 @@ import java.util.List;
 public class ScrapController {
 
     private final ScrapService scrapService;
+    private final AuthUtil authUtil; // 💡 추가
 
     // 💡 스크랩 토글 (추가/삭제) API
     @PostMapping
     public ResponseEntity<?> toggleScrap(
             @RequestParam TargetType targetType,
-            @RequestParam Long targetId,
-            HttpSession session) {
+            @RequestParam Long targetId) { // 💡 AuthUtil 파라미터 제거
         
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
@@ -39,8 +39,8 @@ public class ScrapController {
 
     // 💡 내 스크랩 목록 조회 API
     @GetMapping
-    public ResponseEntity<?> getMyScraps(HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+    public ResponseEntity<?> getMyScraps() { // 💡 AuthUtil 파라미터 제거
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }

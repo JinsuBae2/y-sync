@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByLoginId(String loginId);
+    Optional<Member> findBySocialIdAndProvider(String socialId, com.ync.ysync.domain.AuthProvider provider);
 }

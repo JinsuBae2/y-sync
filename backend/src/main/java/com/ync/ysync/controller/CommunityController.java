@@ -4,7 +4,7 @@ import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.service.CommunityService;
-import jakarta.servlet.http.HttpSession;
+import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class CommunityController {
 
     private final CommunityService communityService;
+    private final AuthUtil authUtil;
 
     // 💡 게시글 목록 조회 (카테고리 필터링 포함)
     @GetMapping
@@ -59,9 +60,8 @@ public class CommunityController {
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createPost(
             @RequestPart("request") CommunityRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         CommunityPost post = communityService.createPostWithImages(
@@ -79,9 +79,9 @@ public class CommunityController {
 
     // 💡 게시글 삭제
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePost(@PathVariable Long id, HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
-        String roleStr = (String) session.getAttribute("loginMemberRole");
+    public ResponseEntity<?> deletePost(@PathVariable Long id) {
+        Long memberId = authUtil.getLoginMemberId();
+        String roleStr = authUtil.getLoginMemberRole();
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         try {

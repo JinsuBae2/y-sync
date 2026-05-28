@@ -7,7 +7,7 @@ import com.ync.ysync.repository.CommentRepository;
 import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository; // 💡 추가
-import jakarta.servlet.http.HttpSession;
+import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +26,11 @@ public class MemberProfileController {
     private final CommunityPostRepository communityPostRepository;
     private final CommentRepository commentRepository;
     private final NoticeRepository noticeRepository;
+    private final AuthUtil authUtil;
 
     @GetMapping("/me")
-    public ResponseEntity<MemberResponse> getMyProfile(HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+    public ResponseEntity<MemberResponse> getMyProfile() {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         return memberRepository.findById(memberId)
@@ -39,8 +40,8 @@ public class MemberProfileController {
 
     // 💡 내가 작성한 커뮤니티 게시글 목록 조회
     @GetMapping("/me/posts")
-    public ResponseEntity<List<CommunityController.CommunityResponse>> getMyPosts(HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+    public ResponseEntity<List<CommunityController.CommunityResponse>> getMyPosts() {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         List<CommunityController.CommunityResponse> responses = communityPostRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId).stream()
@@ -51,8 +52,8 @@ public class MemberProfileController {
 
     // 💡 내가 작성한 공지사항 목록 조회 (관리자 전용)
     @GetMapping("/me/notices")
-    public ResponseEntity<List<NoticeResponse>> getMyNotices(HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+    public ResponseEntity<List<NoticeResponse>> getMyNotices() {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         List<NoticeResponse> responses = noticeRepository.findAllByAuthorIdOrderByIsPinnedDescCreatedAtDesc(memberId).stream()
@@ -65,8 +66,8 @@ public class MemberProfileController {
 
     // 💡 내가 작성한 댓글 목록 조회 (대상 게시물 정보 포함)
     @GetMapping("/me/comments")
-    public ResponseEntity<List<MyCommentResponse>> getMyComments(HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+    public ResponseEntity<List<MyCommentResponse>> getMyComments() {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         List<MyCommentResponse> responses = commentRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId).stream()

@@ -3,7 +3,7 @@ package com.ync.ysync.controller;
 import com.ync.ysync.domain.Comment;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.service.CommentService;
-import jakarta.servlet.http.HttpSession;
+import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class CommentController {
 
     private final CommentService commentService;
+    private final AuthUtil authUtil;
 
     // 공지사항 별 댓글 조회
     @GetMapping("/notices/{noticeId}/comments")
@@ -44,10 +45,9 @@ public class CommentController {
     @PostMapping("/notices/{noticeId}/comments")
     public ResponseEntity<?> createComment(
             @PathVariable Long noticeId,
-            @RequestBody CommentRequest request,
-            HttpSession session) {
+            @RequestBody CommentRequest request) {
         
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         // 빈 내용 검증
@@ -63,10 +63,9 @@ public class CommentController {
     @PostMapping("/community/{postId}/comments")
     public ResponseEntity<?> createCommunityComment(
             @PathVariable Long postId,
-            @RequestBody CommentRequest request,
-            HttpSession session) {
+            @RequestBody CommentRequest request) {
         
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         // 빈 내용 검증
@@ -80,9 +79,9 @@ public class CommentController {
 
     // 댓글 삭제
     @DeleteMapping("/comments/{commentId}")
-    public ResponseEntity<?> deleteComment(@PathVariable Long commentId, HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
-        String roleStr = (String) session.getAttribute("loginMemberRole");
+    public ResponseEntity<?> deleteComment(@PathVariable Long commentId) {
+        Long memberId = authUtil.getLoginMemberId();
+        String roleStr = authUtil.getLoginMemberRole();
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         try {

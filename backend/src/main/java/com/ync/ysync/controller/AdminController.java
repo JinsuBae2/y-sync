@@ -11,7 +11,7 @@ import com.ync.ysync.domain.Comment;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.domain.Notice;
 import com.ync.ysync.repository.NoticeRepository;
-import jakarta.servlet.http.HttpSession;
+import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder; // 💡 추가
 import lombok.Data;
@@ -35,11 +35,12 @@ public class AdminController {
     private final CommunityPostRepository communityPostRepository;
     private final NoticeRepository noticeRepository;
     private final CommentRepository commentRepository;
+    private final AuthUtil authUtil;
 
     // 💡 관리자 권한 신청 (일반 유저용)
     @PostMapping("/requests")
-    public ResponseEntity<?> requestAdmin(@RequestBody AdminRequestDto.Create requestDto, HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+    public ResponseEntity<?> requestAdmin(@RequestBody AdminRequestDto.Create requestDto) {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         // 중복 신청 확인 (PENDING 상태가 있으면 추가 신청 불가)

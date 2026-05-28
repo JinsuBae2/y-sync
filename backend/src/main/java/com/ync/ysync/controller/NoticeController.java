@@ -5,7 +5,7 @@ import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.domain.Notice;
 import com.ync.ysync.domain.NoticeType;
 import com.ync.ysync.service.NoticeService;
-import jakarta.servlet.http.HttpSession;
+import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class NoticeController {
 
     private final NoticeService noticeService;
+    private final AuthUtil authUtil;
 
     // 전체 공지사항 목록 조회
     @GetMapping
@@ -58,9 +59,8 @@ public class NoticeController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> createNotice(
             @RequestPart("request") NoticeRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         // 기본적으로 INTERNAL, 프론트에서 넘어오면 해당 값 사용 가능 (추가 확장)
@@ -79,10 +79,9 @@ public class NoticeController {
     public ResponseEntity<?> updateNotice(
             @PathVariable Long id,
             @RequestPart("request") NoticeRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
-        String roleStr = (String) session.getAttribute("loginMemberRole");
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        Long memberId = authUtil.getLoginMemberId();
+        String roleStr = authUtil.getLoginMemberRole();
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         NoticeType type = NoticeType.INTERNAL;
@@ -103,9 +102,9 @@ public class NoticeController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 관리자 전용
-    public ResponseEntity<?> deleteNotice(@PathVariable Long id, HttpSession session) {
-        Long memberId = (Long) session.getAttribute("loginMemberId");
-        String roleStr = (String) session.getAttribute("loginMemberRole");
+    public ResponseEntity<?> deleteNotice(@PathVariable Long id) {
+        Long memberId = authUtil.getLoginMemberId();
+        String roleStr = authUtil.getLoginMemberRole();
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         try {
