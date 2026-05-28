@@ -270,28 +270,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // 로고 및 타이틀 Area
+                    // 💡 로고 및 타이틀 Area - 소프트웨어융합과 정체성 반영
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.primary.withBlue(180),
+                          ],
+                        ),
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
                       ),
-                      child: Icon(Icons.sync_rounded, size: 48, color: Theme.of(context).colorScheme.primary),
+                      child: const Icon(Icons.sync_rounded, size: 52, color: Colors.white),
                     ),
                     const SizedBox(height: 24),
+                    const Text(
+                      '영남이공대 소프트웨어융합과',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       'Y-Sync',
                       style: TextStyle(
-                        fontSize: 32, 
+                        fontSize: 38, 
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -1.0,
+                        letterSpacing: -1.5,
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '영남이공대 소프트웨어융합과 커뮤니티',
-                      style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
+                    Text(
+                      '학과 정보와 일상을 연결하는 우리들만의 동기화',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
@@ -426,20 +449,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: textColor,
-          elevation: 0,
+          elevation: color == Colors.white ? 1 : 0,
+          shadowColor: Colors.black.withOpacity(0.15),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: borderColor != null ? BorderSide(color: borderColor) : BorderSide.none,
+            borderRadius: BorderRadius.circular(16),
+            side: borderColor != null ? BorderSide(color: borderColor, width: 1.2) : BorderSide.none,
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
         ),
         onPressed: _isLoading ? null : onPressed,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 실제 로고 이미지가 없을 수 있으므로 대비책 사용
-            Icon(iconFallback, color: textColor, size: 24),
+            Icon(iconFallback, color: textColor, size: 22),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+                color: textColor,
+              ),
+            ),
           ],
         ),
       ),

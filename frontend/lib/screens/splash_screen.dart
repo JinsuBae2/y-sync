@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../models/member.dart';
 import 'login_screen.dart';
 import 'main_tab_screen.dart';
+import 'pin_setup_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -36,6 +37,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     final useBiometric = await _storage.read(key: 'use_biometric') == 'true';
     final userPin = await _storage.read(key: 'user_pin');
+    final hasSeenPinSetup = await _storage.read(key: 'has_seen_pin_setup') == 'true';
 
     if (useBiometric) {
       bool authenticated = false;
@@ -65,7 +67,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       _promptPin(userPin);
     } else {
       _isLocalAuthPassed = true;
-      _proceedToMain();
+      if (!hasSeenPinSetup && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const PinSetupScreen()),
+        );
+      } else {
+        _proceedToMain();
+      }
     }
   }
 
