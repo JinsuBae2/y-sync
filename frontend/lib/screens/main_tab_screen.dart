@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'notice_list_screen.dart';
 import 'community_list_screen.dart';
+import 'schedule_tab_screen.dart'; // 💡 신규 추가
 import 'mypage_screen.dart'; // 💡 추가
 import '../providers/auth_provider.dart';
 
@@ -20,6 +21,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
   final List<Widget> _screens = [
     const NoticeListScreen(),
     const CommunityListScreen(),
+    const ScheduleTabScreen(), // 💡 신규 추가
     const MyPageScreen(), // 💡 추가
   ];
 
@@ -59,6 +61,11 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
               icon: Icon(Icons.forum_outlined),
               activeIcon: Icon(Icons.forum),
               label: '커뮤니티',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month_outlined),
+              activeIcon: Icon(Icons.calendar_month),
+              label: '일정',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline_rounded),

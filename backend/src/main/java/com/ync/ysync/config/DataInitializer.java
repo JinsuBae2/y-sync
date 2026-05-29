@@ -25,6 +25,8 @@ public class DataInitializer implements CommandLineRunner {
     private final NoticeRepository noticeRepository;
     private final CommunityPostRepository communityPostRepository;
     private final CommentRepository commentRepository;
+    private final CalendarEventRepository calendarEventRepository;
+    private final TimetableEntryRepository timetableEntryRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -62,6 +64,8 @@ public class DataInitializer implements CommandLineRunner {
                     .author(admin)
                     .noticeType(NoticeType.OFFICIAL)
                     .aiSummary("6월 중순 캡스톤 디자인 발표 및 보고서 제출 사전 안내입니다.")
+                    .eventStartDate(java.time.LocalDate.of(2026, 6, 15))
+                    .eventEndDate(java.time.LocalDate.of(2026, 6, 15))
                     .build());
             
             notices.add(Notice.builder()
@@ -86,6 +90,8 @@ public class DataInitializer implements CommandLineRunner {
                     .author(admin)
                     .noticeType(NoticeType.INTERNAL)
                     .aiSummary("하계 방학 자바 및 코틀린 실무 특강 참여 학생 선착순 모집 안내입니다.")
+                    .eventStartDate(java.time.LocalDate.of(2026, 7, 1))
+                    .eventEndDate(java.time.LocalDate.of(2026, 7, 5))
                     .build());
 
             notices.add(Notice.builder()
@@ -94,6 +100,8 @@ public class DataInitializer implements CommandLineRunner {
                     .author(admin)
                     .noticeType(NoticeType.INTERNAL)
                     .aiSummary("타 대학 연합 해커톤 개최 소식 및 참가자 모집 안내입니다.")
+                    .eventStartDate(java.time.LocalDate.of(2026, 8, 10))
+                    .eventEndDate(java.time.LocalDate.of(2026, 8, 12))
                     .build());
 
             noticeRepository.saveAll(notices);
@@ -120,6 +128,65 @@ public class DataInitializer implements CommandLineRunner {
             comments.add(Comment.builder().content("정문 앞에 '영남식당' 국밥 진짜 맛있어요.").communityPost(posts.get(4)).member(admin).build());
             
             commentRepository.saveAll(comments);
+
+            // --- 5. CalendarEvent(학사 일정) 생성 ---
+            List<CalendarEvent> events = new ArrayList<>();
+            events.add(CalendarEvent.builder()
+                    .title("1학기 중간고사")
+                    .description("중간고사 시험 기간입니다. 학생분들은 실습 과목 일정을 확인하세요.")
+                    .startDate(java.time.LocalDate.of(2026, 4, 20))
+                    .endDate(java.time.LocalDate.of(2026, 4, 24))
+                    .color("#FF5733")
+                    .build());
+            events.add(CalendarEvent.builder()
+                    .title("개교기념일")
+                    .description("휴강일입니다.")
+                    .startDate(java.time.LocalDate.of(2026, 5, 15))
+                    .endDate(java.time.LocalDate.of(2026, 5, 15))
+                    .color("#8E44AD")
+                    .build());
+            calendarEventRepository.saveAll(events);
+
+            // --- 6. TimetableEntry(과 시간표) 생성 ---
+            List<TimetableEntry> timetables = new ArrayList<>();
+            timetables.add(TimetableEntry.builder()
+                    .grade(Grade.GRADE_1)
+                    .dayOfWeek(java.time.DayOfWeek.MONDAY)
+                    .subjectName("모바일 앱 개발")
+                    .professorName("김철수 교수")
+                    .classroom("정보관 303호")
+                    .startPeriod(1)
+                    .endPeriod(2)
+                    .build());
+            timetables.add(TimetableEntry.builder()
+                    .grade(Grade.GRADE_1)
+                    .dayOfWeek(java.time.DayOfWeek.MONDAY)
+                    .subjectName("데이터베이스 실무")
+                    .professorName("이영희 교수")
+                    .classroom("정보관 304호")
+                    .startPeriod(3)
+                    .endPeriod(4)
+                    .build());
+            timetables.add(TimetableEntry.builder()
+                    .grade(Grade.GRADE_1)
+                    .dayOfWeek(java.time.DayOfWeek.TUESDAY)
+                    .subjectName("서버 프레임워크")
+                    .professorName("박민수 교수")
+                    .classroom("정보관 401호")
+                    .startPeriod(5)
+                    .endPeriod(6)
+                    .build());
+            timetables.add(TimetableEntry.builder()
+                    .grade(Grade.GRADE_2)
+                    .dayOfWeek(java.time.DayOfWeek.MONDAY)
+                    .subjectName("캡스톤 디자인")
+                    .professorName("배진수 교수")
+                    .classroom("정보관 402호")
+                    .startPeriod(3)
+                    .endPeriod(4)
+                    .build());
+
+            timetableEntryRepository.saveAll(timetables);
 
             log.info("✅ 초기 데이터 생성이 완료되었습니다!");
         }

@@ -58,6 +58,10 @@ public class Notice {
     @Column(nullable = false)
     private long commentCount = 0L;
 
+    private java.time.LocalDate eventStartDate;
+
+    private java.time.LocalDate eventEndDate;
+
     // 💡 공지사항에 첨부된 이미지 목록 (1:N 양방향 매핑, 부모 엔티티 삭제시 고아 객체 함께 삭제)
     @OneToMany(mappedBy = "notice", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<NoticeImage> images = new java.util.ArrayList<>();
@@ -77,7 +81,7 @@ public class Notice {
     }
 
     @Builder
-    public Notice(String title, String content, Member author, NoticeType noticeType, String aiSummary, Grade targetGrade, boolean isPinned) {
+    public Notice(String title, String content, Member author, NoticeType noticeType, String aiSummary, Grade targetGrade, boolean isPinned, java.time.LocalDate eventStartDate, java.time.LocalDate eventEndDate) {
         this.title = title;
         this.content = content;
         this.author = author;
@@ -85,13 +89,17 @@ public class Notice {
         this.aiSummary = aiSummary;
         this.targetGrade = targetGrade != null ? targetGrade : Grade.ALL;
         this.isPinned = isPinned;
+        this.eventStartDate = eventStartDate;
+        this.eventEndDate = eventEndDate;
     }
 
-    public void update(String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned) {
+    public void update(String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, java.time.LocalDate eventStartDate, java.time.LocalDate eventEndDate) {
         this.title = title;
         this.content = content;
         this.noticeType = noticeType;
         if (targetGrade != null) this.targetGrade = targetGrade;
         this.isPinned = isPinned;
+        this.eventStartDate = eventStartDate;
+        this.eventEndDate = eventEndDate;
     }
 }

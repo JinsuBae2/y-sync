@@ -13,6 +13,8 @@ class Notice {
   final int viewCount;
   final int commentCount;
   final List<String>? imageUrls; // 💡 이미지 URL 목록 추가
+  final String? eventStartDate;
+  final String? eventEndDate;
 
   Notice({
     required this.id,
@@ -28,6 +30,8 @@ class Notice {
     this.viewCount = 0,
     this.commentCount = 0,
     this.imageUrls,
+    this.eventStartDate,
+    this.eventEndDate,
   });
 
   factory Notice.fromJson(Map<String, dynamic> json) {
@@ -45,6 +49,8 @@ class Notice {
       viewCount: json['viewCount'] ?? 0,
       commentCount: json['commentCount'] ?? 0,
       imageUrls: json['imageUrls'] != null ? List<String>.from(json['imageUrls']) : null,
+      eventStartDate: json['eventStartDate'],
+      eventEndDate: json['eventEndDate'],
     );
   }
 }

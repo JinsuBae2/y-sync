@@ -74,7 +74,7 @@ public class NoticeController {
             type = NoticeType.valueOf(request.getNoticeType());
         }
 
-        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId, images);
+        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), request.getEventStartDate(), request.getEventEndDate(), memberId, images);
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
@@ -95,7 +95,7 @@ public class NoticeController {
         }
 
         try {
-            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), memberId, MemberRole.valueOf(roleStr), images);
+            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), request.getEventStartDate(), request.getEventEndDate(), memberId, MemberRole.valueOf(roleStr), images);
             return ResponseEntity.ok(NoticeResponse.from(notice));
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("권한이 없습니다")) {
@@ -132,5 +132,7 @@ public class NoticeController {
         private String noticeType; // Optional, can be null
         private Grade targetGrade;
         private boolean isPinned;
+        private java.time.LocalDate eventStartDate;
+        private java.time.LocalDate eventEndDate;
     }
 }

@@ -123,7 +123,7 @@ class NoticeNotifier {
     return Notice.fromJson(response.data);
   }
 
-  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths}) async {
+  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths, String? eventStartDate, String? eventEndDate}) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
     
@@ -136,6 +136,8 @@ class NoticeNotifier {
           'noticeType': noticeType,
           'targetGrade': targetGrade,
           'isPinned': false,
+          'eventStartDate': eventStartDate,
+          'eventEndDate': eventEndDate,
         }),
         contentType: MediaType('application', 'json'),
       ),
@@ -154,7 +156,7 @@ class NoticeNotifier {
     ref.invalidate(noticesProvider);
   }
 
-  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths}) async {
+  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths, String? eventStartDate, String? eventEndDate}) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
     
@@ -167,6 +169,8 @@ class NoticeNotifier {
           'noticeType': noticeType,
           'targetGrade': targetGrade,
           'isPinned': false,
+          'eventStartDate': eventStartDate,
+          'eventEndDate': eventEndDate,
         }),
         contentType: MediaType('application', 'json'),
       ),

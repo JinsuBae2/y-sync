@@ -65,7 +65,7 @@ public class NoticeService {
     }
 
     @Transactional
-    public Notice createNotice(String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, Long memberId, List<MultipartFile> images) {
+    public Notice createNotice(String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, java.time.LocalDate eventStartDate, java.time.LocalDate eventEndDate, Long memberId, List<MultipartFile> images) {
         Member author = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
@@ -76,6 +76,8 @@ public class NoticeService {
                 .noticeType(noticeType)
                 .targetGrade(targetGrade)
                 .isPinned(isPinned)
+                .eventStartDate(eventStartDate)
+                .eventEndDate(eventEndDate)
                 .build();
 
         if (images != null && !images.isEmpty()) {
@@ -103,11 +105,11 @@ public class NoticeService {
     }
 
     @Transactional
-    public Notice updateNotice(Long id, String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, Long memberId, MemberRole role, List<MultipartFile> images) {
+    public Notice updateNotice(Long id, String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, java.time.LocalDate eventStartDate, java.time.LocalDate eventEndDate, Long memberId, MemberRole role, List<MultipartFile> images) {
         Notice notice = getNotice(id);
         validateAuthorOrAdmin(notice, memberId, role);
         
-        notice.update(title, content, noticeType, targetGrade, isPinned);
+        notice.update(title, content, noticeType, targetGrade, isPinned, eventStartDate, eventEndDate);
         
         // 💡 새 이미지가 전달된 경우 기존 이미지를 초기화 후 추가 (심플 로직)
         if (images != null && !images.isEmpty()) {
