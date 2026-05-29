@@ -16,6 +16,8 @@ class AcademicCalendarView extends ConsumerStatefulWidget {
 }
 
 class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
+  double _horizontalRatio = 0.55; // PC/Web 가로 분할 비율 (55%가 캘린더)
+  double _verticalRatio = 0.50;   // 모바일 세로 분할 비율 (50%가 캘린더)
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -44,6 +46,189 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     }).toList();
   }
 
+  // 💡 달력 카드 뷰 추출
+  Widget _buildCalendarCard({
+    required double rowHeight,
+    required double daysOfWeekHeight,
+    required List<CalendarEvent> allEvents,
+    required ThemeData theme,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TableCalendar(
+        firstDay: DateTime.utc(2025, 1, 1),
+        lastDay: DateTime.utc(2030, 12, 31),
+        focusedDay: _focusedDay,
+        calendarFormat: _calendarFormat,
+        rowHeight: rowHeight,
+        daysOfWeekHeight: daysOfWeekHeight,
+        locale: 'ko_KR', // 💡 한국어 로캘 지정
+        headerStyle: const HeaderStyle(
+          formatButtonVisible: false,
+          titleCentered: true,
+          titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        calendarStyle: CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.2),
+            shape: BoxShape.circle,
+          ),
+          todayTextStyle: TextStyle(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+        ),
+        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+        onDaySelected: (selectedDay, focusedDay) {
+          setState(() {
+            _selectedDay = selectedDay;
+            _focusedDay = focusedDay;
+          });
+        },
+        onPageChanged: (focusedDay) {
+          ref.read(selectedMonthProvider.notifier).updateMonth(focusedDay);
+          setState(() {
+            _focusedDay = focusedDay;
+          });
+        },
+        eventLoader: (day) => _getEventsForDay(day, allEvents),
+        calendarBuilders: CalendarBuilders(
+          // 💡 날짜 하단에 동그란 일정 색상 마커 렌더링
+          markerBuilder: (context, day, events) {
+            if (events.isEmpty) return null;
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: events.take(4).map((event) {
+                final ev = event as CalendarEvent;
+                Color markerColor = theme.colorScheme.primary;
+                try {
+                  markerColor = Color(int.parse(ev.color.replaceFirst('#', '0xff')));
+                } catch (_) {}
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 1.0),
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: markerColor,
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // 💡 일정 목록 리스트 뷰 추출
+  Widget _buildEventList({
+    required List<CalendarEvent> selectedDayEvents,
+    required bool isAdmin,
+    required ThemeData theme,
+  }) {
+    return selectedDayEvents.isEmpty
+        ? const Center(
+            child: Text(
+              '등록된 일정이 없습니다.',
+              style: TextStyle(color: Colors.grey, fontSize: 15),
+            ),
+          )
+        : ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            itemCount: selectedDayEvents.length,
+            itemBuilder: (context, index) {
+              final event = selectedDayEvents[index];
+              final isNoticeLink = event.type == 'NOTICE';
+              Color eventColor = theme.colorScheme.primary;
+              try {
+                eventColor = Color(int.parse(event.color.replaceFirst('#', '0xff')));
+              } catch (_) {}
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border(
+                    left: BorderSide(color: eventColor, width: 5),
+                  ),
+                ),
+                child: ListTile(
+                  title: Text(
+                    event.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (event.description != null && event.description!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 4),
+                          child: Text(
+                            event.description!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                          ),
+                        ),
+                      Text(
+                        '기간: ${event.startDate} ~ ${event.endDate}',
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  trailing: isNoticeLink
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '공지연동',
+                            style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      : (isAdmin
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
+                                  onPressed: () => _showAddEditEventDialog(event: event),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                  onPressed: () => _confirmDelete(event.id),
+                                ),
+                              ],
+                            )
+                          : null),
+                  onTap: isNoticeLink && event.noticeId != null
+                      ? () => _navigateToNoticeDetail(event.noticeId!)
+                      : null,
+                ),
+              );
+            },
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -60,178 +245,120 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         data: (allEvents) {
           final selectedDayEvents = _getEventsForDay(_selectedDay ?? _focusedDay, allEvents);
 
-          return Column(
-            children: [
-              // 💡 달력 카드 영역 (글래스모피즘 분위기의 카드형 테두리 적용)
-              Container(
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 768) {
+                // 💻 PC/Web Layout: Horizontal split with vertical drag divider
+                final totalWidth = constraints.maxWidth;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left panel: Calendar Card
+                    SizedBox(
+                      width: totalWidth * _horizontalRatio,
+                      child: SingleChildScrollView(
+                        child: _buildCalendarCard(
+                          rowHeight: 48.0,
+                          daysOfWeekHeight: 28.0,
+                          allEvents: allEvents,
+                          theme: theme,
+                        ),
+                      ),
+                    ),
+                    // Resizable divider handle
+                    GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onHorizontalDragUpdate: (details) {
+                        setState(() {
+                          _horizontalRatio += details.delta.dx / totalWidth;
+                          _horizontalRatio = _horizontalRatio.clamp(0.35, 0.70);
+                        });
+                      },
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.resizeLeftRight,
+                        child: Container(
+                          width: 10,
+                          color: Colors.grey.shade100,
+                          child: Center(
+                            child: Container(
+                              width: 3,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade400,
+                                borderRadius: BorderRadius.circular(1.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Right panel: Event List
+                    Expanded(
+                      child: _buildEventList(
+                        selectedDayEvents: selectedDayEvents,
+                        isAdmin: isAdmin,
+                        theme: theme,
+                      ),
                     ),
                   ],
-                ),
-                child: TableCalendar(
-                  firstDay: DateTime.utc(2025, 1, 1),
-                  lastDay: DateTime.utc(2030, 12, 31),
-                  focusedDay: _focusedDay,
-                  calendarFormat: _calendarFormat,
-                  locale: 'ko_KR', // 💡 한국어 로캘 지정
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                    titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  calendarStyle: CalendarStyle(
-                    todayDecoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    todayTextStyle: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    selectedDecoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                  onDaySelected: (selectedDay, focusedDay) {
-                    setState(() {
-                      _selectedDay = selectedDay;
-                      _focusedDay = focusedDay;
-                    });
-                  },
-                  onPageChanged: (focusedDay) {
-                    ref.read(selectedMonthProvider.notifier).updateMonth(focusedDay);
-                    setState(() {
-                      _focusedDay = focusedDay;
-                    });
-                  },
-                  eventLoader: (day) => _getEventsForDay(day, allEvents),
-                  calendarBuilders: CalendarBuilders(
-                    // 💡 날짜 하단에 동그란 일정 색상 마커 렌더링
-                    markerBuilder: (context, day, events) {
-                      if (events.isEmpty) return null;
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: events.take(4).map((event) {
-                          final ev = event as CalendarEvent;
-                          Color markerColor = theme.colorScheme.primary;
-                          try {
-                            markerColor = Color(int.parse(ev.color.replaceFirst('#', '0xff')));
-                          } catch (_) {}
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 1.0),
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: markerColor,
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              // 💡 선택 날짜의 일정 목록 리스트 뷰
-              Expanded(
-                child: selectedDayEvents.isEmpty
-                    ? const Center(
-                        child: Text(
-                          '등록된 일정이 없습니다.',
-                          style: TextStyle(color: Colors.grey, fontSize: 15),
+                );
+              } else {
+                // 📱 Mobile Layout: Vertical split with horizontal drag divider
+                final totalHeight = constraints.maxHeight;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Top panel: Calendar Card
+                    SizedBox(
+                      height: totalHeight * _verticalRatio,
+                      child: SingleChildScrollView(
+                        child: _buildCalendarCard(
+                          rowHeight: 40.0, // More compact on mobile
+                          daysOfWeekHeight: 24.0,
+                          allEvents: allEvents,
+                          theme: theme,
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        itemCount: selectedDayEvents.length,
-                        itemBuilder: (context, index) {
-                          final event = selectedDayEvents[index];
-                          final isNoticeLink = event.type == 'NOTICE';
-                          Color eventColor = theme.colorScheme.primary;
-                          try {
-                            eventColor = Color(int.parse(event.color.replaceFirst('#', '0xff')));
-                          } catch (_) {}
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border(
-                                left: BorderSide(color: eventColor, width: 5),
-                              ),
-                            ),
-                            child: ListTile(
-                              title: Text(
-                                event.title,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (event.description != null && event.description!.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4, bottom: 4),
-                                      child: Text(
-                                        event.description!,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                                      ),
-                                    ),
-                                  Text(
-                                    '기간: ${event.startDate} ~ ${event.endDate}',
-                                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                              trailing: isNoticeLink
-                                  ? Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.shade100,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Text(
-                                        '공지연동',
-                                        style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                    )
-                                  : (isAdmin
-                                      ? Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
-                                              onPressed: () => _showAddEditEventDialog(event: event),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                                              onPressed: () => _confirmDelete(event.id),
-                                            ),
-                                          ],
-                                        )
-                                      : null),
-                              onTap: isNoticeLink && event.noticeId != null
-                                  ? () => _navigateToNoticeDetail(event.noticeId!)
-                                  : null,
-                            ),
-                          );
-                        },
                       ),
-              ),
-            ],
+                    ),
+                    // Resizable divider handle
+                    GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onVerticalDragUpdate: (details) {
+                        setState(() {
+                          _verticalRatio += details.delta.dy / totalHeight;
+                          _verticalRatio = _verticalRatio.clamp(0.30, 0.65);
+                        });
+                      },
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.resizeUpDown,
+                        child: Container(
+                          height: 12,
+                          color: Colors.grey.shade100,
+                          child: Center(
+                            child: Container(
+                              width: 45,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade400,
+                                borderRadius: BorderRadius.circular(1.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Bottom panel: Event List
+                    Expanded(
+                      child: _buildEventList(
+                        selectedDayEvents: selectedDayEvents,
+                        isAdmin: isAdmin,
+                        theme: theme,
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
           );
         },
       ),
