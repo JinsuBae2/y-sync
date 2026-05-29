@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
@@ -66,7 +67,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _loginWithGoogle() async {
     try {
       setState(() => _isLoading = true);
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignIn googleSignIn = kIsWeb
+          ? GoogleSignIn(clientId: '286554208893-9glm4n7ul7qo21lin4k8eesfnpku81ah.apps.googleusercontent.com')
+          : GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return; // User canceled
       
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -75,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       await _handleSocialLoginResult(token, 'GOOGLE');
     } catch (e) {
+      print('Google Login Error: $e');
       _showErrorSnackBar('구글 로그인에 실패했습니다.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
