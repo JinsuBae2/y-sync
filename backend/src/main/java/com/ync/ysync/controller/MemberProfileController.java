@@ -8,12 +8,15 @@ import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository; // 💡 추가
 import com.ync.ysync.config.AuthUtil;
+import com.ync.ysync.service.MemberService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,6 +29,7 @@ public class MemberProfileController {
     private final CommunityPostRepository communityPostRepository;
     private final CommentRepository commentRepository;
     private final NoticeRepository noticeRepository;
+    private final MemberService memberService;
     private final AuthUtil authUtil;
 
     @GetMapping("/me")
@@ -34,8 +38,34 @@ public class MemberProfileController {
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         return memberRepository.findById(memberId)
-                .map(member -> ResponseEntity.ok(new MemberResponse(member.getId(), member.getLoginId(), member.getName(), member.getRole().name())))
+                .map(member -> ResponseEntity.ok(new MemberResponse(
+                        member.getId(),
+                        member.getLoginId(),
+                        member.getName(),
+                        member.getRole().name(),
+                        member.isNoticeEnabled(),
+                        member.isCommentEnabled()
+                )))
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @GetMapping("/settings")
+    public ResponseEntity<SettingsResponse> getSettings() {
+        Long memberId = authUtil.getLoginMemberId();
+        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        return memberRepository.findById(memberId)
+                .map(member -> ResponseEntity.ok(new SettingsResponse(member.isNoticeEnabled(), member.isCommentEnabled())))
+                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    @PutMapping("/settings")
+    public ResponseEntity<SettingsResponse> updateSettings(@RequestBody SettingsRequest request) {
+        Long memberId = authUtil.getLoginMemberId();
+        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        memberService.updateNotificationSettings(memberId, request.isNoticeEnabled(), request.isCommentEnabled());
+        return ResponseEntity.ok(new SettingsResponse(request.isNoticeEnabled(), request.isCommentEnabled()));
     }
 
     // 💡 내가 작성한 커뮤니티 게시글 목록 조회
@@ -108,6 +138,21 @@ public class MemberProfileController {
         private String loginId;
         private String name;
         private String role;
+        private boolean noticeEnabled;
+        private boolean commentEnabled;
+    }
+
+    @Data
+    public static class SettingsRequest {
+        private boolean noticeEnabled;
+        private boolean commentEnabled;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class SettingsResponse {
+        private boolean noticeEnabled;
+        private boolean commentEnabled;
     }
 
     @Data

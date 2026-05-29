@@ -55,7 +55,7 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         // 💡 게시글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
-        if (notice.getAuthor().getFcmToken() != null && !notice.getAuthor().getId().equals(memberId)) {
+        if (notice.getAuthor().getFcmToken() != null && !notice.getAuthor().getId().equals(memberId) && notice.getAuthor().isCommentEnabled()) {
             java.util.Map<String, String> data = new java.util.HashMap<>();
             data.put("targetType", "NOTICE");
             data.put("targetId", String.valueOf(notice.getId()));
@@ -81,7 +81,7 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         // 💡 커뮤니티 글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
-        if (post.getMember().getFcmToken() != null && !post.getMember().getId().equals(memberId)) {
+        if (post.getMember().getFcmToken() != null && !post.getMember().getId().equals(memberId) && post.getMember().isCommentEnabled()) {
             java.util.Map<String, String> data = new java.util.HashMap<>();
             data.put("targetType", "COMMUNITY");
             data.put("targetId", String.valueOf(post.getId()));

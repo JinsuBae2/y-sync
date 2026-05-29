@@ -57,6 +57,14 @@ public class Member {
     @Column(length = 500)
     private String fcmToken;
 
+    @Setter
+    @Column(nullable = false)
+    private boolean noticeEnabled = true;
+
+    @Setter
+    @Column(nullable = false)
+    private boolean commentEnabled = true;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -70,5 +78,7 @@ public class Member {
         this.provider = provider != null ? provider : AuthProvider.LOCAL;
         this.socialId = socialId;
         this.authType = authType != null ? authType : AuthType.PASSWORD;
+        this.noticeEnabled = true;
+        this.commentEnabled = true;
     }
 }

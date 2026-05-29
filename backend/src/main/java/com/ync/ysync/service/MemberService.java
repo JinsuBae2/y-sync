@@ -98,4 +98,12 @@ public class MemberService {
         Member member = findById(memberId);
         member.setFcmToken(fcmToken);
     }
+
+    // 💡 알림 설정 업데이트
+    @Transactional
+    public void updateNotificationSettings(Long memberId, boolean noticeEnabled, boolean commentEnabled) {
+        Member member = findById(memberId);
+        member.setNoticeEnabled(noticeEnabled);
+        member.setCommentEnabled(commentEnabled);
+    }
 }

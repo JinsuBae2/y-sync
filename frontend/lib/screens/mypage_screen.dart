@@ -14,6 +14,7 @@ import 'community_list_screen.dart';
 import 'scrap_list_screen.dart'; // 💡 추가
 import '../providers/community_provider.dart'; // 💡 추가
 import 'auth_settings_screen.dart';
+import 'notification_settings_screen.dart';
 
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
@@ -427,6 +428,23 @@ class MyPageScreen extends ConsumerWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AuthSettingsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.notifications_active_rounded,
+                color: Colors.orangeAccent,
+              ),
+              title: const Text(
+                '알림 설정',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
                 );
               },
             ),
