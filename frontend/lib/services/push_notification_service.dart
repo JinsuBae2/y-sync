@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 
+import 'package:flutter/foundation.dart';
 import '../screens/deep_link_loading_screen.dart'; // 💡 딥링크 라우팅용
 
 // 💡 백그라운드에서 메시지를 수신했을 때 호출되는 전역 콜백 (반드시 최상단 포지션으로!)
@@ -25,6 +26,12 @@ class PushNotificationService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   Future<void> initialize() async {
+    // 💡 웹 환경(Web)인 경우 FCM 초기화 로직을 건너뜁니다.
+    if (kIsWeb) {
+      print('FCM 웹 환경에서 알림 초기화를 건너뜁니다.');
+      return;
+    }
+
     // 1. 초기 권한 요청 (iOS, Android 13+)
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
@@ -141,6 +148,15 @@ class PushNotificationService {
 
   // 백엔드로 전달하기 위한 토큰 발급
   Future<String?> getToken() async {
-    return await _fcm.getToken();
+    if (kIsWeb) {
+      print('FCM 웹 환경이므로 토큰 발급을 건너뜁니다.');
+      return null;
+    }
+    try {
+      return await _fcm.getToken();
+    } catch (e) {
+      print('FCM 토큰 발급 실패: $e');
+      return null;
+    }
   }
 }
