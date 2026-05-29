@@ -68,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       setState(() => _isLoading = true);
       final GoogleSignIn googleSignIn = kIsWeb
-          ? GoogleSignIn(clientId: '448944199319-bif1628d14hfrufcmsind6h6guaatrc.apps.googleusercontent.com')
+          ? GoogleSignIn(clientId: '286554208893-9glm4n7ul7qo21lin4k8eesfnpku81ah.apps.googleusercontent.com')
           : GoogleSignIn();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return; // User canceled
