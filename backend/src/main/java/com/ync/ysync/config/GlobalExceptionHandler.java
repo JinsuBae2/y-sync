@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleAllException(Exception e) {
         log.error("🔥 예상치 못한 시스템 내부 오류 발생: ", e);
         Map<String, String> response = new HashMap<>();
-        response.put("message", "서버 내부 오류가 발생했습니다. 관리자에게 문의해 주세요.");
+        response.put("message", "서버 오류: " + e.getClass().getName() + " - " + e.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }
