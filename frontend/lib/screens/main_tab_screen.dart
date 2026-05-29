@@ -16,6 +16,19 @@ class MainTabScreen extends ConsumerStatefulWidget {
 
 class _MainTabScreenState extends ConsumerState<MainTabScreen> {
   int _currentIndex = 0;
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   // 💡 각 탭에 해당하는 화면 리스트
   final List<Widget> _screens = [
@@ -28,8 +41,13 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
         children: _screens,
       ),
       bottomNavigationBar: Container(
@@ -44,7 +62,16 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+            _pageController.animateToPage(
+              index,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+            );
+          },
           selectedItemColor: Theme.of(context).colorScheme.primary,
           unselectedItemColor: Colors.grey,
           showUnselectedLabels: true,
