@@ -187,12 +187,12 @@ class PushNotificationService {
         // 아래 키 값은 파이어베이스 콘솔의 '웹 푸시 인증서(Web Push certificates)' 키 쌍 값입니다.
         const String vapidKey = String.fromEnvironment(
           'FCM_VAPID_KEY',
-          defaultValue: 'BIdyG-X-1F2tGypk8zC0D9N6o5B3c-5B1a0x_b5v9zD-4vA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z_aBcDeFgHiJkLmNoP', // 임시 플레이스홀더
+          defaultValue: 'BCLfIOmGAfT_qvHfk5hNp7PvFcucikSfAbiqg2qlPkJqizxTy0oZ7AJ1ZIpQuKD6vSuDaOiJUPHuNJBauhL2VCk', // 사용자 파이어베이스 VAPID Key 반영
         );
         
-        // VAPID 키가 비어있거나 플레이스홀더 기본값인 경우
-        if (vapidKey.isEmpty || vapidKey.startsWith('BIdyG-X-')) {
-          print('FCM 웹 VAPID Key가 기본값이거나 비어있어, 웹 브라우저 토큰 요청을 건너뜁니다.');
+        // VAPID 키가 비어있는 경우
+        if (vapidKey.isEmpty) {
+          print('FCM 웹 VAPID Key가 비어있어, 웹 브라우저 토큰 요청을 건너뜁니다.');
           return null;
         }
         
