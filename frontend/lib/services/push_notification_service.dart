@@ -38,7 +38,9 @@ class PushNotificationService {
     }
 
     // 2. 백그라운드 메시지 수신 등록
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    }
 
     // 3. 로컬 알림 초기화 설정 (Web이 아닐 때만)
     if (!kIsWeb) {
