@@ -27,6 +27,14 @@ public class SecurityConfig {
     }
 
     @Bean
+    public org.springframework.security.access.hierarchicalroles.RoleHierarchy roleHierarchy() {
+        return org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl.withDefaultRolePrefix()
+            .role("SUPER_ADMIN").implies("ADMIN")
+            .role("ADMIN").implies("USER")
+            .build();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
