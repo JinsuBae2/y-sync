@@ -12,30 +12,137 @@ class SignupScreen extends ConsumerStatefulWidget {
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordConfirmController = TextEditingController();
   final _nameController = TextEditingController();
+  
   bool _isLoading = false;
+  bool _isIdChecked = false;
+  bool _isIdDuplicate = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loginIdController.addListener(() {
+      if (_isIdChecked) {
+        setState(() {
+          _isIdChecked = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _loginIdController.dispose();
+    _passwordController.dispose();
+    _passwordConfirmController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _showWarningSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+        ),
+        backgroundColor: Colors.orange.shade800,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+        ),
+        backgroundColor: Colors.redAccent.shade400,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
+  }
+
+  Future<void> _checkDuplicateId() async {
+    final loginId = _loginIdController.text.trim();
+    if (loginId.isEmpty) {
+      _showWarningSnackBar('아이디를 입력해주세요.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final isDuplicate = await ref.read(authProvider.notifier).checkDuplicate(loginId);
+      setState(() {
+        _isIdChecked = true;
+        _isIdDuplicate = isDuplicate;
+      });
+      if (isDuplicate) {
+        _showErrorSnackBar('이미 사용 중인 아이디입니다.');
+      } else {
+        _showSuccessSnackBar('사용 가능한 아이디입니다!');
+      }
+    } catch (e) {
+      _showErrorSnackBar('중복 확인 중 오류가 발생했습니다.');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _signup() async {
     final loginId = _loginIdController.text.trim();
-    final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
+    final password = _passwordController.text.trim();
+    final passwordConfirm = _passwordConfirmController.text.trim();
 
-    if (loginId.isEmpty || password.isEmpty || name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: const [
-              Icon(Icons.warning_amber_rounded, color: Colors.white),
-              SizedBox(width: 12),
-              Text('모든 항목을 입력해주세요.', style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          backgroundColor: Colors.orange.shade800,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(20),
-        ),
-      );
+    if (loginId.isEmpty || name.isEmpty || password.isEmpty || passwordConfirm.isEmpty) {
+      _showWarningSnackBar('모든 항목을 입력해주세요.');
+      return;
+    }
+
+    if (!_isIdChecked) {
+      _showWarningSnackBar('아이디 중복확인을 진행해주세요.');
+      return;
+    }
+
+    if (_isIdDuplicate) {
+      _showWarningSnackBar('이미 사용 중인 아이디입니다.');
+      return;
+    }
+
+    if (password != passwordConfirm) {
+      _showWarningSnackBar('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       return;
     }
 
@@ -44,40 +151,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     try {
       await ref.read(authProvider.notifier).signup(loginId, password, name);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.check_circle_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Text('회원가입 완료! 로그인해주세요.', style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
-        );
+        _showSuccessSnackBar('회원가입 완료! 로그인해주세요.');
         Navigator.pop(context); // 돌아가기
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.error_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(child: Text('가입 실패: 중복된 아이디거나 서버 오류입니다.', style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-            ),
-            backgroundColor: Colors.redAccent.shade400,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
-        );
+        _showErrorSnackBar('가입 실패: 서버 오류 또는 이미 존재하는 아이디입니다.');
       }
     } finally {
       if (mounted) {
@@ -157,22 +236,29 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                               ),
-                              onPressed: () {
-                                if (_loginIdController.text.trim().isEmpty) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('사용 가능한 아이디입니다! (UI 테스트)'),
-                                    behavior: SnackBarBehavior.floating,
-                                    backgroundColor: Colors.green.shade600,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                );
-                              },
+                              onPressed: _isLoading ? null : _checkDuplicateId,
                               child: const Text('중복확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                             ),
                           ),
                         ],
                       ),
+                      if (_isIdChecked) ...[
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Text(
+                              _isIdDuplicate ? '이미 존재하는 아이디입니다.' : '사용 가능한 아이디입니다.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _isIdDuplicate ? Colors.redAccent.shade700 : Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       
                       // Name Input
@@ -189,6 +275,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         controller: _passwordController,
                         label: '비밀번호',
                         hint: '안전한 비밀번호 입력',
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Password Confirm Input
+                      _buildInputField(
+                        controller: _passwordConfirmController,
+                        label: '비밀번호 확인',
+                        hint: '비밀번호 재입력',
                         icon: Icons.lock_outline,
                         isPassword: true,
                       ),

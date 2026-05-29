@@ -129,6 +129,17 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     }
   }
 
+  Future<bool> checkDuplicate(String loginId) async {
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get('/auth/check-duplicate', queryParameters: {'loginId': loginId});
+      return response.data['isDuplicate'] ?? false;
+    } catch (e) {
+      print('Check duplicate ID error: $e');
+      rethrow;
+    }
+  }
+
   Future<void> signup(String loginId, String password, String name) async {
     try {
       final dio = ref.read(dioProvider);
