@@ -11,4 +11,4 @@ RUN apk add --no-cache tzdata && \
     echo "Asia/Seoul" > /etc/timezone
 
 # 💡 1GB 램 서버 환경에 최적화된 JVM 메모리 튜닝
-ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xms256m", "-Xmx256m", "-XX:MaxMetaspaceSize=96m", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xms192m", "-Xmx192m", "-XX:MaxMetaspaceSize=160m", "-jar", "app.jar"]
