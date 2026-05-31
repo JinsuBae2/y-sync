@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/comment.dart';
 import 'notice_provider.dart';
+import 'community_provider.dart'; // 💡 [Bug4 Fix] 커뮤니티 목록 갱신을 위해 추가
 
 // 💡 댓글이 속한 게시판의 종류를 정의합니다.
 enum CommentSource { notice, community }
@@ -38,6 +39,13 @@ class CommentNotifier {
     
     // 해당 게시물의 댓글 목록 새로고침
     ref.invalidate(commentsProvider((source: source, id: id)));
+    
+    // 💡 [Bug4 Fix] 목록 화면의 commentCount 반영을 위해 게시글 목록도 새로고침
+    if (source == CommentSource.notice) {
+      ref.invalidate(noticesProvider);
+    } else {
+      ref.invalidate(communityPostsProvider);
+    }
   }
 
   // 💡 댓글 삭제
@@ -47,6 +55,13 @@ class CommentNotifier {
     
     // 해당 게시물의 댓글 목록 새로고침
     ref.invalidate(commentsProvider((source: source, id: id)));
+    
+    // 💡 [Bug4 Fix] 목록 화면의 commentCount 반영을 위해 게시글 목록도 새로고침
+    if (source == CommentSource.notice) {
+      ref.invalidate(noticesProvider);
+    } else {
+      ref.invalidate(communityPostsProvider);
+    }
   }
 
   // 💡 관리자용 댓글 삭제 (소프트 딜리트)
@@ -55,6 +70,13 @@ class CommentNotifier {
     await dio.delete('/admin/comments/$commentId', data: {'reason': reason});
     
     ref.invalidate(commentsProvider((source: source, id: id)));
+    
+    // 💡 [Bug4 Fix] 목록 화면의 commentCount 반영
+    if (source == CommentSource.notice) {
+      ref.invalidate(noticesProvider);
+    } else {
+      ref.invalidate(communityPostsProvider);
+    }
   }
 }
 

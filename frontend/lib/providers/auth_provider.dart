@@ -96,6 +96,9 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       }
       return null;
     } catch (e) {
+      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+        throw Exception(e.response?.data['message']);
+      }
       rethrow;
     }
   }

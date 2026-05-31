@@ -79,8 +79,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       await _handleSocialLoginResult(token, 'GOOGLE');
     } catch (e) {
+      String errorMsg = '구글 로그인에 실패했습니다.';
+      if (e is Exception) {
+        final msg = e.toString().replaceAll('Exception: ', '');
+        if (msg.isNotEmpty && msg != 'Exception') errorMsg = msg;
+      }
       print('Google Login Error: $e');
-      _showErrorSnackBar('구글 로그인에 실패했습니다.');
+      _showErrorSnackBar(errorMsg);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

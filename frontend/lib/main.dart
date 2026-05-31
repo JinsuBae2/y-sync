@@ -13,9 +13,12 @@ import 'services/push_notification_service.dart'; // 💡 FCM 추가
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 💡 Firebase 환경 초기화 및 알림 서비스 실행
+  // 💡 Firebase 환경 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await PushNotificationService().initialize();
+
+  // 💡 FCM 알림 서비스는 fire-and-forget으로 실행 (await 하지 않음)
+  // 모바일 사파리 등에서 requestPermission() 블로킹 시에도 runApp()은 즉시 실행됩니다.
+  PushNotificationService().initialize();
 
   // 💡 한국어 포맷팅 지역화 데이터 초기화
   await initializeDateFormatting('ko_KR', null);

@@ -54,17 +54,27 @@ public class MemberController {
     @PostMapping("/social-login")
     @Operation(summary = "소셜 로그인", description = "구글 또는 카카오의 AccessToken을 검증하고, 가입된 회원이면 JWT를 발급하며, 미가입 시 202 상태코드와 임시 식별자를 반환합니다.")
     public ResponseEntity<?> socialLogin(@RequestBody SocialLoginRequest request) {
-        String socialId = socialAuthService.getSocialId(request.getAccessToken(), request.getProvider());
-        Member member = memberService.socialLogin(socialId, request.getProvider());
+        try {
+            String socialId = socialAuthService.getSocialId(request.getAccessToken(), request.getProvider());
+            Member member = memberService.socialLogin(socialId, request.getProvider());
 
-        if (member != null) {
-            String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
-            log.info("소셜 로그인 성공 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-            return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
-        } else {
-            log.info("소셜 로그인 미가입자 발견 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(Map.of("socialId", socialId, "provider", request.getProvider().name(), "message", "가입되지 않은 소셜 계정입니다. 학번을 입력하여 가입을 진행해주세요."));
+            if (member != null) {
+                String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
+                log.info("소셜 로그인 성공 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
+                return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
+            } else {
+                log.info("소셜 로그인 미가입자 발견 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
+                return ResponseEntity.status(HttpStatus.ACCEPTED)
+                        .body(Map.of("socialId", socialId, "provider", request.getProvider().name(), "message", "가입되지 않은 소셜 계정입니다. 학번을 입력하여 가입을 진행해주세요."));
+            }
+        } catch (IllegalArgumentException e) {
+            log.error("소셜 로그인 토큰 검증 실패 - Provider: {}, Error: {}", request.getProvider(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("소셜 로그인 처리 중 예상치 못한 오류 - Provider: {}", request.getProvider(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "소셜 로그인 처리 중 오류가 발생했습니다."));
         }
     }
 

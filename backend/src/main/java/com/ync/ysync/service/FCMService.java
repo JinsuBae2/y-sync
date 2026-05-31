@@ -68,7 +68,7 @@ public class FCMService {
             }
 
             String response = FirebaseMessaging.getInstance().send(messageBuilder.build());
-            log.debug("Successfully sent message to token: {}, response: {}", token, response);
+            log.info("[FCM] 개별 토큰 알림 발송 성공 - token: {}..., response: {}", token.substring(0, Math.min(token.length(), 20)), response);
         } catch (Exception e) {
             log.error("Error sending FCM notification to token: ", e);
         }
@@ -94,7 +94,7 @@ public class FCMService {
             }
 
             String response = FirebaseMessaging.getInstance().send(messageBuilder.build());
-            log.debug("Successfully sent message to topic: {}, response: {}", topic, response);
+            log.info("[FCM] 토픽 알림 발송 성공 - topic: {}, response: {}", topic, response);
         } catch (Exception e) {
             log.error("Error sending FCM notification to topic: ", e);
         }
