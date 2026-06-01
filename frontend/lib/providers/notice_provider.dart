@@ -12,15 +12,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // Secure storage instance
 final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
 
-const String apiBaseUrl = String.fromEnvironment(
+const String _rawApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080/api/v1',
+  defaultValue: 'http://168.107.29.144:8080/api/v1',
 );
 
-const String imageBaseUrl = String.fromEnvironment(
+// 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
+const String apiBaseUrl = _rawApiBaseUrl == '' ? 'http://168.107.29.144:8080/api/v1' : _rawApiBaseUrl;
+
+const String _rawImageBaseUrl = String.fromEnvironment(
   'IMAGE_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
+  defaultValue: 'http://168.107.29.144:8080',
 );
+
+// 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
+const String imageBaseUrl = _rawImageBaseUrl == '' ? 'http://168.107.29.144:8080' : _rawImageBaseUrl;
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
