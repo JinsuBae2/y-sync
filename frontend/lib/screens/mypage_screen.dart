@@ -15,6 +15,7 @@ import 'scrap_list_screen.dart'; // 💡 추가
 import '../providers/community_provider.dart'; // 💡 추가
 import 'auth_settings_screen.dart';
 import 'notification_settings_screen.dart';
+import 'login_screen.dart';
 
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
@@ -797,9 +798,10 @@ class MyPageScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
-              Navigator.of(
-                context,
-              ).pushNamedAndRemoveUntil('/login', (route) => false);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
             },
             child: const Text('로그아웃', style: TextStyle(color: Colors.red)),
           ),

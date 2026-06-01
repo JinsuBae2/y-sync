@@ -6,6 +6,7 @@ import 'signup_screen.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'splash_screen.dart';
+import 'social_signup_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -97,7 +98,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (result != null) {
         // 202 Accepted: 미가입자, 추가 정보 입력 필요
         if (mounted) {
-          _showSocialSignupBottomSheet(result['socialId'], result['provider']);
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SocialSignupScreen(
+                socialId: result['socialId'],
+                provider: result['provider'],
+              ),
+            ),
+          );
         }
       } else {
         if (mounted) {

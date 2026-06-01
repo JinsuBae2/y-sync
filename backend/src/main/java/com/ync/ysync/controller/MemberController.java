@@ -61,11 +61,13 @@ public class MemberController {
             if (member != null) {
                 String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
                 log.info("소셜 로그인 성공 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-                return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
+                // 💡 [구글 로그인 리팩토링] 기존 회원인 경우 isNewMember를 false로 응답
+                return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공", "isNewMember", false));
             } else {
                 log.info("소셜 로그인 미가입자 발견 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
+                // 💡 [구글 로그인 리팩토링] 신규 회원인 경우 추가 정보 가입 필요를 알리기 위해 isNewMember를 true로 응답
                 return ResponseEntity.status(HttpStatus.ACCEPTED)
-                        .body(Map.of("socialId", socialId, "provider", request.getProvider().name(), "message", "가입되지 않은 소셜 계정입니다. 학번을 입력하여 가입을 진행해주세요."));
+                        .body(Map.of("socialId", socialId, "provider", request.getProvider().name(), "isNewMember", true, "message", "가입되지 않은 소셜 계정입니다. 학번을 입력하여 가입을 진행해주세요."));
             }
         } catch (IllegalArgumentException e) {
             log.error("소셜 로그인 토큰 검증 실패 - Provider: {}, Error: {}", request.getProvider(), e.getMessage());

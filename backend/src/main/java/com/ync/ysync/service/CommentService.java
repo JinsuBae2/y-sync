@@ -56,8 +56,9 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
 
-        // 💡 [Bug4 Fix] 댓글 수 증가 반영
+        // 💡 [Bug4 Fix] 댓글 수 증가 반영 및 명시적 DB 저장 (트랜잭션 플러시 보장)
         notice.incrementCommentCount();
+        noticeRepository.save(notice);
 
         // 💡 게시글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
         Member author = notice.getAuthor();
@@ -90,8 +91,9 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
 
-        // 💡 [Bug4 Fix] 댓글 수 증가 반영
+        // 💡 [Bug4 Fix] 댓글 수 증가 반영 및 명시적 DB 저장 (트랜잭션 플러시 보장)
         post.incrementCommentCount();
+        communityPostRepository.save(post);
 
         // 💡 커뮤니티 글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
         Member postAuthor = post.getMember();
@@ -120,8 +122,10 @@ public class CommentService {
         
         if (comment.getCommunityPost() != null) {
             comment.getCommunityPost().decrementCommentCount(); // 💡 게시글 댓글 수 감소
+            communityPostRepository.save(comment.getCommunityPost()); // 💡 명시적 DB 저장
         } else if (comment.getNotice() != null) {
             comment.getNotice().decrementCommentCount(); // 💡 공지사항 댓글 수 감소
+            noticeRepository.save(comment.getNotice()); // 💡 명시적 DB 저장
         }
         commentRepository.delete(comment);
     }

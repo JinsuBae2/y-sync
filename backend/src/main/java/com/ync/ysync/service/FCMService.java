@@ -38,7 +38,8 @@ public class FCMService {
             }
             isInitialized = true;
         } catch (Exception e) {
-            log.warn("FCM 활성화 실패 (firebase-adminsdk.json 파일이 없거나 잘못되었습니다. FCM 기능이 비활성화됩니다.): {}", e.getMessage());
+            // 💡 [FCM 로그 개선] 초기화 실패 오류 상세 로그 출력
+            log.error("[FCM] Firebase 초기화 실패 (FCM 기능 비활성화) - 사유: {}", e.getMessage(), e);
             isInitialized = false;
         }
     }
@@ -46,12 +47,14 @@ public class FCMService {
     // 💡 개별 기기(토큰)로 푸시 알림 전송
     public void sendNotificationToToken(String token, String title, String body, Map<String, String> data) {
         if (!isInitialized) {
-            log.info("FCM is disabled. Skipping sending notification to token: {}", token);
+            // 💡 [FCM 로그 개선] 비활성화 시 로그 기록
+            log.info("[FCM] FCM이 비활성화 상태입니다. 알림 전송을 건너뜁니다. 수신 토큰: {}", token);
             return;
         }
         
         if (token == null || token.isEmpty()) {
-            log.warn("FCM Token is empty, skipping notification.");
+            // 💡 [FCM 로그 개선] 토큰 유무 확인 로그 기록 (INFO 레벨)
+            log.info("[FCM] 수신자 FCM 토큰이 비어있어 알림 전송을 건너뜁니다. 제목: {}", title);
             return;
         }
         
@@ -68,16 +71,20 @@ public class FCMService {
             }
 
             String response = FirebaseMessaging.getInstance().send(messageBuilder.build());
-            log.info("[FCM] 개별 토큰 알림 발송 성공 - token: {}..., response: {}", token.substring(0, Math.min(token.length(), 20)), response);
+            // 💡 [FCM 로그 개선] 성공 여부 INFO 레벨로 명확하게 노출
+            log.info("[FCM] 개별 토큰 알림 발송 성공 - 수신 토큰: {}..., 제목: {}, response: {}", 
+                    token.substring(0, Math.min(token.length(), 20)), title, response);
         } catch (Exception e) {
-            log.error("Error sending FCM notification to token: ", e);
+            // 💡 [FCM 로그 개선] 실패한 경우에도 상세 내용을 INFO 및 ERROR 형태로 확실하게 기록
+            log.error("[FCM] 개별 토큰 알림 발송 실패 - 수신 토큰: {}, 제목: {}, 사유: {}", token, title, e.getMessage(), e);
         }
     }
 
     // 💡 전체 사용자(토픽)에게 푸시 알림 브로드캐스트
     public void sendNotificationToTopic(String topic, String title, String body, Map<String, String> data) {
         if (!isInitialized) {
-            log.info("FCM is disabled. Skipping sending notification to topic: {}", topic);
+            // 💡 [FCM 로그 개선] 비활성화 시 로그 기록
+            log.info("[FCM] FCM이 비활성화 상태입니다. 토픽 알림 전송을 건너뜁니다. 토픽: {}", topic);
             return;
         }
         
@@ -94,9 +101,11 @@ public class FCMService {
             }
 
             String response = FirebaseMessaging.getInstance().send(messageBuilder.build());
-            log.info("[FCM] 토픽 알림 발송 성공 - topic: {}, response: {}", topic, response);
+            // 💡 [FCM 로그 개선] 성공 여부 INFO 레벨로 명확하게 노출
+            log.info("[FCM] 토픽 알림 발송 성공 - 토픽: {}, 제목: {}, response: {}", topic, title, response);
         } catch (Exception e) {
-            log.error("Error sending FCM notification to topic: ", e);
+            // 💡 [FCM 로그 개선] 실패한 경우에도 상세 내용을 INFO 및 ERROR 형태로 확실하게 기록
+            log.error("[FCM] 토픽 알림 발송 실패 - 토픽: {}, 제목: {}, 사유: {}", topic, title, e.getMessage(), e);
         }
     }
 }
