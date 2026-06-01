@@ -56,7 +56,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOriginPattern("*");
+        // 💡 [CORS 설정 수정] 새로운 파이어베이스 호스팅 도메인 및 기존 넷리파이, 로컬 개발용 오리진 허용 등록
+        configuration.addAllowedOrigin("https://y-sync-31c03.web.app");
+        configuration.addAllowedOrigin("https://y-sync-31c03.firebaseapp.com");
+        configuration.addAllowedOrigin("https://y-sync.netlify.app");
+        configuration.addAllowedOrigin("http://localhost:3000");
+        configuration.addAllowedOrigin("http://localhost:8080");
+        configuration.addAllowedOrigin("http://localhost:5000");
+        configuration.addAllowedOrigin("http://127.0.0.1:3000");
+        configuration.addAllowedOrigin("http://127.0.0.1:8080");
+        configuration.addAllowedOrigin("http://127.0.0.1:5000");
+        
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
