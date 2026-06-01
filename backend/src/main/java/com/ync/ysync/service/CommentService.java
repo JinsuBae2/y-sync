@@ -62,8 +62,20 @@ public class CommentService {
         notice.incrementCommentCount();
         noticeRepository.save(notice);
 
-        // 💡 비동기 알림 이벤트 발행 위임 (중복 발송 방지 및 속도 개선)
-        eventPublisher.publishEvent(new CommentCreatedEvent(this, savedComment, "NOTICE", memberId));
+        // 💡 트랜잭션이 활성화된 상태에서 Lazy Loading 없이 대상 유저 정보를 꺼냄 (지연 로딩 에러 원천 방지)
+        Member author = notice.getAuthor();
+        if (author != null) {
+            eventPublisher.publishEvent(new CommentCreatedEvent(
+                    this,
+                    author.getId(),
+                    author.getFcmToken(),
+                    author.isCommentEnabled(),
+                    memberId,
+                    "NOTICE",
+                    notice.getId(),
+                    content
+            ));
+        }
 
         return savedComment;
     }
@@ -87,8 +99,20 @@ public class CommentService {
         post.incrementCommentCount();
         communityPostRepository.save(post);
 
-        // 💡 비동기 알림 이벤트 발행 위임 (중복 발송 방지 및 속도 개선)
-        eventPublisher.publishEvent(new CommentCreatedEvent(this, savedComment, "COMMUNITY", memberId));
+        // 💡 트랜잭션이 활성화된 상태에서 Lazy Loading 없이 대상 유저 정보를 꺼냄 (지연 로딩 에러 원천 방지)
+        Member postAuthor = post.getMember();
+        if (postAuthor != null) {
+            eventPublisher.publishEvent(new CommentCreatedEvent(
+                    this,
+                    postAuthor.getId(),
+                    postAuthor.getFcmToken(),
+                    postAuthor.isCommentEnabled(),
+                    memberId,
+                    "COMMUNITY",
+                    post.getId(),
+                    content
+            ));
+        }
 
         return savedComment;
     }

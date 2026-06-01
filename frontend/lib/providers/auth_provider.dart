@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
 import 'notice_provider.dart';
+import 'mypage_provider.dart';
+import 'community_provider.dart';
 
 import '../services/push_notification_service.dart'; // 💡 FCM 추가
 
@@ -159,17 +161,26 @@ class AuthNotifier extends AsyncNotifier<Member?> {
   Future<void> logout() async {
     state = const AsyncValue.loading();
     try {
+      final dio = ref.read(dioProvider);
+      // 💡 [FCM 토큰 클리어 보장] 백엔드가 로그인 사용자를 식별해 FCM 토큰을 지울 수 있도록,
+      // 로컬 토큰을 삭제하기 전에 먼저 백엔드 로그아웃 API를 호출합니다.
+      await dio.post('/auth/logout');
+      
       final storage = ref.read(secureStorageProvider);
       await storage.delete(key: 'jwt_token');
-      
-      final dio = ref.read(dioProvider);
-      await dio.post('/auth/logout');
       
       state = const AsyncValue.data(null);
     } catch (e) {
+      print('Logout API call failed: $e');
       final storage = ref.read(secureStorageProvider);
       await storage.delete(key: 'jwt_token');
       state = const AsyncValue.data(null);
+    } finally {
+      // 💡 [로그아웃 캐시 찌꺼기 제거] 로그아웃 후 다른 사용자로 재로그인 시
+      // 이전 사용자의 캐시된 데이터가 노출되는 현상을 막기 위해 전역 상태들을 강제 무효화합니다.
+      ref.invalidate(myPageProvider);
+      ref.invalidate(noticesProvider);
+      ref.invalidate(communityPostsProvider);
     }
   }
 }

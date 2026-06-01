@@ -98,6 +98,16 @@ public class MemberController {
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout() {
+        String loginId = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (loginId != null && !loginId.equals("anonymousUser")) {
+            Optional<Member> memberOpt = memberRepository.findByLoginId(loginId);
+            if (memberOpt.isPresent()) {
+                Member member = memberOpt.get();
+                member.setFcmToken(null); // 💡 로그아웃 시 FCM 토큰 클리어
+                memberRepository.save(member);
+                log.info("로그아웃 처리 - DB 내 FCM 토큰 삭제 완료: {}", loginId);
+            }
+        }
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok("로그아웃 성공");
     }
