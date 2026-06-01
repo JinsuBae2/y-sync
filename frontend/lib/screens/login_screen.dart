@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
-import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'splash_screen.dart';
 import 'social_signup_screen.dart';
@@ -19,7 +18,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _showLocalLogin = false;
 
   Future<void> _login() async {
     final loginId = _loginIdController.text.trim();
@@ -38,28 +36,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       _showErrorSnackBar('아이디 또는 비밀번호를 다시 확인해주세요.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loginWithKakao() async {
-    try {
-      setState(() => _isLoading = true);
-      OAuthToken token;
-      if (await isKakaoTalkInstalled()) {
-        try {
-          token = await UserApi.instance.loginWithKakaoTalk();
-        } catch (error) {
-          token = await UserApi.instance.loginWithKakaoAccount();
-        }
-      } else {
-        token = await UserApi.instance.loginWithKakaoAccount();
-      }
-      
-      await _handleSocialLoginResult(token.accessToken, 'KAKAO');
-    } catch (e) {
-      _showErrorSnackBar('카카오 로그인에 실패했습니다.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -337,16 +313,102 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 48),
 
-                    // Social Login Buttons
-                    _buildSocialButton(
-                      iconPath: 'assets/images/kakao_logo.png', // 카카오 로고가 필요함 (없으면 기본 아이콘 표시)
-                      label: '카카오로 시작하기',
-                      color: const Color(0xFFFEE500),
-                      textColor: Colors.black87,
-                      onPressed: _loginWithKakao,
-                      iconFallback: Icons.chat_bubble_rounded,
+                    const SizedBox(height: 32),
+                    
+                    // 💡 [개편] 일반 로그인 폼을 메인 상단에 항시 고정 배치
+                    _buildInputField(
+                      controller: _loginIdController,
+                      label: '아이디',
+                      hint: '학번을 입력해주세요',
+                      icon: Icons.person_outline,
                     ),
                     const SizedBox(height: 16),
+                    _buildInputField(
+                      controller: _passwordController,
+                      label: '비밀번호',
+                      hint: '비밀번호를 입력해주세요',
+                      icon: Icons.lock_outline,
+                      isPassword: true,
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        ),
+                        onPressed: _isLoading ? null : _login,
+                        child: _isLoading 
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                            : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // 💡 [개편] 비밀번호 분실 팝업 및 회원가입 메뉴 링크
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('비밀번호 분실 안내', style: TextStyle(fontWeight: FontWeight.bold)),
+                                content: const Text(
+                                  '비밀번호 분실 시 학생회장 또는 학과 사무실에 문의하여 초기화를 요청하세요.',
+                                  style: TextStyle(height: 1.5),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('확인'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            '비밀번호를 잊으셨나요?',
+                            style: TextStyle(color: Colors.grey, fontSize: 13, decoration: TextDecoration.underline),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SignupScreen()),
+                            );
+                          },
+                          child: Text(
+                            '회원가입하기',
+                            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // 💡 [개편] 디바이더 배치
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey.shade300)),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('또는', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey.shade300)),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // 💡 [개편] 구글 로그인 버튼을 서브 수단으로 아래에 배치
                     _buildSocialButton(
                       iconPath: 'assets/images/google_logo.png',
                       label: '구글로 시작하기',
@@ -355,91 +417,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       borderColor: Colors.grey.shade300,
                       onPressed: _loginWithGoogle,
                       iconFallback: Icons.g_mobiledata_rounded,
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    // Local Login Toggle
-                    InkWell(
-                      onTap: () => setState(() => _showLocalLogin = !_showLocalLogin),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '일반 학번으로 로그인',
-                              style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
-                            ),
-                            Icon(_showLocalLogin ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Colors.grey.shade600),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    // Collapsible Local Login Area
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      height: _showLocalLogin ? null : 0,
-                      curve: Curves.easeInOut,
-                      child: ClipRect(
-                        child: _showLocalLogin ? Column(
-                          children: [
-                            const SizedBox(height: 16),
-                            _buildInputField(
-                              controller: _loginIdController,
-                              label: '아이디',
-                              hint: '학번을 입력해주세요',
-                              icon: Icons.person_outline,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInputField(
-                              controller: _passwordController,
-                              label: '비밀번호',
-                              hint: '비밀번호를 입력해주세요',
-                              icon: Icons.lock_outline,
-                              isPassword: true,
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 54,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                ),
-                                onPressed: _isLoading ? null : _login,
-                                child: _isLoading 
-                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                                    : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('계정이 없으신가요?', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const SignupScreen()),
-                                    );
-                                  },
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Theme.of(context).colorScheme.primary,
-                                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                  child: const Text('회원가입하기'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ) : const SizedBox(),
-                      ),
                     ),
                   ],
                 ),

@@ -177,18 +177,20 @@ class PushNotificationService {
   void _handleNotificationClick(String payload) {
     try {
       final Map<String, dynamic> data = jsonDecode(payload);
-      final targetType = data['targetType'];
-      final targetId = data['targetId'];
+      
+      // 💡 targetType 및 targetId 외에 type 및 postId가 페이로드에 있는 경우를 대비한 Fallback 파싱
+      final targetType = data['targetType'] ?? data['type'];
+      final targetId = data['targetId'] ?? data['postId'];
       
       print('FCM Routing -> Type: $targetType, ID: $targetId');
       
       if (targetType != null && targetId != null && navigatorKey.currentState != null) {
-         // 💡 화면 텔레포트
+         // 💡 화면 텔레포트 (원하는 상세 화면으로 라우팅 처리)
          navigatorKey.currentState!.push(
            MaterialPageRoute(
              builder: (context) => DeepLinkLoadingScreen(
-               targetType: targetType,
-               targetId: targetId,
+               targetType: targetType.toString(),
+               targetId: targetId.toString(),
              ),
            ),
          );

@@ -11,6 +11,8 @@ import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import com.ync.ysync.event.CommentCreatedEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +28,7 @@ public class CommentService {
     private final NoticeRepository noticeRepository;
     private final CommunityPostRepository communityPostRepository;
     private final MemberRepository memberRepository;
-    private final FCMService fcmService; // 💡 FCM 추가
+    private final ApplicationEventPublisher eventPublisher; // 💡 비동기 알림 이벤트 발행자
 
     public List<Comment> getCommentsByNoticeId(Long noticeId) {
         return commentRepository.findAllByNoticeIdOrderByCreatedAtAsc(noticeId);
@@ -60,18 +62,8 @@ public class CommentService {
         notice.incrementCommentCount();
         noticeRepository.save(notice);
 
-        // 💡 게시글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
-        Member author = notice.getAuthor();
-        if (author.getFcmToken() != null && !author.getId().equals(memberId) && author.isCommentEnabled()) {
-            log.info("[FCM] 공지사항 댓글 알림 발송 - Notice ID: {}, 수신자: {}, Token: {}...", notice.getId(), author.getName(), author.getFcmToken().substring(0, Math.min(author.getFcmToken().length(), 20)));
-            java.util.Map<String, String> data = new java.util.HashMap<>();
-            data.put("targetType", "NOTICE");
-            data.put("targetId", String.valueOf(notice.getId()));
-            fcmService.sendNotificationToToken(author.getFcmToken(), "내 작성글에 새로운 댓글", "방금 누군가 댓글을 남겼어요!", data);
-        } else {
-            log.info("[FCM] 공지사항 댓글 알림 Skip - Notice ID: {}, 사유: fcmToken={}, 본인글={}, commentEnabled={}",
-                    notice.getId(), author.getFcmToken() != null, author.getId().equals(memberId), author.isCommentEnabled());
-        }
+        // 💡 비동기 알림 이벤트 발행 위임 (중복 발송 방지 및 속도 개선)
+        eventPublisher.publishEvent(new CommentCreatedEvent(this, savedComment, "NOTICE", memberId));
 
         return savedComment;
     }
@@ -95,18 +87,8 @@ public class CommentService {
         post.incrementCommentCount();
         communityPostRepository.save(post);
 
-        // 💡 커뮤니티 글 작성자에게 새 댓글 알림 발송 (단, 내가 내 글에 단 댓글은 제외)
-        Member postAuthor = post.getMember();
-        if (postAuthor.getFcmToken() != null && !postAuthor.getId().equals(memberId) && postAuthor.isCommentEnabled()) {
-            log.info("[FCM] 커뮤니티 댓글 알림 발송 - Post ID: {}, 수신자: {}, Token: {}...", post.getId(), postAuthor.getName(), postAuthor.getFcmToken().substring(0, Math.min(postAuthor.getFcmToken().length(), 20)));
-            java.util.Map<String, String> data = new java.util.HashMap<>();
-            data.put("targetType", "COMMUNITY");
-            data.put("targetId", String.valueOf(post.getId()));
-            fcmService.sendNotificationToToken(postAuthor.getFcmToken(), "내 게시글에 새로운 댓글", "방금 누군가 댓글을 남겼어요!", data);
-        } else {
-            log.info("[FCM] 커뮤니티 댓글 알림 Skip - Post ID: {}, 사유: fcmToken={}, 본인글={}, commentEnabled={}",
-                    post.getId(), postAuthor.getFcmToken() != null, postAuthor.getId().equals(memberId), postAuthor.isCommentEnabled());
-        }
+        // 💡 비동기 알림 이벤트 발행 위임 (중복 발송 방지 및 속도 개선)
+        eventPublisher.publishEvent(new CommentCreatedEvent(this, savedComment, "COMMUNITY", memberId));
 
         return savedComment;
     }
