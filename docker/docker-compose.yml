@@ -41,6 +41,9 @@ services:
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:-1234}
       - JWT_SECRET=${JWT_SECRET:-YSyncSuperSecretKeyYSyncSuperSecretKeyYSyncSuperSecretKeyYSyncSuperSecretKey}
+      - FIREBASE_CONFIG_PATH=file:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 외부 파이어베이스 키 설정 경로 지정
+    volumes:
+      - ./firebase-adminsdk.json:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 로컬 호스트의 파이어베이스 키 파일을 컨테이너 내부로 바인드 마운트
     depends_on:
       - ysync-mysql
     deploy:
