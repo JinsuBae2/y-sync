@@ -142,6 +142,13 @@ class CommunityNotifier {
     await dio.delete('/admin/posts/$id', data: {'reason': reason});
     ref.invalidate(communityPostsProvider);
   }
+
+  // 💡 관리자용 게시글 복구 (소프트 딜리트 해제)
+  Future<void> restorePostByAdmin(int id) async {
+    final dio = ref.read(dioProvider);
+    await dio.post('/admin/posts/$id/restore');
+    ref.invalidate(communityPostsProvider);
+  }
 }
 
 final communityNotifierProvider = Provider((ref) => CommunityNotifier(ref));

@@ -18,9 +18,15 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] 백그라운드 메시지 수신: ', payload);
   
-  const notificationTitle = payload.notification ? payload.notification.title : 'Y-Sync 알림';
+  // 💡 payload.notification이 존재하면 Firebase Web SDK가 백그라운드에서 자동으로 알림을 띄우므로,
+  // 중복 노출을 차단하기 위해 여기서 수동으로 showNotification을 호출하지 않고 조기 리턴합니다.
+  if (payload.notification) {
+    return;
+  }
+
+  const notificationTitle = 'Y-Sync 알림';
   const notificationOptions = {
-    body: payload.notification ? payload.notification.body : '',
+    body: payload.data ? payload.data.body || '' : '',
     icon: '/favicon.png', // 파비콘을 아이콘으로 사용
     data: payload.data
   };

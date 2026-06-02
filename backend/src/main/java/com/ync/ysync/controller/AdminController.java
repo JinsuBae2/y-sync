@@ -117,6 +117,18 @@ public class AdminController {
         return ResponseEntity.ok("게시글이 관리자에 의해 삭제되었습니다.");
     }
 
+    // 💡 관리자 게시물 복구
+    @PostMapping("/posts/{id}/restore")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> restorePostByAdmin(@PathVariable Long id) {
+        CommunityPost post = communityPostRepository.findById(id).orElse(null);
+        if (post == null) return ResponseEntity.notFound().build();
+
+        post.restoreByAdmin();
+        communityPostRepository.save(post);
+        return ResponseEntity.ok("게시글이 성공적으로 복구되었습니다.");
+    }
+
     // 💡 관리자 댓글 삭제 (소프트 딜리트)
     @DeleteMapping("/comments/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")

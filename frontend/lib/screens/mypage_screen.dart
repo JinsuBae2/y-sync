@@ -6,13 +6,10 @@ import '../providers/auth_provider.dart';
 import '../models/community_post.dart';
 import '../models/my_comment.dart';
 import '../models/notice.dart';
-import 'community_detail_screen.dart';
-import 'notice_detail_screen.dart';
 import '../providers/admin_provider.dart';
 import 'notice_form_screen.dart';
-import 'community_list_screen.dart';
+import 'admin_post_management_screen.dart'; // 💡 신규 관리자 게시글 대시보드 화면 추가
 import 'scrap_list_screen.dart'; // 💡 추가
-import '../providers/community_provider.dart'; // 💡 추가
 import 'auth_settings_screen.dart';
 import 'notification_settings_screen.dart';
 import 'login_screen.dart';
@@ -364,8 +361,8 @@ class MyPageScreen extends ConsumerWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      // 💡 관리자용 전체 게시글 화면으로 이동
-                      builder: (context) => const CommunityListScreen(isAdminMode: true),
+                      // 💡 관리자용 게시글 관리 대시보드 화면으로 이동
+                      builder: (context) => const AdminPostManagementScreen(),
                     ),
                   );
                 },
