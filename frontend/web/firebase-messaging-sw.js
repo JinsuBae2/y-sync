@@ -33,3 +33,35 @@ messaging.onBackgroundMessage((payload) => {
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
+// 💡 알림 클릭 시 브라우저 창을 활성화하거나 새 탭을 열고 딥링크 쿼리 파라미터를 넘겨줍니다.
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  
+  const data = event.notification.data;
+  const targetType = data ? data.targetType || data.type : null;
+  const targetId = data ? data.targetId || data.postId : null;
+
+  const targetUrl = targetType && targetId 
+    ? `/?targetType=${targetType}&targetId=${targetId}`
+    : '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      // 💡 이미 사이트 탭이 열려있다면 해당 탭의 URL을 딥링크 경로로 네비게이션 시키고 포커스를 잡습니다.
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (client.url.indexOf(self.location.host) !== -1 && 'focus' in client) {
+          if ('navigate' in client && targetType && targetId) {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      // 💡 열려있는 사이트 탭이 없다면 새로 열어 딥링크 URL을 타게 합니다.
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

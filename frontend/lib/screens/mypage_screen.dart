@@ -8,7 +8,6 @@ import '../models/my_comment.dart';
 import '../models/notice.dart';
 import '../providers/admin_provider.dart';
 import 'notice_form_screen.dart';
-import 'admin_post_management_screen.dart'; // 💡 신규 관리자 게시글 대시보드 화면 추가
 import 'scrap_list_screen.dart'; // 💡 추가
 import 'auth_settings_screen.dart';
 import 'notification_settings_screen.dart';
@@ -296,79 +295,7 @@ class MyPageScreen extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 32),
 
-            // 💡 관리역역 (권한에 따라 노출)
-            if (member.role == 'SUPER_ADMIN' || member.role == 'ADMIN') ...[
-              const Text(
-                '관리자 도구',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0A192F),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 💡 관리자 임명 관리 (SUPER_ADMIN 전용)
-              if (member.role == 'SUPER_ADMIN') ...[
-                ListTile(
-                  leading: const Icon(
-                    Icons.admin_panel_settings_rounded,
-                    color: Colors.amber,
-                  ),
-                  title: const Text(
-                    '관리자 임명 관리',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: const Text('접수된 관리자 신청 건을 검토합니다.'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showAdminManagementList(context, ref),
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              ListTile(
-                leading: const Icon(
-                  Icons.auto_stories_rounded,
-                  color: Colors.blue,
-                ),
-                title: const Text(
-                  '공식 공지사항 작성',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NoticeFormScreen(),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_sweep_rounded,
-                  color: Colors.blue,
-                ),
-                title: const Text(
-                  '전체 게시글 관리',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      // 💡 관리자용 게시글 관리 대시보드 화면으로 이동
-                      builder: (context) => const AdminPostManagementScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-            ],
 
             // 💡 일반 유저 전용 메뉴 (관리자 신청)
             if (member.role == 'USER') ...[

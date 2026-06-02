@@ -21,9 +21,6 @@ class PushNotificationService {
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  
-  // 💡 인앱 알림 중첩 방지를 위해 현재 활성화된 오버레이 엔트리를 보관합니다.
-  OverlayEntry? _currentOverlayEntry;
 
   // 💡 앱 내 어디서든 라우팅을 제어할 수 있도록 전역 Nav Key 사용
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -91,8 +88,9 @@ class PushNotificationService {
         
         if (notification != null) {
           if (kIsWeb) {
-            // 💡 웹 환경에서는 브라우저의 ScaffoldMessenger SnackBar를 활용해 인앱 알림을 노출합니다.
-            _showWebForegroundNotification(notification.title ?? '', notification.body ?? '', message.data);
+            // 💡 웹 환경에서는 브라우저 시스템 네이티브 알림을 통해 알림이 자동으로 노출되며,
+            // 클릭 시의 웹 딥링크 처리 또한 서비스 워커에서 동작하므로
+            // 포그라운드 인앱 알림 배너를 중복 노출하지 않습니다.
           } else {
             AndroidNotification? android = message.notification?.android;
             if (android != null) {
@@ -145,52 +143,6 @@ class PushNotificationService {
       // 💡 최상위 방어: 어떤 예외가 발생해도 앱 자체는 절대 멈추지 않습니다.
       print('PushNotificationService 초기화 중 예외 발생 (앱 실행에 영향 없음): $e');
     }
-  }
-
-  void _showWebForegroundNotification(String title, String body, Map<String, dynamic> data) {
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    final overlay = Overlay.of(context);
-
-    // 이전 알림 배너가 아직 화면에 남아있다면 먼저 안전하게 제거합니다.
-    if (_currentOverlayEntry != null) {
-      try {
-        _currentOverlayEntry!.remove();
-      } catch (e) {
-        print('이전 인앱 알림 오버레이 제거 실패: $e');
-      }
-      _currentOverlayEntry = null;
-    }
-
-    late OverlayEntry overlayEntry;
-    overlayEntry = OverlayEntry(
-      builder: (context) {
-        return _TopNotificationBanner(
-          title: title,
-          body: body,
-          onTap: () {
-            if (_currentOverlayEntry == overlayEntry) {
-              _currentOverlayEntry = null;
-            }
-            _handleNotificationClick(jsonEncode(data));
-          },
-          onDismiss: () {
-            try {
-              overlayEntry.remove();
-            } catch (e) {
-              print('인앱 알림 오버레이 제거 실패: $e');
-            }
-            if (_currentOverlayEntry == overlayEntry) {
-              _currentOverlayEntry = null;
-            }
-          },
-        );
-      },
-    );
-
-    _currentOverlayEntry = overlayEntry;
-    overlay.insert(overlayEntry);
   }
 
   void _handleRemoteMessageClick(RemoteMessage message) {
@@ -249,188 +201,5 @@ class PushNotificationService {
       print('FCM 토큰 발급 실패: $e');
       return null;
     }
-  }
-}
-
-// 💡 화면 상단에 플로팅 방식으로 슬라이드 애니메이션과 함께 노출되는 커스텀 인앱 알림 배너
-class _TopNotificationBanner extends StatefulWidget {
-  final String title;
-  final String body;
-  final VoidCallback onTap;
-  final VoidCallback onDismiss;
-
-  const _TopNotificationBanner({
-    Key? key,
-    required this.title,
-    required this.body,
-    required this.onTap,
-    required this.onDismiss,
-  }) : super(key: key);
-
-  @override
-  State<_TopNotificationBanner> createState() => _TopNotificationBannerState();
-}
-
-class _TopNotificationBannerState extends State<_TopNotificationBanner> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _offsetAnimation;
-  late Animation<double> _opacityAnimation;
-  bool _dismissed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0.0, -1.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
-
-    _opacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
-
-    _controller.forward();
-
-    // 💡 4초간 미조작 시 자동으로 사라짐
-    Future.delayed(const Duration(seconds: 4), () {
-      if (mounted && !_dismissed) {
-        _dismiss();
-      }
-    });
-  }
-
-  void _dismiss() async {
-    if (_dismissed) return;
-    _dismissed = true;
-    
-    try {
-      await _controller.reverse();
-    } catch (_) {}
-    
-    widget.onDismiss();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    return Positioned(
-      top: mediaQuery.padding.top + 16,
-      left: 16,
-      right: 16,
-      child: SlideTransition(
-        position: _offsetAnimation,
-        child: FadeTransition(
-          opacity: _opacityAnimation,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                border: Border.all(
-                  color: Colors.black.withOpacity(0.05),
-                  width: 1,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: IntrinsicHeight(
-                  child: Row(
-                    children: [
-                      // 💡 Y-Sync 블루 테마 좌측 데코 레이아웃
-                      Container(
-                        width: 6,
-                        color: const Color(0xFF164687),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            if (_dismissed) return;
-                            _dismissed = true;
-                            _controller.reverse().then((_) {
-                              widget.onTap();
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.notifications_active_rounded,
-                                      color: Color(0xFF164687),
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        widget.title,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  widget.body,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.black54,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
-                        onPressed: _dismiss,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
