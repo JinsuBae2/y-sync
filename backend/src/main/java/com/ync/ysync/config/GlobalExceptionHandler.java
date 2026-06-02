@@ -86,6 +86,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
+    // 💡 권한 부족 예외 처리 (403 Forbidden)
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException e) {
+        log.warn("🚨 권한 부족 예외 발생: {}", e.getMessage());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "해당 작업을 수행할 권한이 없습니다.");
+        response.put("details", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     // 💡 그 외 알 수 없는 모든 예외 처리 (500 Internal Server Error)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleAllException(Exception e) {
@@ -96,4 +106,5 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }
+
 

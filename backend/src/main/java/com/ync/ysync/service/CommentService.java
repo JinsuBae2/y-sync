@@ -121,10 +121,11 @@ public class CommentService {
     public void deleteComment(Long commentId, Long memberId, MemberRole role) {
         Comment comment = getComment(commentId);
         
-        // 작성자 본인이거나 ADMIN인 경우에만 삭제 가능
-        if (role != MemberRole.ADMIN && !comment.getMember().getId().equals(memberId)) {
+        // 작성자 본인이거나 ADMIN, SUPER_ADMIN인 경우에만 삭제 가능
+        if (role != MemberRole.ADMIN && role != MemberRole.SUPER_ADMIN && !comment.getMember().getId().equals(memberId)) {
             throw new IllegalArgumentException("해당 댓글에 대한 권한이 없습니다.");
         }
+
         
         if (comment.getCommunityPost() != null) {
             comment.getCommunityPost().decrementCommentCount(); // 💡 게시글 댓글 수 감소

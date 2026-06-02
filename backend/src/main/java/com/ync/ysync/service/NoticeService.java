@@ -142,8 +142,9 @@ public class NoticeService {
     }
 
     private void validateAuthorOrAdmin(Notice notice, Long memberId, MemberRole role) {
-        if (role != MemberRole.ADMIN && !notice.getAuthor().getId().equals(memberId)) {
+        if (role != MemberRole.ADMIN && role != MemberRole.SUPER_ADMIN && !notice.getAuthor().getId().equals(memberId)) {
             throw new IllegalArgumentException("해당 공지사항에 대한 권한이 없습니다.");
         }
     }
 }
+

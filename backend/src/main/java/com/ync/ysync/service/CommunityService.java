@@ -89,9 +89,10 @@ public class CommunityService {
     public void deletePost(Long id, Long memberId, MemberRole role) {
         CommunityPost post = getPost(id);
         
-        if (role != MemberRole.ADMIN && !post.getMember().getId().equals(memberId)) {
+        if (role != MemberRole.ADMIN && role != MemberRole.SUPER_ADMIN && !post.getMember().getId().equals(memberId)) {
             throw new IllegalArgumentException("게시글 삭제 권한이 없습니다.");
         }
+
         
         communityPostRepository.delete(post);
     }
