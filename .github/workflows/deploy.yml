@@ -61,9 +61,11 @@ jobs:
             rm deploy.tar.gz
             cd docker
             
-            # DB_PASSWORD 및 JWT_SECRET 환경변수를 반영하여 docker-compose 재시작
+            # DB_PASSWORD, JWT_SECRET, MAIL_USERNAME, MAIL_PASSWORD 환경변수를 반영하여 docker-compose 재시작
             export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export MAIL_USERNAME="${{ secrets.MAIL_USERNAME }}"
+            export MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
             
             docker compose down || true
             docker compose up -d --build
