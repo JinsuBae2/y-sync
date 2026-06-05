@@ -4,22 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
-   const SignupScreen({super.key});
+  const SignupScreen({super.key});
 
-   @override
-   ConsumerState<SignupScreen> createState() => _SignupScreenState();
+  @override
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _loginIdController = TextEditingController();
-  final _verificationCodeController = TextEditingController();
   final _nameController = TextEditingController();
+  final _verificationCodeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
 
   bool _isLoading = false;
-  bool _isEmailSent = false;
-  bool _isVerified = false;
+  bool _isStudentInfoVerified = false; // 1차 정보 대조 확인 완료 여부
+  bool _isEmailSent = false;          // 2차 이메일 인증코드 발송 여부
+  bool _isVerified = false;           // 이메일 인증 최종 통과 여부
 
   Timer? _timer;
   int _timerSeconds = 300; // 5분
@@ -27,8 +28,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   void dispose() {
     _loginIdController.dispose();
-    _verificationCodeController.dispose();
     _nameController.dispose();
+    _verificationCodeController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
     _timer?.cancel();
@@ -118,10 +119,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  Future<void> _sendVerificationCode() async {
+  // 1단계: 학번 및 이름 1차 대조 확인
+  Future<void> _verifyStudentInfo() async {
     final loginId = _loginIdController.text.trim();
-    if (loginId.isEmpty) {
-      _showWarningSnackBar('학번을 입력해주세요.');
+    final name = _nameController.text.trim();
+
+    if (loginId.isEmpty || name.isEmpty) {
+      _showWarningSnackBar('학번과 이름을 모두 입력해주세요.');
       return;
     }
     if (!RegExp(r'^\d+$').hasMatch(loginId)) {
@@ -131,7 +135,26 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(authProvider.notifier).sendVerificationCode(loginId);
+      await ref.read(authProvider.notifier).verifyStudent(loginId, name);
+      setState(() {
+        _isStudentInfoVerified = true;
+      });
+      _showSuccessSnackBar('학생 정보가 확인되었습니다. 본인 인증을 진행해 주세요.');
+    } catch (e) {
+      _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // 2단계: 인증 코드 메일 발송
+  Future<void> _sendVerificationCode() async {
+    final loginId = _loginIdController.text.trim();
+    final name = _nameController.text.trim();
+
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(authProvider.notifier).sendVerificationCode(loginId, name);
       setState(() {
         _isEmailSent = true;
       });
@@ -144,6 +167,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
+  // 2-1단계: 인증 코드 일치 확인
   Future<void> _verifyCode() async {
     final loginId = _loginIdController.text.trim();
     final code = _verificationCodeController.text.trim();
@@ -172,6 +196,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
+  // 3단계: 가입 완료
   Future<void> _signup() async {
     final loginId = _loginIdController.text.trim();
     final name = _nameController.text.trim();
@@ -255,167 +280,241 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        '이메일 인증 가입',
+                        '학생 인증 회원가입',
                         style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: -1.0),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '영남이공대학교 학생 메일로 가입을 진행합니다.',
+                        '학적 대조 후 학교 이메일을 이용해 가입을 진행합니다.',
                         style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
                       
-                      // 1단계: 학번 입력 및 인증코드 발송
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: _buildInputField(
-                              controller: _loginIdController,
-                              label: '학번',
-                              hint: '학번 입력 (예: 2305009)',
-                              icon: Icons.badge_outlined,
-                              enabled: !_isVerified,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            height: 52,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _isVerified 
-                                    ? Colors.grey.shade200 
-                                    : primaryColor.withOpacity(0.1),
-                                foregroundColor: _isVerified 
-                                    ? Colors.grey 
-                                    : primaryColor,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                              ),
-                              onPressed: (_isLoading || _isVerified) ? null : _sendVerificationCode,
-                              child: Text(
-                                _isEmailSent ? '재발송' : '코드발송',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                            ),
-                          ),
-                        ],
+                      // 1단계: 학번 및 이름 입력 영역
+                      _buildInputField(
+                        controller: _loginIdController,
+                        label: '학번',
+                        hint: '학번 입력 (예: 2305009)',
+                        icon: Icons.badge_outlined,
+                        enabled: !_isStudentInfoVerified,
                       ),
                       const SizedBox(height: 16),
+                      _buildInputField(
+                        controller: _nameController,
+                        label: '이름',
+                        hint: '실명 입력',
+                        icon: Icons.person_outline,
+                        enabled: !_isStudentInfoVerified,
+                      ),
+                      const SizedBox(height: 20),
 
-                      // 2단계: 인증코드 입력 및 확인 (이메일이 발송되었고 아직 검증되지 않은 상태)
-                      if (_isEmailSent && !_isVerified) ...[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: _buildInputField(
-                                controller: _verificationCodeController,
-                                label: '인증 번호 (6자리)',
-                                hint: '인증 번호 입력',
-                                icon: Icons.lock_open_rounded,
-                              ),
+                      if (!_isStudentInfoVerified) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                             ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              height: 52,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                ),
-                                onPressed: _isLoading ? null : _verifyCode,
-                                child: const Text('인증확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '남은 시간: ${_formatTimerText()}',
-                            style: TextStyle(
-                              color: Colors.redAccent.shade700,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                            onPressed: _isLoading ? null : _verifyStudentInfo,
+                            child: _isLoading
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Text('학생 정보 확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                           ),
                         ),
-                        const SizedBox(height: 16),
                       ],
 
-                      if (_isVerified) ...[
-                        // 인증 완료 배지
+                      // 1차 정보 대조 통과 완료 시
+                      if (_isStudentInfoVerified) ...[
+                        // 학생 인증 완료 배지
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.shade200),
+                            border: Border.all(color: Colors.blue.shade200),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                              Icon(Icons.check_circle, color: Colors.blue.shade700, size: 20),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  '이메일 인증이 완료되었습니다.',
-                                  style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 13),
+                                  '학생 정보가 확인되었습니다.',
+                                  style: TextStyle(color: Colors.blue.shade800, fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
 
-                        // 3단계: 이름 및 비밀번호 입력 폼
-                        _buildInputField(
-                          controller: _nameController,
-                          label: '이름 (실명)',
-                          hint: '실명을 입력해주세요',
-                          icon: Icons.person_outline,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInputField(
-                          controller: _passwordController,
-                          label: '비밀번호',
-                          hint: '비밀번호 입력 (최소 4자)',
-                          icon: Icons.lock_outline,
-                          isPassword: true,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInputField(
-                          controller: _passwordConfirmController,
-                          label: '비밀번호 확인',
-                          hint: '비밀번호 재입력',
-                          icon: Icons.lock_outline,
-                          isPassword: true,
-                        ),
-                        const SizedBox(height: 28),
-
-                        // 가입 버튼
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        // 2단계: 이메일 전송 패널 및 본인 인증
+                        if (!_isVerified) ...[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Text(
+                                '이메일 본인 인증',
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700, fontSize: 13),
+                              ),
                             ),
-                            onPressed: _isLoading ? null : _signup,
-                            child: _isLoading 
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                                : const Text('가입 완료하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
-                        ),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.email_outlined, size: 18, color: Colors.grey),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '수신 메일: ${_loginIdController.text}@ync.ac.kr',
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  height: 44,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: primaryColor.withOpacity(0.1),
+                                      foregroundColor: primaryColor,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: _isLoading ? null : _sendVerificationCode,
+                                    child: Text(
+                                      _isEmailSent ? '인증 코드 재전송' : '인증 코드 전송',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // 이메일 코드가 발송되었고 아직 검증되지 않은 상태
+                        if (_isEmailSent && !_isVerified) ...[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: _buildInputField(
+                                  controller: _verificationCodeController,
+                                  label: '인증 번호 (6자리)',
+                                  hint: '인증 번호 입력',
+                                  icon: Icons.lock_open_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 52,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  ),
+                                  onPressed: _isLoading ? null : _verifyCode,
+                                  child: const Text('인증확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '남은 시간: ${_formatTimerText()}',
+                              style: TextStyle(
+                                color: Colors.redAccent.shade700,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // 2단계 완료 (이메일 인증 성공 시)
+                        if (_isVerified) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '이메일 본인인증이 완료되었습니다.',
+                                    style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // 3단계: 최종 비밀번호 입력 폼
+                          _buildInputField(
+                            controller: _passwordController,
+                            label: '비밀번호 설정',
+                            hint: '비밀번호 입력 (최소 4자)',
+                            icon: Icons.lock_outline,
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInputField(
+                            controller: _passwordConfirmController,
+                            label: '비밀번호 확인',
+                            hint: '비밀번호 재입력',
+                            icon: Icons.lock_outline,
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 28),
+
+                          // 가입 버튼
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              ),
+                              onPressed: _isLoading ? null : _signup,
+                              child: _isLoading 
+                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                                  : const Text('가입 완료하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),

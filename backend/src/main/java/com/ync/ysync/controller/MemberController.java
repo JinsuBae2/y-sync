@@ -51,15 +51,32 @@ public class MemberController {
         return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
     }
 
-    @PostMapping("/verify-student/send-code")
-    @Operation(summary = "이메일 인증 코드 전송", description = "학번을 입력받아 [학번]@ync.ac.kr로 6자리 인증 메일을 전송합니다.")
-    public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
+    @PostMapping("/verify-student")
+    @Operation(summary = "학생 사전 정보 검증 (1차)", description = "학번과 이름을 입력받아 DB의 사전 등록 정보와 일치하는지 1차 확인합니다.")
+    public ResponseEntity<?> verifyStudent(@RequestBody Map<String, String> request) {
         String loginId = request.get("loginId");
-        if (loginId == null || loginId.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "학번을 입력해 주세요."));
+        String name = request.get("name");
+        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
         }
         try {
-            memberService.sendVerificationEmail(loginId);
+            memberService.verifyStudentForSignup(loginId, name);
+            return ResponseEntity.ok(Map.of("message", "학생 정보가 정상적으로 확인되었습니다. 이메일 인증을 진행할 수 있습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-student/send-code")
+    @Operation(summary = "이메일 인증 코드 전송 (2차)", description = "학번과 이름을 대조 확인한 뒤 [학번]@ync.ac.kr로 6자리 인증 메일을 전송합니다.")
+    public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
+        String loginId = request.get("loginId");
+        String name = request.get("name");
+        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
+        }
+        try {
+            memberService.sendVerificationEmail(loginId, name);
             return ResponseEntity.ok(Map.of("message", "인증 코드가 이메일로 전송되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

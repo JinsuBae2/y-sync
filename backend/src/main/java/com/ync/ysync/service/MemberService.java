@@ -44,25 +44,36 @@ public class MemberService {
     }
 
     /**
-     * 회원가입을 위한 인증번호 전송
+     * 회원가입 전 학번과 이름 일치 여부 1차 검증
      */
-    public void sendVerificationEmail(String loginId) {
-        // 1. 사전 등록 여부 조회
+    @Transactional(readOnly = true)
+    public void verifyStudentForSignup(String loginId, String name) {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 학번입니다. 학과 사무실에 문의하세요."));
 
-        // 2. 이미 활성화된 계정인지 검증
         if (member.isActivated()) {
             throw new IllegalArgumentException("이미 회원가입이 완료된 학번입니다.");
         }
 
-        // 3. 6자리 인증번호 생성
+        if (!member.getName().equals(name)) {
+            throw new IllegalArgumentException("학번과 이름이 일치하지 않습니다.");
+        }
+    }
+
+    /**
+     * 회원가입을 위한 인증번호 전송
+     */
+    public void sendVerificationEmail(String loginId, String name) {
+        // 1. 사전 등록 여부 및 이름 일치 검증 (1차 검증 재호출로 보안 보장)
+        verifyStudentForSignup(loginId, name);
+
+        // 2. 6자리 인증번호 생성
         String code = String.format("%06d", (int) (Math.random() * 1000000));
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5); // 5분 유효
 
         verificationCodes.put(loginId, new VerificationInfo(code, expiredAt));
         
-        // 4. 이메일 발송
+        // 3. 이메일 발송
         String toEmail = loginId + "@ync.ac.kr";
         emailService.sendVerificationCode(toEmail, code);
     }
