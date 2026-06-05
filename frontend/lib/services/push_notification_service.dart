@@ -131,7 +131,9 @@ class PushNotificationService {
       // 7. 앱이 백그라운드에 있다가 배너를 눌러 가져와진 경우
       FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteMessageClick);
 
-      // 8. 공지사항 일괄 수신 처리를 위해 'all' 토픽 구독 (모바일 전용)
+      // 💡 [웹앱 환경 개선] 브라우저 및 하이브리드 환경의 제약으로 인해 FCM 토픽 구독 방식은 사용하지 않습니다.
+      // 💡 공지사항 알림은 백엔드에서 활성 유저 기기 토큰 목록을 조회하여 멀티캐스트(Multicast) 방식으로 발송합니다.
+      /*
       if (!kIsWeb) {
         try {
           await _fcm.subscribeToTopic('all');
@@ -139,6 +141,7 @@ class PushNotificationService {
           print('FCM 토픽 구독 실패: $e');
         }
       }
+      */
     } catch (e) {
       // 💡 최상위 방어: 어떤 예외가 발생해도 앱 자체는 절대 멈추지 않습니다.
       print('PushNotificationService 초기화 중 예외 발생 (앱 실행에 영향 없음): $e');

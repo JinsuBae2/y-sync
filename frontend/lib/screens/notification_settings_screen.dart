@@ -46,7 +46,9 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
         'commentEnabled': commentEnabled,
       });
 
-      // 2. 모바일 환경의 경우 FCM 토픽 구독 동적 제어
+      // 💡 [웹앱 환경 개선] 브라우저 제약 상 FCM 토픽 구독 제어가 불가능하므로, 토픽 방식은 주석 처리합니다.
+      // 💡 공지사항 알림 수신 여부는 백엔드 DB의 noticeEnabled 필드를 반영하여 발송 쿼리 시 자동으로 걸러집니다.
+      /*
       if (!kIsWeb) {
         if (noticeEnabled) {
           await FirebaseMessaging.instance.subscribeToTopic('all');
@@ -54,6 +56,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
           await FirebaseMessaging.instance.unsubscribeFromTopic('all');
         }
       }
+      */
 
       setState(() {
         _noticeEnabled = noticeEnabled;
