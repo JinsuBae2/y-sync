@@ -32,7 +32,7 @@ public class EmailService {
             log.info("인증 이메일 전송 완료 - 수신자: {}", toEmail);
         } catch (Exception e) {
             log.error("❌ SMTP 메일 전송 실패 (Gmail SMTP 환경 변수가 설정되지 않았거나 네트워크 문제일 수 있습니다.)", e);
-            log.warn("💡 [로컬 개발용 폴백] 메일 전송은 실패했으나, 로컬 테스트를 위해 콘솔에 인증 코드를 출력합니다: [{}] -> 코드: [{}]", toEmail, code);
+            throw new IllegalArgumentException("이메일 발송에 실패했습니다. 메일 주소를 확인하거나 잠시 후 다시 시도해 주세요.", e);
         }
     }
 }
