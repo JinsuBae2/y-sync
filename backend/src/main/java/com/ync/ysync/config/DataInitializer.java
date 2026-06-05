@@ -65,6 +65,17 @@ public class DataInitializer implements CommandLineRunner {
         student2.setActivated(true);
         memberRepository.save(student2);
 
+        // 4. 테스트용 가입 대기 학생 (김수빈 - 2505034)
+        Member testPendingStudent = memberRepository.findByLoginId("2505034").orElseGet(() -> 
+                Member.builder()
+                        .loginId("2505034")
+                        .password(passwordEncoder.encode("TEMP_2505034_PENDING"))
+                        .name("김수빈")
+                        .isActivated(false) // 💡 회원가입 테스트가 가능하도록 비활성 상태로 유지
+                        .build());
+        testPendingStudent.setRole(MemberRole.USER);
+        memberRepository.save(testPendingStudent);
+
         // --- 2. 기존 데이터 정리 및 재생성 (공용 데이터는 이미 있으면 유지 가능하지만 시연용이므로 조건부 생성) ---
         if (noticeRepository.count() == 0) {
             log.info("🚀 초기 공지사항 및 게시글 생성을 시작합니다...");
