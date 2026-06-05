@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'admin_member_tab.dart';
 import 'admin_approval_tab.dart';
+import 'admin_post_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -16,7 +17,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       setState(() {
@@ -90,6 +91,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ],
               ),
             ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.article_rounded, size: 18),
+                  SizedBox(width: 8),
+                  Text('게시글 관리'),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -98,6 +109,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         children: const [
           AdminMemberTab(isDesktop: false),
           AdminApprovalTab(isDesktop: false),
+          AdminPostManagementScreen(isTabMode: true),
         ],
       ),
     );
@@ -168,6 +180,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   title: '관리자 승인 대기',
                   activeColor: themeColor,
                 ),
+                _buildSidebarItem(
+                  index: 2,
+                  icon: Icons.article_rounded,
+                  title: '전체 게시글 관리',
+                  activeColor: themeColor,
+                ),
                 
                 const Spacer(),
                 
@@ -205,7 +223,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        _selectedIndex == 0 ? '학생 정보 관리 대시보드' : '관리자 승인 처리 패널',
+                        _selectedIndex == 0
+                            ? '학생 정보 관리 대시보드'
+                            : (_selectedIndex == 1 ? '관리자 승인 처리 패널' : '전체 게시글 모니터링 타워'),
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black87),
                       ),
                       Text(
@@ -223,6 +243,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: const [
                       AdminMemberTab(isDesktop: true),
                       AdminApprovalTab(isDesktop: true),
+                      AdminPostManagementScreen(isTabMode: true),
                     ],
                   ),
                 ),

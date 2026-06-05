@@ -5,7 +5,8 @@ import '../providers/community_provider.dart';
 import 'community_detail_screen.dart';
 
 class AdminPostManagementScreen extends ConsumerStatefulWidget {
-  const AdminPostManagementScreen({super.key});
+  final bool isTabMode;
+  const AdminPostManagementScreen({super.key, this.isTabMode = false});
 
   @override
   ConsumerState<AdminPostManagementScreen> createState() => _AdminPostManagementScreenState();
@@ -37,6 +38,98 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
   @override
   Widget build(BuildContext context) {
     final postsAsync = ref.watch(communityPostsProvider);
+    final themeColor = const Color(0xFF164687);
+
+    final content = Column(
+      children: [
+        if (widget.isTabMode) ...[
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: themeColor,
+              labelColor: themeColor,
+              unselectedLabelColor: Colors.grey,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+              tabs: const [
+                Tab(text: '전체 게시글'),
+                Tab(text: '삭제된 게시글 복구'),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Colors.black12),
+        ],
+        // 💡 검색 바 영역
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          color: Colors.white,
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: '제목, 내용, 작성자 검색...',
+              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, color: Colors.grey),
+                      onPressed: () => _searchController.clear(),
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: postsAsync.when(
+            data: (allPosts) {
+              // 검색어 필터링
+              final filtered = allPosts.where((post) {
+                if (_searchQuery.isEmpty) return true;
+                final query = _searchQuery.toLowerCase();
+                return post.title.toLowerCase().contains(query) ||
+                    post.content.toLowerCase().contains(query) ||
+                    post.authorName.toLowerCase().contains(query);
+              }).toList();
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  // 탭 1: 전체 게시글 목록
+                  _buildAllPostsTab(filtered),
+                  // 탭 2: 삭제된 게시글 복구 목록
+                  _buildDeletedPostsTab(filtered.where((p) => p.isDeleted).toList()),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF164687))),
+            error: (err, stack) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Text('데이터 로드 실패: $err', style: const TextStyle(color: Colors.black54)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (widget.isTabMode) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: content,
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -45,7 +138,7 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
           '전체 게시글 관리',
           style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF164687),
+        backgroundColor: themeColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
@@ -61,71 +154,7 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // 💡 검색 바 영역
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: '제목, 내용, 작성자 검색...',
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, color: Colors.grey),
-                        onPressed: () => _searchController.clear(),
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: postsAsync.when(
-              data: (allPosts) {
-                // 검색어 필터링
-                final filtered = allPosts.where((post) {
-                  if (_searchQuery.isEmpty) return true;
-                  final query = _searchQuery.toLowerCase();
-                  return post.title.toLowerCase().contains(query) ||
-                      post.content.toLowerCase().contains(query) ||
-                      post.authorName.toLowerCase().contains(query);
-                }).toList();
-
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // 탭 1: 전체 게시글 목록
-                    _buildAllPostsTab(filtered),
-                    // 탭 2: 삭제된 게시글 복구 목록
-                    _buildDeletedPostsTab(filtered.where((p) => p.isDeleted).toList()),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline_rounded, size: 48, color: Colors.red),
-                    const SizedBox(height: 12),
-                    Text('데이터 로드 실패: $err', style: const TextStyle(color: Colors.black54)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: content,
     );
   }
 
