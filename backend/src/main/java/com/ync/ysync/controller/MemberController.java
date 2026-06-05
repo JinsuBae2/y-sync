@@ -68,15 +68,16 @@ public class MemberController {
     }
 
     @PostMapping("/verify-student/send-code")
-    @Operation(summary = "이메일 인증 코드 전송 (2차)", description = "학번과 이름을 대조 확인한 뒤 [학번]@ync.ac.kr로 6자리 인증 메일을 전송합니다.")
+    @Operation(summary = "이메일 인증 코드 전송 (2차)", description = "학번과 이름을 대조 확인한 뒤 입력한 이메일(@ync.ac.kr)로 6자리 인증 메일을 전송합니다.")
     public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
         String loginId = request.get("loginId");
         String name = request.get("name");
-        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
+        String email = request.get("email");
+        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty() || email == null || email.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번, 이름, 이메일을 모두 입력해 주세요."));
         }
         try {
-            memberService.sendVerificationEmail(loginId, name);
+            memberService.sendVerificationEmail(loginId, name, email);
             return ResponseEntity.ok(Map.of("message", "인증 코드가 이메일로 전송되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

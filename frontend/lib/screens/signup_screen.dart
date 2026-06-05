@@ -13,6 +13,7 @@ class SignupScreen extends ConsumerStatefulWidget {
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _loginIdController = TextEditingController();
   final _nameController = TextEditingController();
+  final _emailController = TextEditingController(); // 💡 이메일 아이디 입력 컨트롤러 추가
   final _verificationCodeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
@@ -29,6 +30,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   void dispose() {
     _loginIdController.dispose();
     _nameController.dispose();
+    _emailController.dispose(); // 💡 이메일 컨트롤러 해제 추가
     _verificationCodeController.dispose();
     _passwordController.dispose();
     _passwordConfirmController.dispose();
@@ -151,15 +153,23 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _sendVerificationCode() async {
     final loginId = _loginIdController.text.trim();
     final name = _nameController.text.trim();
+    final emailLocal = _emailController.text.trim();
+
+    if (emailLocal.isEmpty) {
+      _showWarningSnackBar('이메일 아이디를 입력해주세요.');
+      return;
+    }
+
+    final fullEmail = '$emailLocal@ync.ac.kr';
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(authProvider.notifier).sendVerificationCode(loginId, name);
+      await ref.read(authProvider.notifier).sendVerificationCode(loginId, name, fullEmail);
       setState(() {
         _isEmailSent = true;
       });
       _startTimer();
-      _showSuccessSnackBar('학생 메일($loginId@ync.ac.kr)로 인증 코드를 전송했습니다.');
+      _showSuccessSnackBar('학생 메일($fullEmail)로 인증 코드를 전송했습니다.');
     } catch (e) {
       _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
     } finally {
@@ -377,12 +387,45 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.email_outlined, size: 18, color: Colors.grey),
-                                    const SizedBox(width: 8),
                                     Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: TextField(
+                                          controller: _emailController,
+                                          enabled: !_isEmailSent,
+                                          style: const TextStyle(fontSize: 14),
+                                          decoration: InputDecoration(
+                                            hintText: '이메일 아이디 입력',
+                                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                            prefixIcon: const Icon(Icons.email_outlined, size: 18, color: Colors.grey),
+                                            filled: true,
+                                            fillColor: Colors.white,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(color: Colors.grey.shade200),
+                                            ),
+                                            disabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(color: Colors.grey.shade300),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(color: primaryColor, width: 1.5),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 8.0),
                                       child: Text(
-                                        '수신 메일: ${_loginIdController.text}@ync.ac.kr',
-                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                        '@ync.ac.kr',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
                                       ),
                                     ),
                                   ],

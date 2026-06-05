@@ -149,12 +149,13 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     }
   }
 
-  Future<void> sendVerificationCode(String loginId, String name) async {
+  Future<void> sendVerificationCode(String loginId, String name, String email) async {
     try {
       final dio = ref.read(dioProvider);
       await dio.post('/auth/verify-student/send-code', data: {
         'loginId': loginId,
         'name': name,
+        'email': email,
       });
     } catch (e) {
       if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {

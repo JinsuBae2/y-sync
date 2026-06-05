@@ -63,9 +63,17 @@ public class MemberService {
     /**
      * 회원가입을 위한 인증번호 전송
      */
-    public void sendVerificationEmail(String loginId, String name) {
+    public void sendVerificationEmail(String loginId, String name, String email) {
         // 1. 사전 등록 여부 및 이름 일치 검증 (1차 검증 재호출로 보안 보장)
         verifyStudentForSignup(loginId, name);
+
+        // 이메일 형식 검증 (도메인이 ync.ac.kr 인지 점검)
+        String toEmail = email.trim();
+        if (!toEmail.contains("@")) {
+            toEmail = toEmail + "@ync.ac.kr";
+        } else if (!toEmail.endsWith("@ync.ac.kr")) {
+            throw new IllegalArgumentException("영남이공대학교 이메일(@ync.ac.kr)만 사용 가능합니다.");
+        }
 
         // 2. 6자리 인증번호 생성
         String code = String.format("%06d", (int) (Math.random() * 1000000));
@@ -74,7 +82,6 @@ public class MemberService {
         verificationCodes.put(loginId, new VerificationInfo(code, expiredAt));
         
         // 3. 이메일 발송
-        String toEmail = loginId + "@ync.ac.kr";
         emailService.sendVerificationCode(toEmail, code);
     }
 
