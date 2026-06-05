@@ -51,49 +51,52 @@ public class MemberController {
         return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
     }
 
-    @PostMapping("/social-login")
-    @Operation(summary = "소셜 로그인", description = "구글 또는 카카오의 AccessToken을 검증하고, 가입된 회원이면 JWT를 발급하며, 미가입 시 202 상태코드와 임시 식별자를 반환합니다.")
-    public ResponseEntity<?> socialLogin(@RequestBody SocialLoginRequest request) {
+    @PostMapping("/verify-student/send-code")
+    @Operation(summary = "이메일 인증 코드 전송", description = "학번을 입력받아 [학번]@ync.ac.kr로 6자리 인증 메일을 전송합니다.")
+    public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
+        String loginId = request.get("loginId");
+        if (loginId == null || loginId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번을 입력해 주세요."));
+        }
         try {
-            String socialId = socialAuthService.getSocialId(request.getAccessToken(), request.getProvider());
-            Member member = memberService.socialLogin(socialId, request.getProvider());
-
-            if (member != null) {
-                String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
-                log.info("소셜 로그인 성공 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-                // 💡 [구글 로그인 리팩토링] 기존 회원인 경우 isNewMember를 false로 응답
-                return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공", "isNewMember", false));
-            } else {
-                log.info("소셜 로그인 미가입자 발견 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-                // 💡 [구글 로그인 리팩토링] 신규 회원인 경우 추가 정보 가입 필요를 알리기 위해 isNewMember를 true로 응답
-                return ResponseEntity.status(HttpStatus.ACCEPTED)
-                        .body(Map.of("socialId", socialId, "provider", request.getProvider().name(), "isNewMember", true, "message", "가입되지 않은 소셜 계정입니다. 학번을 입력하여 가입을 진행해주세요."));
-            }
+            memberService.sendVerificationEmail(loginId);
+            return ResponseEntity.ok(Map.of("message", "인증 코드가 이메일로 전송되었습니다."));
         } catch (IllegalArgumentException e) {
-            log.error("소셜 로그인 토큰 검증 실패 - Provider: {}, Error: {}", request.getProvider(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("소셜 로그인 처리 중 예상치 못한 오류 - Provider: {}", request.getProvider(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "소셜 로그인 처리 중 오류가 발생했습니다."));
+            log.error("인증 이메일 발송 실패", e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "이메일 발송 중 오류가 발생했습니다."));
         }
     }
 
-    @PostMapping("/social-signup")
-    @Operation(summary = "소셜 회원가입", description = "소셜 로그인 후 반환된 socialId와 provider, 그리고 추가 정보(학번, 이름)를 이용해 회원가입을 완료하고 JWT를 발급합니다.")
-    public ResponseEntity<?> socialSignup(@RequestBody SocialSignupRequest request) {
-        try {
-            Member member = memberService.socialSignup(request.getLoginId(), request.getName(), request.getSocialId(), request.getProvider(), request.getPassword());
-            String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
-            log.info("소셜 회원가입 성공 - LoginID: {}, Provider: {}", member.getLoginId(), request.getProvider());
-            return ResponseEntity.ok(Map.of("token", token, "message", "소셜 회원가입 성공"));
-        } catch (IllegalArgumentException e) {
-            if ("REQUIRE_PASSWORD".equals(e.getMessage())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "REQUIRE_PASSWORD"));
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    @PostMapping("/verify-student/verify-code")
+    @Operation(summary = "이메일 인증 코드 검증", description = "이메일로 수신된 6자리 인증 코드를 확인합니다.")
+    public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> request) {
+        String loginId = request.get("loginId");
+        String code = request.get("code");
+        if (loginId == null || code == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번과 인증 코드를 모두 입력해 주세요."));
         }
+        try {
+            boolean isSuccess = memberService.verifyCode(loginId, code);
+            return ResponseEntity.ok(Map.of("success", isSuccess, "message", "인증이 성공적으로 완료되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/social-login")
+    @Operation(summary = "소셜 로그인 (비활성화)", description = "이메일 인증 가입 도입으로 인해 비활성화된 API입니다.")
+    public ResponseEntity<?> socialLogin(@RequestBody SocialLoginRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "소셜 로그인 기능은 비활성화되었습니다. 학번 로그인을 이용해 주세요."));
+    }
+
+    @PostMapping("/social-signup")
+    @Operation(summary = "소셜 회원가입 (비활성화)", description = "이메일 인증 가입 도입으로 인해 비활성화된 API입니다.")
+    public ResponseEntity<?> socialSignup(@RequestBody SocialSignupRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "소셜 회원가입 기능은 비활성화되었습니다. 학번 로그인을 이용해 주세요."));
     }
 
     @PostMapping("/logout")

@@ -5,6 +5,7 @@ class Member {
   final String role;
   final bool noticeEnabled;
   final bool commentEnabled;
+  final bool isActivated; // 💡 가입(활성화) 여부 추가
 
   Member({
     required this.id,
@@ -13,6 +14,7 @@ class Member {
     required this.role,
     required this.noticeEnabled,
     required this.commentEnabled,
+    required this.isActivated,
   });
 
   factory Member.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class Member {
       role: json['role'] ?? '',
       noticeEnabled: json['noticeEnabled'] ?? true,
       commentEnabled: json['commentEnabled'] ?? true,
+      isActivated: json['activated'] ?? json['isActivated'] ?? false,
     );
   }
 }

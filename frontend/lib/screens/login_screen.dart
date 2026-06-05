@@ -393,31 +393,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     
                     const SizedBox(height: 24),
-                    
-                    // 💡 [개편] 디바이더 배치
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('또는', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        ),
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // 💡 [개편] 구글 로그인 버튼을 서브 수단으로 아래에 배치
-                    _buildSocialButton(
-                      iconPath: 'assets/images/google_logo.png',
-                      label: '구글로 시작하기',
-                      color: Colors.white,
-                      textColor: Colors.black87,
-                      borderColor: Colors.grey.shade300,
-                      onPressed: _loginWithGoogle,
-                      iconFallback: Icons.g_mobiledata_rounded,
-                    ),
                   ],
                 ),
               ),

@@ -134,6 +134,34 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     }
   }
 
+  Future<void> sendVerificationCode(String loginId) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/auth/verify-student/send-code', data: {'loginId': loginId});
+    } catch (e) {
+      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+        throw Exception(e.response?.data['message']);
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> verifyCode(String loginId, String code) async {
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.post('/auth/verify-student/verify-code', data: {
+        'loginId': loginId,
+        'code': code,
+      });
+      return response.data['success'] ?? false;
+    } catch (e) {
+      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+        throw Exception(e.response?.data['message']);
+      }
+      rethrow;
+    }
+  }
+
   Future<bool> checkDuplicate(String loginId) async {
     try {
       final dio = ref.read(dioProvider);

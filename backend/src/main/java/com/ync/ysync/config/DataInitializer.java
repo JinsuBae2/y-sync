@@ -32,24 +32,37 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        // --- 0. 기존 DB 회원 마이그레이션 (안전장치) ---
+        // 이미 유효한 암호화된 비밀번호를 가진 계정들은 isActivated = true로 일괄 마이그레이션합니다.
+        memberRepository.findAll().forEach(member -> {
+            if (!member.isActivated() && member.getPassword() != null && !member.getPassword().trim().isEmpty() && !member.getPassword().startsWith("TEMP_")) {
+                member.setActivated(true);
+                memberRepository.save(member);
+                log.info("Migration: 회원 [{}] 계정을 활성화 상태(isActivated=true)로 업데이트했습니다.", member.getLoginId());
+            }
+        });
+
         // --- 1. Member 생성 (Upsert 방식) ---
         
         // 1. 마스터 관리자 (배진수)
         Member admin = memberRepository.findByLoginId("2305009").orElseGet(() -> 
-                Member.builder().loginId("2305009").password(passwordEncoder.encode("ync2305009!")).name("배진수").build());
+                Member.builder().loginId("2305009").password(passwordEncoder.encode("ync2305009!")).name("배진수").isActivated(true).build());
         admin.setRole(MemberRole.SUPER_ADMIN); // 💡 항상 SUPER_ADMIN으로 보장
+        admin.setActivated(true);
         memberRepository.save(admin);
 
         // 2. 테스트 학생 1
         Member student1 = memberRepository.findByLoginId("2300001").orElseGet(() -> 
-                Member.builder().loginId("2300001").password(passwordEncoder.encode("test1234!")).name("김철수").build());
+                Member.builder().loginId("2300001").password(passwordEncoder.encode("test1234!")).name("김철수").isActivated(true).build());
         student1.setRole(MemberRole.USER);
+        student1.setActivated(true);
         memberRepository.save(student1);
 
         // 3. 테스트 학생 2
         Member student2 = memberRepository.findByLoginId("2300002").orElseGet(() -> 
-                Member.builder().loginId("2300002").password(passwordEncoder.encode("test1234!")).name("이영희").build());
+                Member.builder().loginId("2300002").password(passwordEncoder.encode("test1234!")).name("이영희").isActivated(true).build());
         student2.setRole(MemberRole.USER);
+        student2.setActivated(true);
         memberRepository.save(student2);
 
         // --- 2. 기존 데이터 정리 및 재생성 (공용 데이터는 이미 있으면 유지 가능하지만 시연용이므로 조건부 생성) ---

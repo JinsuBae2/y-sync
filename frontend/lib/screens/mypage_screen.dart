@@ -9,6 +9,7 @@ import '../models/notice.dart';
 import '../providers/admin_provider.dart';
 import 'notice_form_screen.dart';
 import 'scrap_list_screen.dart'; // 💡 추가
+import 'admin_dashboard_screen.dart'; // 💡 추가
 import 'auth_settings_screen.dart';
 import 'notification_settings_screen.dart';
 import 'login_screen.dart';
@@ -148,6 +149,30 @@ class MyPageScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // 💡 학과 관리자 페이지 이동 메뉴 (ADMIN 또는 SUPER_ADMIN 전용)
+            if (member.role == 'ADMIN' || member.role == 'SUPER_ADMIN') ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF164687)),
+                  title: const Text('학과 관리자 페이지', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  trailing: const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // 💡 내가 스크랩한 글 (새 화면 진입용 타일)
             Container(

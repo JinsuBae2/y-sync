@@ -65,12 +65,16 @@ public class Member {
     @Column(nullable = false)
     private boolean commentEnabled = true;
 
+    @Setter
+    @Column(nullable = false)
+    private boolean isActivated = false; // 💡 회원가입(활성화) 여부
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public Member(String loginId, String password, String name, MemberRole role, AuthProvider provider, String socialId, AuthType authType) {
+    public Member(String loginId, String password, String name, MemberRole role, AuthProvider provider, String socialId, AuthType authType, boolean isActivated) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;
@@ -80,5 +84,6 @@ public class Member {
         this.authType = authType != null ? authType : AuthType.PASSWORD;
         this.noticeEnabled = true;
         this.commentEnabled = true;
+        this.isActivated = isActivated;
     }
 }
