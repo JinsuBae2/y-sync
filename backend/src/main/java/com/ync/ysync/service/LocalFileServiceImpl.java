@@ -1,5 +1,6 @@
 package com.ync.ysync.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
@@ -10,8 +11,9 @@ import java.util.UUID;
 @Service
 public class LocalFileServiceImpl implements FileService {
 
-    // 💡 파일을 저장할 로컬 디렉토리 경로. 운영체제가 Windows이므로 C:/ 경로를 사용합니다.
-    private final String uploadDir = "C:/uploads/y-sync/";
+    // 💡 프로퍼티에서 저장할 디렉토리 경로를 주입받습니다.
+    @Value("${ysync.upload.dir}")
+    private String uploadDir;
 
     @Override
     public String uploadFile(MultipartFile file) throws IOException {

@@ -1,5 +1,6 @@
 package com.ync.ysync.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -9,12 +10,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    @Value("${ysync.upload.resource-location}")
+    private String uploadResourceLocation;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 클라이언트가 /uploads/** 패턴으로 요청하면, 
-        // 실제 물리적인 경로인 C:/uploads/y-sync/ 에서 파일을 찾아 응답합니다.
+        // 주입받은 물리적 스토리지 리소스를 맵핑하여 파일을 찾아 응답합니다.
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:///C:/uploads/y-sync/");
+                .addResourceLocations(uploadResourceLocation);
     }
 
     @Override

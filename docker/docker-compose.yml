@@ -44,8 +44,11 @@ services:
       - FIREBASE_CONFIG_PATH=file:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 외부 파이어베이스 키 설정 경로 지정
       - MAIL_USERNAME=${MAIL_USERNAME}  # 💡 [Gmail 연동] 외부 메일 유저네임 주입
       - MAIL_PASSWORD=${MAIL_PASSWORD}  # 💡 [Gmail 연동] 외부 메일 앱비밀번호 주입
+      - UPLOAD_DIR=/app/uploads/        # 💡 [업로드 마운트] 리눅스 도커 디렉토리 주입
+      - UPLOAD_RESOURCE_LOCATION=file:/app/uploads/ # 💡 [업로드 마운트] 리눅스 파일 스키마 주입
     volumes:
       - ./firebase-adminsdk.json:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 로컬 호스트의 파이어베이스 키 파일을 컨테이너 내부로 바인드 마운트
+      - ./uploads:/app/uploads  # 💡 [업로드 마운트] 이미지 보존을 위해 볼륨 바인딩
     depends_on:
       - ysync-mysql
     deploy:
