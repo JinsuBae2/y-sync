@@ -40,6 +40,27 @@ class AdminNotifier extends AsyncNotifier<List<AdminRequest>> {
     await dio.post('/admin/requests/$id/reject');
     await fetchPendingRequests(); // 목록 갱신
   }
+
+  // 💡 작성자 차단
+  Future<void> suspendMember(int id) async {
+    final dio = ref.read(dioProvider);
+    await dio.post('/admin/members/$id/suspend');
+  }
+
+  // 💡 작성자 차단 해제
+  Future<void> unsuspendMember(int id) async {
+    final dio = ref.read(dioProvider);
+    await dio.post('/admin/members/$id/unsuspend');
+  }
+
+  // 💡 신고 기각 및 대상 복구
+  Future<void> dismissReport(String targetType, int targetId) async {
+    final dio = ref.read(dioProvider);
+    await dio.post('/admin/reports/dismiss', data: {
+      'targetType': targetType,
+      'targetId': targetId,
+    });
+  }
 }
 
 final adminProvider = AsyncNotifierProvider<AdminNotifier, List<AdminRequest>>(() {
@@ -53,6 +74,8 @@ class AdminReportSummary {
   final String title;
   final String content;
   final String authorName;
+  final int? authorId; // 💡 작성자 차단을 위해 추가
+  final bool isAuthorSuspended; // 💡 작성자 차단 여부 추가
   final bool isDeleted;
   final String? deletionReason;
   final List<String> reasons;
@@ -64,6 +87,8 @@ class AdminReportSummary {
     required this.title,
     required this.content,
     required this.authorName,
+    this.authorId,
+    required this.isAuthorSuspended,
     required this.isDeleted,
     this.deletionReason,
     required this.reasons,
@@ -77,6 +102,8 @@ class AdminReportSummary {
       title: json['title'] ?? '',
       content: json['content'] ?? '',
       authorName: json['authorName'] ?? '',
+      authorId: json['authorId'],
+      isAuthorSuspended: json['isAuthorSuspended'] ?? false,
       isDeleted: json['isDeleted'] ?? false,
       deletionReason: json['deletionReason'],
       reasons: List<String>.from(json['reasons'] ?? []),

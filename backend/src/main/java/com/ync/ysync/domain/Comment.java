@@ -70,4 +70,9 @@ public class Comment {
         this.isDeleted = true;
         this.deletionReason = reason;
     }
+
+    public void restoreByAdmin() {
+        this.isDeleted = false;
+        this.deletionReason = null;
+    }
 }

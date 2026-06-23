@@ -15,4 +15,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Object[]> findReportCountsGroupedByTarget();
 
     List<Report> findAllByTargetTypeAndTargetId(Report.TargetType targetType, Long targetId);
+
+    void deleteByTargetTypeAndTargetId(Report.TargetType targetType, Long targetId);
 }

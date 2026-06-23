@@ -1,5 +1,7 @@
 package com.ync.ysync.config;
 
+import com.ync.ysync.domain.Member;
+import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.service.MemberService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,6 +23,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -41,6 +44,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             if (loginId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt, loginId)) {
+                    // 💡 차단 유저 가드
+                    boolean suspended = memberRepository.findByLoginId(loginId)
+                            .map(Member::isSuspended)
+                            .orElse(false);
+
+                    if (suspended) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"message\": \"차단된 계정입니다. 관리자에게 문의하세요.\"}");
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             loginId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
                     );

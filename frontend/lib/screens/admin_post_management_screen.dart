@@ -764,29 +764,86 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('작성자: ${report.authorName}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
-                          if (isPost && !report.isDeleted)
-                            TextButton(
-                              onPressed: () async {
-                                try {
-                                  final fullPost = await ref.read(communityNotifierProvider).getPost(report.targetId);
-                                  if (context.mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => CommunityDetailScreen(post: fullPost)),
-                                    );
-                                  }
-                                } catch (e) {
-                                  _showErrorToast('게시글 조회 실패: $e');
-                                }
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          Row(
+                            children: [
+                              Text('작성자: ${report.authorName}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
+                              if (report.authorId != null) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: report.isAuthorSuspended ? Colors.red.shade50 : Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: report.isAuthorSuspended ? Colors.red.shade200 : Colors.green.shade200),
+                                  ),
+                                  child: Text(
+                                    report.isAuthorSuspended ? '차단됨' : '정상',
+                                    style: TextStyle(
+                                      color: report.isAuthorSuspended ? Colors.red.shade700 : Colors.green.shade700,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              if (isPost && !report.isDeleted)
+                                TextButton(
+                                  onPressed: () async {
+                                    try {
+                                      final fullPost = await ref.read(communityNotifierProvider).getPost(report.targetId);
+                                      if (context.mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => CommunityDetailScreen(post: fullPost)),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      _showErrorToast('게시글 조회 실패: $e');
+                                    }
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text('원문 보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                              if (report.authorId != null)
+                                OutlinedButton(
+                                  onPressed: () => _toggleSuspend(report),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: report.isAuthorSuspended ? const Color(0xFF164687) : Colors.red,
+                                    side: BorderSide(color: report.isAuthorSuspended ? const Color(0xFF164687) : Colors.red),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    report.isAuthorSuspended ? '차단 해제' : '작성자 차단',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              OutlinedButton(
+                                onPressed: () => _confirmDismissReport(report),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.teal,
+                                  side: const BorderSide(color: Colors.teal),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text(
+                                  '기각/복구',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
                               ),
-                              child: const Text('원문 보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
+                            ],
+                          ),
                         ],
                       ),
                     ],
@@ -855,6 +912,83 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('블라인드 처리', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleSuspend(AdminReportSummary report) {
+    if (report.authorId == null) return;
+    final isSuspending = !report.isAuthorSuspended;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isSuspending ? '작성자 차단' : '작성자 차단 해제', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(isSuspending
+            ? '"${report.authorName}" 유저를 차단(정지) 상태로 변경하시겠습니까?\n차단 시 해당 유저의 모든 API 요청이 거부됩니다.'
+            : '"${report.authorName}" 유저의 차단(정지) 상태를 해제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _showLoading();
+              try {
+                if (isSuspending) {
+                  await ref.read(adminProvider.notifier).suspendMember(report.authorId!);
+                  _showSuccessToast('작성자가 차단되었습니다.');
+                } else {
+                  await ref.read(adminProvider.notifier).unsuspendMember(report.authorId!);
+                  _showSuccessToast('작성자 차단이 해제되었습니다.');
+                }
+                ref.invalidate(adminReportsProvider);
+                _hideLoading();
+              } catch (e) {
+                _hideLoading();
+                _showErrorDialog('처리 실패: $e');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: isSuspending ? Colors.red : const Color(0xFF164687)),
+            child: Text(isSuspending ? '차단하기' : '해제하기', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDismissReport(AdminReportSummary report) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('신고 기각 / 복구', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('해당 ${report.targetType == 'POST' ? '게시글' : '댓글'}에 대한 모든 신고 내역을 삭제하고, 만약 블라인드(삭제) 상태인 경우 다시 정상 복구합니다.\n\n진행하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _showLoading();
+              try {
+                await ref.read(adminProvider.notifier).dismissReport(report.targetType, report.targetId);
+                ref.invalidate(adminReportsProvider);
+                ref.invalidate(communityPostsProvider); // 게시글 목록도 갱신
+                _hideLoading();
+                _showSuccessToast('신고가 기각되고 정상 복구되었습니다.');
+              } catch (e) {
+                _hideLoading();
+                _showErrorDialog('신고 기각 실패: $e');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+            child: const Text('기각 및 복구', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

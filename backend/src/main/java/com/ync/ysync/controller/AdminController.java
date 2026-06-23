@@ -168,6 +168,8 @@ public class AdminController {
                     String title = "";
                     String content = "";
                     String authorName = "";
+                    Long authorId = null;
+                    boolean isAuthorSuspended = false;
                     boolean isDeleted = false;
                     String deletionReason = "";
 
@@ -177,6 +179,8 @@ public class AdminController {
                             title = post.getTitle();
                             content = post.getContent();
                             authorName = post.isAnonymous() ? "익명" : post.getMember().getName();
+                            authorId = post.getMember().getId();
+                            isAuthorSuspended = post.getMember().isSuspended();
                             isDeleted = post.isDeleted();
                             deletionReason = post.getDeletionReason();
                         } else {
@@ -189,6 +193,8 @@ public class AdminController {
                             title = "댓글";
                             content = comment.getContent();
                             authorName = comment.getMember().getName();
+                            authorId = comment.getMember().getId();
+                            isAuthorSuspended = comment.getMember().isSuspended();
                             isDeleted = comment.isDeleted();
                             deletionReason = comment.getDeletionReason();
                         } else {
@@ -208,6 +214,8 @@ public class AdminController {
                             .title(title)
                             .content(content)
                             .authorName(authorName)
+                            .authorId(authorId)
+                            .isAuthorSuspended(isAuthorSuspended)
                             .isDeleted(isDeleted)
                             .deletionReason(deletionReason)
                             .reasons(reasons)
@@ -216,6 +224,56 @@ public class AdminController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(responses);
+    }
+
+    // 💡 신고 기각 및 대상 복구 (ADMIN, SUPER_ADMIN 전용)
+    @PostMapping("/reports/dismiss")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> dismissReport(@RequestBody ReportDismissRequest request) {
+        Report.TargetType targetType;
+        try {
+            targetType = Report.TargetType.valueOf(request.getTargetType().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("올바르지 않은 대상 타입입니다.");
+        }
+
+        Long targetId = request.getTargetId();
+
+        // 1. 신고 내역 삭제
+        reportRepository.deleteByTargetTypeAndTargetId(targetType, targetId);
+
+        // 2. 대상 복구 (소프트 딜리트 상태인 경우 복구)
+        if (targetType == Report.TargetType.POST) {
+            CommunityPost post = communityPostRepository.findById(targetId).orElse(null);
+            if (post != null && post.isDeleted()) {
+                post.restoreByAdmin();
+                communityPostRepository.save(post);
+            }
+        } else if (targetType == Report.TargetType.COMMENT) {
+            Comment comment = commentRepository.findById(targetId).orElse(null);
+            if (comment != null && comment.isDeleted()) {
+                comment.restoreByAdmin();
+                if (comment.getCommunityPost() != null) {
+                    CommunityPost post = comment.getCommunityPost();
+                    post.incrementCommentCount();
+                    communityPostRepository.save(post);
+                } else if (comment.getNotice() != null) {
+                    Notice notice = comment.getNotice();
+                    notice.incrementCommentCount();
+                    noticeRepository.save(notice);
+                }
+                commentRepository.save(comment);
+            }
+        }
+
+        return ResponseEntity.ok("신고가 기각되고 대상이 복구되었습니다.");
+    }
+
+    @Data
+    public static class ReportDismissRequest {
+        private String targetType;
+        private Long targetId;
     }
 
     // 💡 통계 및 DTO 클래스들
@@ -230,6 +288,8 @@ public class AdminController {
         private String title;
         private String content;
         private String authorName;
+        private Long authorId;
+        private boolean isAuthorSuspended;
         private boolean isDeleted;
         private String deletionReason;
         private List<String> reasons;

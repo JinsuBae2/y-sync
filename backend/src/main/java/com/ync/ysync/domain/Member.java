@@ -69,12 +69,16 @@ public class Member {
     @Column(nullable = false)
     private boolean isActivated = false; // 💡 회원가입(활성화) 여부
 
+    @Setter
+    @Column(nullable = false)
+    private boolean isSuspended = false; // 💡 차단 여부 필드 추가
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public Member(String loginId, String password, String name, MemberRole role, AuthProvider provider, String socialId, AuthType authType, boolean isActivated) {
+    public Member(String loginId, String password, String name, MemberRole role, AuthProvider provider, String socialId, AuthType authType, boolean isActivated, boolean isSuspended) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;
@@ -85,5 +89,6 @@ public class Member {
         this.noticeEnabled = true;
         this.commentEnabled = true;
         this.isActivated = isActivated;
+        this.isSuspended = isSuspended;
     }
 }

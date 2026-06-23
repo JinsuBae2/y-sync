@@ -99,6 +99,28 @@ public class AdminMemberController {
         }
     }
 
+    @PostMapping("/{id}/suspend")
+    @Operation(summary = "회원 차단", description = "특정 회원을 차단(정지) 상태로 설정합니다.")
+    public ResponseEntity<?> suspendMember(@PathVariable Long id) {
+        try {
+            memberService.suspendMember(id);
+            return ResponseEntity.ok(Map.of("message", "회원이 성공적으로 차단되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/unsuspend")
+    @Operation(summary = "회원 차단 해제", description = "특정 회원의 차단(정지) 상태를 해제합니다.")
+    public ResponseEntity<?> unsuspendMember(@PathVariable Long id) {
+        try {
+            memberService.unsuspendMember(id);
+            return ResponseEntity.ok(Map.of("message", "회원의 차단이 성공적으로 해제되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @Data
     public static class AdminCreateMemberRequest {
         private String loginId;

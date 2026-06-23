@@ -357,4 +357,29 @@ public class MemberService {
         memberRepository.save(member);
         log.info("관리자 회원 계정 비밀번호 초기화 완료 - ID: {}, 학번: {} (가입 대기 상태로 리셋)", id, member.getLoginId());
     }
+
+    /**
+     * 관리자 회원 차단 처리 (isSuspended = true)
+     */
+    @Transactional
+    public void suspendMember(Long id) {
+        Member member = findById(id);
+        if (member.getRole() == MemberRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("SUPER_ADMIN 계정은 차단할 수 없습니다.");
+        }
+        member.setSuspended(true);
+        memberRepository.save(member);
+        log.info("관리자 회원 차단 완료 - ID: {}, 학번: {}", id, member.getLoginId());
+    }
+
+    /**
+     * 관리자 회원 차단 해제 처리 (isSuspended = false)
+     */
+    @Transactional
+    public void unsuspendMember(Long id) {
+        Member member = findById(id);
+        member.setSuspended(false);
+        memberRepository.save(member);
+        log.info("관리자 회원 차단 해제 완료 - ID: {}, 학번: {}", id, member.getLoginId());
+    }
 }
