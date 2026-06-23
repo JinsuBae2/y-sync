@@ -3,9 +3,11 @@ package com.ync.ysync.controller;
 import com.ync.ysync.domain.AdminRequest;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
+import com.ync.ysync.domain.Report;
 import com.ync.ysync.repository.AdminRequestRepository;
 import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.CommentRepository;
+import com.ync.ysync.repository.ReportRepository;
 import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Comment;
 import com.ync.ysync.repository.MemberRepository;
@@ -35,6 +37,7 @@ public class AdminController {
     private final CommunityPostRepository communityPostRepository;
     private final NoticeRepository noticeRepository;
     private final CommentRepository commentRepository;
+    private final ReportRepository reportRepository;
     private final AuthUtil authUtil;
 
     // 💡 관리자 권한 신청 (일반 유저용)
@@ -151,7 +154,87 @@ public class AdminController {
         return ResponseEntity.ok("댓글이 관리자에 의해 삭제되었습니다.");
     }
 
+    // 💡 누적 신고 목록 조회 (ADMIN, SUPER_ADMIN 전용)
+    @GetMapping("/reports")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<List<AdminReportSummaryResponse>> getReportedTargets() {
+        List<Object[]> groupedReports = reportRepository.findReportCountsGroupedByTarget();
+        List<AdminReportSummaryResponse> responses = groupedReports.stream()
+                .map(row -> {
+                    Report.TargetType targetType = (Report.TargetType) row[0];
+                    Long targetId = (Long) row[1];
+                    Long count = (Long) row[2];
+
+                    String title = "";
+                    String content = "";
+                    String authorName = "";
+                    boolean isDeleted = false;
+                    String deletionReason = "";
+
+                    if (targetType == Report.TargetType.POST) {
+                        CommunityPost post = communityPostRepository.findById(targetId).orElse(null);
+                        if (post != null) {
+                            title = post.getTitle();
+                            content = post.getContent();
+                            authorName = post.isAnonymous() ? "익명" : post.getMember().getName();
+                            isDeleted = post.isDeleted();
+                            deletionReason = post.getDeletionReason();
+                        } else {
+                            title = "존재하지 않는 게시글";
+                            content = "삭제되었거나 존재하지 않는 게시글입니다.";
+                        }
+                    } else if (targetType == Report.TargetType.COMMENT) {
+                        Comment comment = commentRepository.findById(targetId).orElse(null);
+                        if (comment != null) {
+                            title = "댓글";
+                            content = comment.getContent();
+                            authorName = comment.getMember().getName();
+                            isDeleted = comment.isDeleted();
+                            deletionReason = comment.getDeletionReason();
+                        } else {
+                            title = "존재하지 않는 댓글";
+                            content = "삭제되었거나 존재하지 않는 댓글입니다.";
+                        }
+                    }
+
+                    List<String> reasons = reportRepository.findAllByTargetTypeAndTargetId(targetType, targetId).stream()
+                            .map(Report::getReason)
+                            .collect(Collectors.toList());
+
+                    return AdminReportSummaryResponse.builder()
+                            .targetType(targetType.name())
+                            .targetId(targetId)
+                            .reportCount(count)
+                            .title(title)
+                            .content(content)
+                            .authorName(authorName)
+                            .isDeleted(isDeleted)
+                            .deletionReason(deletionReason)
+                            .reasons(reasons)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
+    }
+
     // 💡 통계 및 DTO 클래스들
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminReportSummaryResponse {
+        private String targetType;
+        private Long targetId;
+        private Long reportCount;
+        private String title;
+        private String content;
+        private String authorName;
+        private boolean isDeleted;
+        private String deletionReason;
+        private List<String> reasons;
+    }
+
     public static class AdminRequestDto {
         
         @Data

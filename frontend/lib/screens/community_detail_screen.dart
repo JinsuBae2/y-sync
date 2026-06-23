@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../models/community_post.dart';
 import '../models/comment.dart';
 import '../providers/community_provider.dart';
@@ -71,13 +72,20 @@ class CommunityDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('${post.category} 게시글'),
-        actions: canDelete ? [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: '삭제',
-            onPressed: () => _confirmDelete(context, ref),
-          ),
-        ] : null,
+        actions: [
+          if (canDelete)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: '삭제',
+              onPressed: () => _confirmDelete(context, ref),
+            ),
+          if (currentMember != null && currentMember.id != post.memberId)
+            IconButton(
+              icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
+              tooltip: '신고',
+              onPressed: () => _showReportBottomSheet(context, ref, 'POST', post.id),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -340,6 +348,12 @@ class _CommentList extends ConsumerWidget {
                   IconButton(
                     icon: const Icon(Icons.close, size: 16, color: Colors.grey),
                     onPressed: () => _confirmDeleteComment(context, ref, comment, isAdmin),
+                  )
+                else if (currentMember != null && !comment.isDeleted)
+                  IconButton(
+                    icon: const Icon(Icons.report_gmailerrorred_rounded, size: 16, color: Colors.redAccent),
+                    tooltip: '신고',
+                    onPressed: () => _showReportBottomSheet(context, ref, 'COMMENT', comment.id),
                   ),
               ],
             );
@@ -465,4 +479,73 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
     _controller.dispose();
     super.dispose();
   }
+}
+
+void _showReportBottomSheet(BuildContext context, WidgetRef ref, String targetType, int targetId) {
+  final reasons = [
+    '스팸홍보/도배글입니다.',
+    '음란물/선정적인 내용입니다.',
+    '욕설/생명경시/혐오/비하성 내용입니다.',
+    '개인정보 노출/권리침해 신고입니다.',
+    '기타 부적절한 내용입니다.',
+  ];
+
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Text(
+                  '신고 사유 선택',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ),
+              const Divider(),
+              ...reasons.map((reason) {
+                return ListTile(
+                  title: Text(reason, style: const TextStyle(fontSize: 14)),
+                  leading: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      await ref.read(communityNotifierProvider).reportTarget(
+                        targetType: targetType,
+                        targetId: targetId,
+                        reason: reason,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('신고가 성공적으로 접수되었습니다. 신고 기준 누적 시 자동 숨김 처리됩니다.')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        String errorMessage = e.toString();
+                        if (e is DioException && e.response?.data != null) {
+                          errorMessage = e.response?.data.toString() ?? e.toString();
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('신고 실패: $errorMessage')),
+                        );
+                      }
+                    }
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

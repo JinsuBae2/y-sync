@@ -57,6 +57,7 @@ class _ScheduleTabScreenState extends State<ScheduleTabScreen> with SingleTicker
       ),
       body: TabBarView(
         controller: _tabController,
+        physics: const BouncingScrollPhysics(), // 💡 쫀득한 스와이프 물리 효과 탑재
         children: const [
           AcademicCalendarView(),
           TimetableView(),

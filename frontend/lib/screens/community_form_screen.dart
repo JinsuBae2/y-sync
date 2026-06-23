@@ -74,13 +74,6 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('글 쓰기', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton.icon(
-            onPressed: _isLoading ? null : _savePost,
-            icon: const Icon(Icons.check, color: Color(0xFF164687)),
-            label: const Text('등록', style: TextStyle(color: Color(0xFF164687), fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -252,23 +245,32 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              // 💡 하단 큰 등록 버튼 추가
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF164687),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: _isLoading ? null : _savePost,
-                  child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('등록하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              ),
             ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20, // 💡 키보드 오버레이 대응
+        ),
+        color: Colors.white,
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF164687),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            onPressed: _isLoading ? null : _savePost,
+            child: _isLoading 
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('등록하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
       ),

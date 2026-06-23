@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/community_post.dart';
 import '../providers/community_provider.dart';
+import '../providers/admin_provider.dart';
+import '../providers/comment_provider.dart';
 import 'community_detail_screen.dart';
 
 class AdminPostManagementScreen extends ConsumerStatefulWidget {
@@ -20,7 +22,7 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.trim();
@@ -55,6 +57,7 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               tabs: const [
                 Tab(text: '전체 게시글'),
                 Tab(text: '삭제된 게시글 복구'),
+                Tab(text: '신고 누적 블랙리스트'),
               ],
             ),
           ),
@@ -105,6 +108,8 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                   _buildAllPostsTab(filtered),
                   // 탭 2: 삭제된 게시글 복구 목록
                   _buildDeletedPostsTab(filtered.where((p) => p.isDeleted).toList()),
+                  // 탭 3: 신고 누적 블랙리스트 목록
+                  _buildReportBlacklistTab(),
                 ],
               );
             },
@@ -151,6 +156,7 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
           tabs: const [
             Tab(text: '전체 게시글'),
             Tab(text: '삭제된 게시글 복구'),
+            Tab(text: '신고 누적 블랙리스트'),
           ],
         ),
       ),
@@ -593,6 +599,262 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 💡 탭 3: 신고 누적 블랙리스트 탭 빌더
+  Widget _buildReportBlacklistTab() {
+    final reportsAsync = ref.watch(adminReportsProvider);
+
+    return reportsAsync.when(
+      data: (reports) {
+        if (reports.isEmpty) {
+          return const Center(
+            child: Text('신고된 게시글 및 댓글이 없습니다.', style: TextStyle(color: Colors.black45)),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(adminReportsProvider),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: reports.length,
+            itemBuilder: (context, index) {
+              final report = reports[index];
+              final isPost = report.targetType == 'POST';
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.orange.shade200),
+                ),
+                color: report.isDeleted ? Colors.grey.shade100 : Colors.orange.shade50.withOpacity(0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isPost ? Colors.blue.shade50 : Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: isPost ? Colors.blue.shade200 : Colors.green.shade200),
+                            ),
+                            child: Text(
+                              isPost ? '게시글' : '댓글',
+                              style: TextStyle(
+                                color: isPost ? Colors.blue.shade700 : Colors.green.shade700,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '신고 ${report.reportCount}회',
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          if (report.isDeleted)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                '숨김 처리됨',
+                                style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            )
+                          else
+                            ElevatedButton(
+                              onPressed: () => _confirmReportDelete(report),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                minimumSize: Size.zero,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              ),
+                              child: const Text(
+                                '블라인드',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (isPost && report.title.isNotEmpty) ...[
+                        Text(
+                          report.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            decoration: report.isDeleted ? TextDecoration.lineThrough : null,
+                            color: report.isDeleted ? Colors.black38 : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                      ],
+                      Text(
+                        report.content,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: report.isDeleted ? Colors.black38 : Colors.black54,
+                          decoration: report.isDeleted ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1, color: Colors.black12),
+                      const SizedBox(height: 8),
+                      // 신고 사유 리스트
+                      const Text(
+                        '신고 사유 목록:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 4),
+                      ...report.reasons.map((r) => Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 2),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.subdirectory_arrow_right_rounded, size: 12, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    r,
+                                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('작성자: ${report.authorName}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
+                          if (isPost && !report.isDeleted)
+                            TextButton(
+                              onPressed: () async {
+                                try {
+                                  final fullPost = await ref.read(communityNotifierProvider).getPost(report.targetId);
+                                  if (context.mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => CommunityDetailScreen(post: fullPost)),
+                                    );
+                                  }
+                                } catch (e) {
+                                  _showErrorToast('게시글 조회 실패: $e');
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text('원문 보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF164687))),
+      error: (err, stack) => Center(child: Text('블랙리스트 로드 실패: $err')),
+    );
+  }
+
+  void _confirmReportDelete(AdminReportSummary report) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${report.targetType == 'POST' ? '게시글' : '댓글'} 블라인드 처리', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('신고 누적 대상을 강제로 숨김(블라인드) 처리합니다.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: '블라인드 사유를 입력하세요 (필수)',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) {
+                _showErrorToast('사유를 입력해주세요.');
+                return;
+              }
+              Navigator.pop(context);
+              _showLoading();
+              try {
+                if (report.targetType == 'POST') {
+                  await ref.read(communityNotifierProvider).deletePostByAdmin(report.targetId, reason);
+                } else {
+                  await ref.read(commentNotifierProvider).deleteCommentByAdmin(CommentSource.community, 0, report.targetId, reason);
+                }
+                ref.invalidate(adminReportsProvider);
+                _hideLoading();
+                _showSuccessToast('정상적으로 블라인드 처리되었습니다.');
+              } catch (e) {
+                _hideLoading();
+                _showErrorDialog('블라인드 실패: $e');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('블라인드 처리', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

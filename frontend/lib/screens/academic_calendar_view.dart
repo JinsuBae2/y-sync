@@ -150,6 +150,7 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             ),
           )
         : ListView.builder(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             itemCount: selectedDayEvents.length,
             itemBuilder: (context, index) {

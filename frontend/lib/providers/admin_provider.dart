@@ -45,3 +45,49 @@ class AdminNotifier extends AsyncNotifier<List<AdminRequest>> {
 final adminProvider = AsyncNotifierProvider<AdminNotifier, List<AdminRequest>>(() {
   return AdminNotifier();
 });
+
+class AdminReportSummary {
+  final String targetType;
+  final int targetId;
+  final int reportCount;
+  final String title;
+  final String content;
+  final String authorName;
+  final bool isDeleted;
+  final String? deletionReason;
+  final List<String> reasons;
+
+  AdminReportSummary({
+    required this.targetType,
+    required this.targetId,
+    required this.reportCount,
+    required this.title,
+    required this.content,
+    required this.authorName,
+    required this.isDeleted,
+    this.deletionReason,
+    required this.reasons,
+  });
+
+  factory AdminReportSummary.fromJson(Map<String, dynamic> json) {
+    return AdminReportSummary(
+      targetType: json['targetType'] ?? '',
+      targetId: json['targetId'] ?? 0,
+      reportCount: json['reportCount'] ?? 0,
+      title: json['title'] ?? '',
+      content: json['content'] ?? '',
+      authorName: json['authorName'] ?? '',
+      isDeleted: json['isDeleted'] ?? false,
+      deletionReason: json['deletionReason'],
+      reasons: List<String>.from(json['reasons'] ?? []),
+    );
+  }
+}
+
+final adminReportsProvider = FutureProvider<List<AdminReportSummary>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get('/admin/reports');
+  final list = response.data as List<dynamic>;
+  return list.map((json) => AdminReportSummary.fromJson(json)).toList();
+});
+

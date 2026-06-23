@@ -163,6 +163,21 @@ class CommunityNotifier {
     await dio.post('/admin/posts/$id/restore');
     ref.invalidate(communityPostsProvider);
   }
+
+  // 💡 게시글 또는 댓글 신고
+  Future<void> reportTarget({
+    required String targetType,
+    required int targetId,
+    required String reason,
+  }) async {
+    final dio = ref.read(dioProvider);
+    await dio.post('/reports', data: {
+      'targetType': targetType,
+      'targetId': targetId,
+      'reason': reason,
+    });
+    ref.invalidate(communityPostsProvider);
+  }
 }
 
 final communityNotifierProvider = Provider((ref) => CommunityNotifier(ref));

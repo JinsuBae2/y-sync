@@ -124,13 +124,6 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? '공지사항 수정' : '새 공지사항 쓰기'),
-        actions: [
-          TextButton.icon(
-            onPressed: _isLoading ? null : _submit,
-            icon: const Icon(Icons.check, color: Color(0xFF164687)),
-            label: const Text('등록', style: TextStyle(color: Color(0xFF164687), fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -282,7 +275,6 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
             ),
             const Divider(color: Colors.black12, thickness: 1, height: 1),
             const SizedBox(height: 16),
-            const SizedBox(height: 16),
             // 💡 -------------------------
             // 이미지 추가 버튼 및 가로 스크롤 미리보기 영역
             Row(
@@ -343,22 +335,32 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               ),
             // -------------------------
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF164687),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(isEdit ? '수정하기' : '등록하기', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20, // 💡 키보드 대응
+        ),
+        color: Colors.white,
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF164687),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            onPressed: _isLoading ? null : _submit,
+            child: _isLoading 
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(isEdit ? '수정하기' : '등록하기', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
         ),
       ),
     );
