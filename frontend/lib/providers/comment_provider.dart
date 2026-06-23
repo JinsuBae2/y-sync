@@ -26,8 +26,8 @@ class CommentNotifier {
 
   CommentNotifier(this.ref);
 
-  // 💡 댓글 작성 (소스와 ID에 따라 분기)
-  Future<void> createComment(CommentSource source, int id, String content) async {
+  // 💡 댓글 작성 (소스와 ID, 대댓글 parentId에 따라 분기)
+  Future<void> createComment(CommentSource source, int id, String content, {int? parentId}) async {
     final dio = ref.read(dioProvider);
     final path = source == CommentSource.notice 
         ? '/notices/$id/comments' 
@@ -35,6 +35,7 @@ class CommentNotifier {
 
     await dio.post(path, data: {
       'content': content,
+      'parentId': parentId, // 💡 대댓글을 위한 부모 ID 추가
     });
     
     // 해당 게시물의 댓글 목록 새로고침
@@ -81,3 +82,6 @@ class CommentNotifier {
 }
 
 final commentNotifierProvider = Provider((ref) => CommentNotifier(ref));
+
+// 💡 대댓글(답글) 작성 시 선택된 부모 댓글 상태를 포스트 ID별로 추적하는 Provider입니다.
+final activeParentCommentProvider = StateProvider.family<Comment?, int>((ref, postId) => null);

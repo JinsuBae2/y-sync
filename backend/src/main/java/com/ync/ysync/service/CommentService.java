@@ -44,16 +44,23 @@ public class CommentService {
     }
 
     @Transactional
-    public Comment createComment(Long noticeId, Long memberId, String content) {
+    public Comment createComment(Long noticeId, Long memberId, String content, Long parentId) {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 공지사항이 존재하지 않습니다."));
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
+        Comment parent = null;
+        if (parentId != null) {
+            parent = commentRepository.findById(parentId)
+                    .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
+        }
+
         Comment comment = Comment.builder()
                 .content(content)
                 .notice(notice)
                 .member(member)
+                .parent(parent) // 💡 대댓글 parent 설정
                 .build();
 
         Comment savedComment = commentRepository.save(comment);
@@ -81,16 +88,23 @@ public class CommentService {
     }
 
     @Transactional
-    public Comment createCommunityComment(Long communityPostId, Long memberId, String content) {
+    public Comment createCommunityComment(Long communityPostId, Long memberId, String content, Long parentId) {
         CommunityPost post = communityPostRepository.findById(communityPostId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다."));
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
+        Comment parent = null;
+        if (parentId != null) {
+            parent = commentRepository.findById(parentId)
+                    .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
+        }
+
         Comment comment = Comment.builder()
                 .content(content)
                 .communityPost(post)
                 .member(member)
+                .parent(parent) // 💡 대댓글 parent 설정
                 .build();
 
         Comment savedComment = commentRepository.save(comment);
@@ -115,6 +129,45 @@ public class CommentService {
         }
 
         return savedComment;
+    }
+
+    // 💡 학사 공지사항 대댓글 계층형 DTO 조립 조회
+    public List<com.ync.ysync.controller.CommentResponse> getCommentTreeByNoticeId(Long noticeId) {
+        List<Comment> comments = commentRepository.findAllByNoticeIdOrderByCreatedAtAsc(noticeId);
+        return convertToTree(comments);
+    }
+
+    // 💡 커뮤니티 게시글 대댓글 계층형 DTO 조립 조회
+    public List<com.ync.ysync.controller.CommentResponse> getCommentTreeByCommunityPostId(Long communityPostId) {
+        List<Comment> comments = commentRepository.findAllByCommunityPostIdOrderByCreatedAtAsc(communityPostId);
+        return convertToTree(comments);
+    }
+
+    // 💡 일차원 댓글 리스트를 트리 구조(계층형) DTO 리스트로 가공하는 공용 비즈니스 로직
+    private List<com.ync.ysync.controller.CommentResponse> convertToTree(List<Comment> comments) {
+        List<com.ync.ysync.controller.CommentResponse> result = new java.util.ArrayList<>();
+        java.util.Map<Long, com.ync.ysync.controller.CommentResponse> map = new java.util.HashMap<>();
+
+        // 1단계: DTO로 전부 변환하여 맵에 저장
+        for (Comment comment : comments) {
+            com.ync.ysync.controller.CommentResponse response = com.ync.ysync.controller.CommentResponse.from(comment);
+            map.put(comment.getId(), response);
+            if (comment.getParent() == null) {
+                result.add(response); // 루트 댓글
+            }
+        }
+
+        // 2단계: 자식 댓글들을 부모 DTO의 children에 매핑
+        for (Comment comment : comments) {
+            if (comment.getParent() != null) {
+                com.ync.ysync.controller.CommentResponse parentResponse = map.get(comment.getParent().getId());
+                if (parentResponse != null) {
+                    parentResponse.getChildren().add(map.get(comment.getId()));
+                }
+            }
+        }
+
+        return result;
     }
 
     @Transactional

@@ -9,6 +9,8 @@ class Comment {
   final String? updatedAt;
   final bool isDeleted;
   final String? deletionReason;
+  final int? parentId; // 💡 부모 댓글 ID
+  final List<Comment>? children; // 💡 대댓글(자식) 목록
 
   Comment({
     required this.id,
@@ -21,6 +23,8 @@ class Comment {
     this.updatedAt,
     this.isDeleted = false,
     this.deletionReason,
+    this.parentId,
+    this.children,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,10 @@ class Comment {
       updatedAt: json['updatedAt'],
       isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
       deletionReason: json['deletionReason'],
+      parentId: json['parentId'],
+      children: json['children'] != null
+          ? (json['children'] as List).map((i) => Comment.fromJson(i)).toList()
+          : null,
     );
   }
 }
