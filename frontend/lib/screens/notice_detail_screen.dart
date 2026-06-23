@@ -7,6 +7,8 @@ import '../providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
 import 'notice_form_screen.dart';
 import '../widgets/deletion_reason_dialog.dart';
+import '../utils/image_url_helper.dart';
+import '../widgets/image_viewer_screen.dart';
 
 class NoticeDetailScreen extends ConsumerWidget {
   final Notice notice;
@@ -123,38 +125,48 @@ class NoticeDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   if (notice.imageUrls != null && notice.imageUrls!.isNotEmpty) ...[
                     ...notice.imageUrls!.map((url) {
-                      final cleanImageBase = imageBaseUrl.replaceAll('http://', '').replaceAll('https://', '');
-                      final imageUrl = url.startsWith('/') 
-                          ? '$imageBaseUrl$url' 
-                          : url.replaceAll('localhost:8080', cleanImageBase).replaceAll('localhost', cleanImageBase);
+                      final imageUrl = getCleanImageUrl(url);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                width: double.infinity,
-                                height: 200,
-                                color: Colors.grey.shade100,
-                                child: const Center(child: CircularProgressIndicator()),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) => Container(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ImageViewerScreen(
+                                  imageUrls: notice.imageUrls!.map((u) => getCleanImageUrl(u)).toList(),
+                                  initialIndex: notice.imageUrls!.indexOf(url),
+                                ),
+                              ),
+                            );
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              imageUrl,
                               width: double.infinity,
-                              height: 150,
-                              color: Colors.grey.shade100,
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
-                                  SizedBox(height: 8),
-                                  Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.grey)),
-                                ],
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: double.infinity,
+                                  height: 200,
+                                  color: Colors.grey.shade100,
+                                  child: const Center(child: CircularProgressIndicator()),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: double.infinity,
+                                height: 150,
+                                color: Colors.grey.shade100,
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

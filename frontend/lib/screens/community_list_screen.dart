@@ -5,6 +5,7 @@ import '../providers/community_provider.dart';
 import '../providers/scrap_provider.dart';
 import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
+import '../utils/image_url_helper.dart';
 
 class CommunityListScreen extends ConsumerStatefulWidget {
   final bool isAdminMode; // 💡 관리자 모드 플래그 추가
@@ -307,28 +308,73 @@ class CommunityPostCard extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (post.isPinned) // 💡 핀 고정 아이콘
-                    const Padding(
-                      padding: EdgeInsets.only(right: 6),
-                      child: Text('📌', style: TextStyle(fontSize: 18)),
-                    ),
                   Expanded(
-                    child: Text(
-                      post.title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (post.isPinned) // 💡 핀 고정 아이콘
+                              const Padding(
+                                padding: EdgeInsets.only(right: 6),
+                                child: Text('📌', style: TextStyle(fontSize: 18)),
+                              ),
+                            Expanded(
+                              child: Text(
+                                post.title,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          post.content,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.grey.shade700, height: 1.5),
+                        ),
+                      ],
                     ),
                   ),
+                  if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
+                    const SizedBox(width: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        getCleanImageUrl(post.imageUrls!.first),
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            width: 76,
+                            height: 76,
+                            color: Colors.grey.shade100,
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF164687)),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 76,
+                          height: 76,
+                          color: Colors.grey.shade100,
+                          child: const Icon(Icons.broken_image_rounded, size: 24, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                post.content,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey.shade700, height: 1.5),
               ),
               const SizedBox(height: 16),
               Row(

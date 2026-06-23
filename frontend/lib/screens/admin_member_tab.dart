@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../providers/admin_member_provider.dart';
 import '../models/member.dart';
+import '../utils/csv_picker.dart';
 
 class AdminMemberTab extends ConsumerStatefulWidget {
   final bool isDesktop;
@@ -227,17 +228,11 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                           ),
                                           onPressed: () async {
-                                            setDialogState(() => isUploading = true);
                                             try {
-                                              FilePickerResult? result = await FilePicker.platform.pickFiles(
-                                                type: FileType.custom,
-                                                allowedExtensions: ['csv'],
-                                                withData: true,
-                                              );
-                                              if (result != null && result.files.single.bytes != null) {
-                                                final bytes = result.files.single.bytes!;
-                                                final filename = result.files.single.name;
-                                                await ref.read(adminMemberProvider.notifier).uploadCsv(bytes, filename);
+                                              final result = await CsvPicker.pickCsv();
+                                              if (result != null) {
+                                                setDialogState(() => isUploading = true);
+                                                await ref.read(adminMemberProvider.notifier).uploadCsv(result.bytes, result.name);
                                                 if (context.mounted) {
                                                   Navigator.pop(context);
                                                   _showSuccessSnackBar('CSV 파일 내 학생들이 성공적으로 등록되었습니다.');
