@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -54,7 +55,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
         content: _content,
         anonymous: _anonymous,
         targetGrade: _targetGrade,
-        imagePaths: _images.map((e) => e.path).toList(),
+        images: _images,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -203,7 +204,9 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: Colors.grey.shade300),
                               image: DecorationImage(
-                                image: FileImage(File(_images[index].path)),
+                                image: kIsWeb
+                                    ? NetworkImage(_images[index].path) as ImageProvider
+                                    : FileImage(File(_images[index].path)) as ImageProvider,
                                 fit: BoxFit.cover,
                               ),
                             ),

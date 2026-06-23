@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
@@ -130,7 +132,7 @@ class NoticeNotifier {
     return Notice.fromJson(response.data);
   }
 
-  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths, String? eventStartDate, String? eventEndDate}) async {
+  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<XFile>? images, String? eventStartDate, String? eventEndDate}) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
     
@@ -150,12 +152,24 @@ class NoticeNotifier {
       ),
     ));
 
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      for (String path in imagePaths) {
-        formData.files.add(MapEntry(
-          'images',
-          await MultipartFile.fromFile(path),
-        ));
+    if (images != null && images.isNotEmpty) {
+      for (XFile file in images) {
+        if (kIsWeb) {
+          final bytes = await file.readAsBytes();
+          formData.files.add(MapEntry(
+            'images',
+            MultipartFile.fromBytes(
+              bytes,
+              filename: file.name,
+              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
+            ),
+          ));
+        } else {
+          formData.files.add(MapEntry(
+            'images',
+            await MultipartFile.fromFile(file.path),
+          ));
+        }
       }
     }
 
@@ -163,7 +177,7 @@ class NoticeNotifier {
     ref.invalidate(noticesProvider);
   }
 
-  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths, String? eventStartDate, String? eventEndDate}) async {
+  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<XFile>? images, String? eventStartDate, String? eventEndDate}) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
     
@@ -183,12 +197,24 @@ class NoticeNotifier {
       ),
     ));
 
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      for (String path in imagePaths) {
-        formData.files.add(MapEntry(
-          'images',
-          await MultipartFile.fromFile(path),
-        ));
+    if (images != null && images.isNotEmpty) {
+      for (XFile file in images) {
+        if (kIsWeb) {
+          final bytes = await file.readAsBytes();
+          formData.files.add(MapEntry(
+            'images',
+            MultipartFile.fromBytes(
+              bytes,
+              filename: file.name,
+              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
+            ),
+          ));
+        } else {
+          formData.files.add(MapEntry(
+            'images',
+            await MultipartFile.fromFile(file.path),
+          ));
+        }
       }
     }
 

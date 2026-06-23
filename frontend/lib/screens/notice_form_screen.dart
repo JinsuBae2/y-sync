@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -82,19 +83,18 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
 
     try {
       final notifier = ref.read(noticeNotifierProvider);
-      final List<String> paths = _images.map((e) => e.path).toList();
       final startStr = _isEvent ? "${_eventStartDate.year}-${_eventStartDate.month.toString().padLeft(2, '0')}-${_eventStartDate.day.toString().padLeft(2, '0')}" : null;
       final endStr = _isEvent ? "${_eventEndDate.year}-${_eventEndDate.month.toString().padLeft(2, '0')}-${_eventEndDate.day.toString().padLeft(2, '0')}" : null;
 
       if (widget.notice == null) {
-        await notifier.createNotice(title, content, _noticeType, targetGrade: _targetGrade, imagePaths: paths, eventStartDate: startStr, eventEndDate: endStr);
+        await notifier.createNotice(title, content, _noticeType, targetGrade: _targetGrade, images: _images, eventStartDate: startStr, eventEndDate: endStr);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('공지사항이 등록되었습니다.')),
           );
         }
       } else {
-        await notifier.updateNotice(widget.notice!.id, title, content, _noticeType, targetGrade: _targetGrade, imagePaths: paths, eventStartDate: startStr, eventEndDate: endStr);
+        await notifier.updateNotice(widget.notice!.id, title, content, _noticeType, targetGrade: _targetGrade, images: _images, eventStartDate: startStr, eventEndDate: endStr);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('공지사항이 수정되었습니다.')),
@@ -314,7 +314,9 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey.shade300),
                             image: DecorationImage(
-                              image: FileImage(File(_images[index].path)),
+                              image: kIsWeb
+                                  ? NetworkImage(_images[index].path) as ImageProvider
+                                  : FileImage(File(_images[index].path)) as ImageProvider,
                               fit: BoxFit.cover,
                             ),
                           ),

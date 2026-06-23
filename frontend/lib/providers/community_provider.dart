@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
@@ -93,7 +95,7 @@ class CommunityNotifier {
     required String content,
     required bool anonymous,
     required String targetGrade,
-    List<String>? imagePaths,
+    List<XFile>? images,
   }) async {
     final dio = ref.read(dioProvider);
     
@@ -116,12 +118,24 @@ class CommunityNotifier {
     ));
 
     // 이미지 파일 파트 추가
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      for (String path in imagePaths) {
-        formData.files.add(MapEntry(
-          'images',
-          await MultipartFile.fromFile(path),
-        ));
+    if (images != null && images.isNotEmpty) {
+      for (XFile file in images) {
+        if (kIsWeb) {
+          final bytes = await file.readAsBytes();
+          formData.files.add(MapEntry(
+            'images',
+            MultipartFile.fromBytes(
+              bytes,
+              filename: file.name,
+              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
+            ),
+          ));
+        } else {
+          formData.files.add(MapEntry(
+            'images',
+            await MultipartFile.fromFile(file.path),
+          ));
+        }
       }
     }
 
