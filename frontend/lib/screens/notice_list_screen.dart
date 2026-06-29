@@ -6,6 +6,7 @@ import '../providers/mypage_provider.dart'; // 💡 추가
 import '../providers/scrap_provider.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
+import '../widgets/notification_action_button.dart'; // 💡 추가
 
 class NoticeListScreen extends ConsumerStatefulWidget {
   const NoticeListScreen({super.key});
@@ -45,6 +46,9 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: const [
+          NotificationActionButton(), // 💡 추가
+        ],
       ),
       body: Column(
         children: [

@@ -6,6 +6,7 @@ import '../providers/scrap_provider.dart';
 import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
 import '../utils/image_url_helper.dart';
+import '../widgets/notification_action_button.dart'; // 💡 추가
 
 class CommunityListScreen extends ConsumerStatefulWidget {
   final bool isAdminMode; // 💡 관리자 모드 플래그 추가
@@ -39,6 +40,9 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('커뮤니티', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: const [
+          NotificationActionButton(), // 💡 추가
+        ],
       ),
       body: Column(
         children: [
