@@ -25,6 +25,7 @@ public class NoticeEventListener {
 
     private final FCMService fcmService;
     private final MemberRepository memberRepository;
+    private final com.ync.ysync.service.NotificationService notificationService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -32,6 +33,17 @@ public class NoticeEventListener {
         Notice notice = event.getNotice();
         log.info("[FCM] 공지사항 알림 발송 시작 - Notice ID: {}, Title: '{}', Thread: {}", 
                 notice.getId(), notice.getTitle(), Thread.currentThread().getName());
+
+        // 💡 1. 인앱 알림 DB 적재 (수신 동의한 전체 활성 회원 대상)
+        try {
+            notificationService.createNotificationsForNotice(
+                    "[새 공지사항] " + notice.getTitle(),
+                    "새로운 공지사항이 등록되었습니다.",
+                    notice.getId()
+            );
+        } catch (Exception e) {
+            log.error("[Notification] 공지사항 인앱 알림 일괄 DB 적재 실패 - Notice ID: {}, 사유: {}", notice.getId(), e.getMessage(), e);
+        }
 
         try {
             // 💡 [웹앱 알림 제약 해결] 전체 활성 회원의 FCM 토큰 조회

@@ -2,7 +2,6 @@ package com.ync.ysync.config;
 
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.repository.MemberRepository;
-import com.ync.ysync.service.MemberService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final MemberRepository memberRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String loginId;
@@ -41,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             loginId = jwtUtil.extractLoginId(jwt);
             role = jwtUtil.extractClaim(jwt, claims -> claims.get("role", String.class));
-            
+
             if (loginId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt, loginId)) {
                     // 💡 차단 유저 가드
@@ -57,8 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            loginId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
+                            loginId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
@@ -66,7 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             // Invalid token
         }
-        
+
         filterChain.doFilter(request, response);
     }
 }

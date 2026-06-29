@@ -22,6 +22,7 @@ import java.util.Map;
 public class CommentEventListener {
 
     private final FCMService fcmService;
+    private final com.ync.ysync.service.NotificationService notificationService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -39,7 +40,22 @@ public class CommentEventListener {
             return;
         }
 
-        // 💡 발송 대상 검증: FCM 토큰 유무, 알림 허용 여부
+        // 💡 1. 인앱 알림 DB 적재 (FCM 토큰 유무와 상관없이 수신 설정이 켜져 있으면 적재)
+        if (targetCommentEnabled && targetMemberId != null) {
+            try {
+                notificationService.createNotification(
+                        targetMemberId,
+                        "💬 내 글에 새로운 댓글이 달렸어요!",
+                        "방금 내 작성글에 새로운 댓글이 달렸습니다.",
+                        com.ync.ysync.domain.TargetType.valueOf(targetType),
+                        targetId
+                );
+            } catch (Exception e) {
+                log.error("[Notification] 댓글 인앱 알림 DB 적재 실패 - Member ID: {}, Target ID: {}, 사유: {}", targetMemberId, targetId, e.getMessage(), e);
+            }
+        }
+
+        // 💡 2. FCM 푸시 알림 발송
         if (targetFcmToken != null && !targetFcmToken.isEmpty() && targetCommentEnabled) {
             log.info("[FCM] 댓글 알림 비동기 발송 시작 - Target Type: {}, ID: {}, Token: {}...", 
                     targetType, targetId, targetFcmToken.substring(0, Math.min(targetFcmToken.length(), 20)));

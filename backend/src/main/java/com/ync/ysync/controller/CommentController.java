@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -42,16 +41,18 @@ public class CommentController {
     public ResponseEntity<?> createComment(
             @PathVariable Long noticeId,
             @RequestBody CommentRequest request) {
-        
+
         Long memberId = authUtil.getLoginMemberId();
-        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        if (memberId == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         // 빈 내용 검증
         if (request.getContent() == null || request.getContent().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("댓글 내용을 입력해주세요.");
         }
 
-        Comment comment = commentService.createComment(noticeId, memberId, request.getContent().trim(), request.getParentId());
+        Comment comment = commentService.createComment(noticeId, memberId, request.getContent().trim(),
+                request.getParentId());
         return ResponseEntity.ok(CommentResponse.from(comment));
     }
 
@@ -60,16 +61,18 @@ public class CommentController {
     public ResponseEntity<?> createCommunityComment(
             @PathVariable Long postId,
             @RequestBody CommentRequest request) {
-        
+
         Long memberId = authUtil.getLoginMemberId();
-        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        if (memberId == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         // 빈 내용 검증
         if (request.getContent() == null || request.getContent().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("댓글 내용을 입력해주세요.");
         }
 
-        Comment comment = commentService.createCommunityComment(postId, memberId, request.getContent().trim(), request.getParentId());
+        Comment comment = commentService.createCommunityComment(postId, memberId, request.getContent().trim(),
+                request.getParentId());
         return ResponseEntity.ok(CommentResponse.from(comment));
     }
 
@@ -78,7 +81,8 @@ public class CommentController {
     public ResponseEntity<?> deleteComment(@PathVariable Long commentId) {
         Long memberId = authUtil.getLoginMemberId();
         String roleStr = authUtil.getLoginMemberRole();
-        if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        if (memberId == null || roleStr == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
         try {
             commentService.deleteComment(commentId, memberId, MemberRole.valueOf(roleStr));

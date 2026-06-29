@@ -5,7 +5,6 @@ import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.service.MemberService;
-import com.ync.ysync.service.SocialAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import java.util.Optional;
 public class MemberController {
 
     private final MemberService memberService;
-    private final SocialAuthService socialAuthService;
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
 
@@ -73,7 +71,8 @@ public class MemberController {
         String loginId = request.get("loginId");
         String name = request.get("name");
         String email = request.get("email");
-        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty() || email == null || email.trim().isEmpty()) {
+        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty() || email == null
+                || email.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "학번, 이름, 이메일을 모두 입력해 주세요."));
         }
         try {
@@ -140,7 +139,7 @@ public class MemberController {
         if (loginId == null || loginId.equals("anonymousUser")) {
             return ResponseEntity.status(401).body("로그인이 필요합니다.");
         }
-        
+
         Optional<Member> memberOpt = memberRepository.findByLoginId(loginId);
         if (memberOpt.isPresent()) {
             memberService.updateFcmToken(memberOpt.get().getId(), request.getFcmToken());

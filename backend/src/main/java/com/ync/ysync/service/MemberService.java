@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -80,7 +79,7 @@ public class MemberService {
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5); // 5분 유효
 
         verificationCodes.put(loginId, new VerificationInfo(code, expiredAt));
-        
+
         // 3. 이메일 발송
         emailService.sendVerificationCode(toEmail, code);
     }
@@ -230,7 +229,8 @@ public class MemberService {
 
         Member member = Member.builder()
                 .loginId(loginId)
-                .password(passwordEncoder.encode("TEMP_" + loginId + "_" + System.currentTimeMillis())) // 임시 비밀번호 (로그인 불가능 상태 유도)
+                .password(passwordEncoder.encode("TEMP_" + loginId + "_" + System.currentTimeMillis())) // 임시 비밀번호 (로그인
+                                                                                                        // 불가능 상태 유도)
                 .name(name)
                 .role(role != null ? role : MemberRole.USER)
                 .isActivated(false) // 비활성화 상태로 등록
@@ -253,21 +253,24 @@ public class MemberService {
             int successCount = 0;
 
             while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
-                
+                if (line.trim().isEmpty())
+                    continue;
+
                 // UTF-8 BOM 제거
                 if (isFirstLine && line.startsWith("\uFEFF")) {
                     line = line.substring(1);
                 }
 
                 String[] parts = line.split(",");
-                if (parts.length < 2) continue;
+                if (parts.length < 2)
+                    continue;
 
                 String loginId = parts[0].trim();
                 String name = parts[1].trim();
 
                 // 첫 행 헤더 필터링
-                if (isFirstLine && (loginId.contains("학번") || loginId.equalsIgnoreCase("loginid") || loginId.equalsIgnoreCase("studentId"))) {
+                if (isFirstLine && (loginId.contains("학번") || loginId.equalsIgnoreCase("loginid")
+                        || loginId.equalsIgnoreCase("studentId"))) {
                     isFirstLine = false;
                     continue;
                 }
@@ -315,7 +318,7 @@ public class MemberService {
     @Transactional
     public Member updateMemberByAdmin(Long id, String name, MemberRole role) {
         Member member = findById(id);
-        
+
         if (name != null && !name.trim().isEmpty()) {
             member.setName(name);
         }
@@ -351,7 +354,7 @@ public class MemberService {
         if (member.getRole() == MemberRole.SUPER_ADMIN) {
             throw new IllegalArgumentException("SUPER_ADMIN 계정의 비밀번호는 관리자 도구로 초기화할 수 없습니다.");
         }
-        
+
         member.setPassword(passwordEncoder.encode("TEMP_" + member.getLoginId() + "_" + System.currentTimeMillis()));
         member.setActivated(false); // 가입 대기 상태로 리셋
         memberRepository.save(member);
