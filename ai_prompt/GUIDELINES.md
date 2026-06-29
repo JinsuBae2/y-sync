@@ -51,3 +51,45 @@ Y-Sync의 UI/UX는 모던하고 프리미엄한 감각을 지향합니다.
 
 * **빈(Bean) 주입 규칙**: 컨트롤러 내부 핸들러 메소드 매개변수에 `AuthUtil`을 직접 선언하여 요청 맵핑 시 null이 삽입되는 버그를 원천 차단하십시오. 반드시 클래스 필드 주입과 생성자(`@RequiredArgsConstructor`) 주입을 사용해야 합니다.
 * **차단 필터 연동**: 신규 API 개발 시 정지 회원(isSuspended)의 접근 제한이 필요한 보안 대상일 경우, 필터 단(`JwtAuthenticationFilter`)에서 처리되므로 별도의 복잡한 차단 검증 코드를 컨트롤러에 중복 구현할 필요가 없습니다.
+
+---
+
+## 6. 로컬 개발 환경 변수 (Environment Variables) 설정 지침
+
+보안 강화를 위해 데이터베이스 접속 비밀번호 및 JWT Secret Key 등의 중요한 설정을 소스코드에서 분리하고 환경변수로 주입받도록 구성되어 있습니다.
+
+### A. 사용되는 환경변수 목록
+| 환경변수명 | 설명 | 기본값 (Fallback) |
+|---|---|---|
+| `DB_URL` | MySQL 접속 URL | `jdbc:mysql://127.0.0.1:3306/ysync_db?...` |
+| `DB_USERNAME` | 데이터베이스 계정명 | `root` |
+| `DB_PASSWORD` | 데이터베이스 패스워드 | `1234` |
+| `JWT_SECRET` | JWT 서명용 비밀키 | `YSyncSuperSecretKeyYSyncSuperSecretKey...` |
+
+### B. 개발 도구(IDE)별 설정 방법
+* **IntelliJ IDEA**: 
+  1. `Run/Debug Configurations` ➡️ `Edit Configurations...` 선택.
+  2. Spring Boot Application 실행 설정 선택 후 `Environment variables` 필드에 입력 (형식: `DB_PASSWORD=your_password;JWT_SECRET=your_secret`).
+* **STS / Eclipse**: 
+  1. `Run Configurations...` ➡️ `Environment` 탭 선택.
+  2. `Add...` 버튼을 눌러 변수명(`DB_PASSWORD`, `JWT_SECRET`)과 값을 기입.
+
+### C. 터미널(CLI) 구동 시 설정 방법
+* **Windows (PowerShell)**:
+  ```powershell
+  $env:DB_PASSWORD="your_db_password"
+  $env:JWT_SECRET="your_custom_jwt_secret_key"
+  ./gradlew bootRun
+  ```
+* **Windows (CMD)**:
+  ```cmd
+  set DB_PASSWORD=your_db_password
+  set JWT_SECRET=your_custom_jwt_secret_key
+  gradlew bootRun
+  ```
+* **macOS / Linux**:
+  ```bash
+  export DB_PASSWORD="your_db_password"
+  export JWT_SECRET="your_custom_jwt_secret_key"
+  ./gradlew bootRun
+  ```
