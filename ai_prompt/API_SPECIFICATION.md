@@ -261,3 +261,45 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
   }
   ```
 - **Response (200 OK)**: `"관리자 권한 신청이 완료되었습니다."`
+
+---
+
+### 🔔 Notification Center (알림 센터)
+
+#### 1. 수신한 알림 내역 최신순 조회 (`GET /notifications`)
+- **Response (200 OK)**
+  ```json
+  [
+    {
+      "id": 1,
+      "title": "💬 내 글에 새로운 댓글이 달렸어요!",
+      "body": "방금 내 작성글에 새로운 댓글이 달렸습니다.",
+      "targetType": "COMMUNITY",
+      "targetId": 105,
+      "isRead": false,
+      "createdAt": "2026-06-29T13:00:00"
+    },
+    {
+      "id": 2,
+      "title": "[새 공지사항] 도서관 연장 운영",
+      "body": "새로운 공지사항이 등록되었습니다.",
+      "targetType": "NOTICE",
+      "targetId": 12,
+      "isRead": true,
+      "createdAt": "2026-06-29T12:30:00"
+    }
+  ]
+  ```
+
+#### 2. 모든 알림 일괄 읽음 처리 (`PUT /notifications/read`)
+- **Response (200 OK)**
+  `"전체 읽음 처리 완료"` (String)
+
+#### 3. 개별 알림 읽음 처리 (`PUT /notifications/{id}/read`)
+- **Response (200 OK)**
+  `"개별 읽음 처리 완료"` (String)
+
+#### 4. 개별 알림 삭제 (`DELETE /notifications/{id}`)
+- **Response (200 OK)**
+  `"알림 삭제 완료"` (String)
+
