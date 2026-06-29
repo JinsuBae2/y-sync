@@ -83,5 +83,19 @@ class CommentNotifier {
 
 final commentNotifierProvider = Provider((ref) => CommentNotifier(ref));
 
-// 💡 대댓글(답글) 작성 시 선택된 부모 댓글 상태를 포스트 ID별로 추적하는 Provider입니다.
-final activeParentCommentProvider = StateProvider.family<Comment?, int>((ref, postId) => null);
+// 💡 대댓글(답글) 작성 시 선택된 부모 댓글 상태를 포스트 ID별로 추적하는 Notifier입니다. (Riverpod 3.x 호환)
+class ActiveParentCommentNotifier extends Notifier<Map<int, Comment?>> {
+  @override
+  Map<int, Comment?> build() => {};
+
+  void updateState(int postId, Comment? comment) {
+    state = {
+      ...state,
+      postId: comment,
+    };
+  }
+}
+
+final activeParentCommentProvider = NotifierProvider<ActiveParentCommentNotifier, Map<int, Comment?>>(
+  ActiveParentCommentNotifier.new,
+);

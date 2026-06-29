@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notice.dart';
 import '../models/comment.dart';
+import '../models/member.dart';
 import '../providers/notice_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
@@ -413,7 +414,7 @@ class _CommentList extends ConsumerWidget {
                   ),
                   onPressed: () {
                     // 답글 대상 지정
-                    ref.read(activeParentCommentProvider(id).notifier).state = comment;
+                    ref.read(activeParentCommentProvider.notifier).updateState(id, comment);
                   },
                   child: const Text('답글', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF164687))),
                 ),
@@ -462,6 +463,12 @@ class _CommentList extends ConsumerWidget {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('삭제되었습니다.')));
                   }
                 } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+                  }
+                }
+              },
+              child: const Text('삭제', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -507,7 +514,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
           );
       _controller.clear();
       // 답글 모드 리셋
-      ref.read(activeParentCommentProvider(widget.id).notifier).state = null;
+      ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
       FocusScope.of(context).unfocus(); // Close keyboard
     } catch (e) {
       if (mounted) {
@@ -524,7 +531,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
 
   @override
   Widget build(BuildContext context) {
-    final activeParent = ref.watch(activeParentCommentProvider(widget.id));
+    final activeParent = ref.watch(activeParentCommentProvider)[widget.id];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -547,7 +554,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
                 GestureDetector(
                   onTap: () {
                     // 답글 취소
-                    ref.read(activeParentCommentProvider(widget.id).notifier).state = null;
+                    ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
                   },
                   child: const Icon(Icons.cancel_rounded, size: 16, color: Colors.grey),
                 ),
@@ -621,25 +628,6 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
     );
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-},
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.send_rounded),
-                    color: Colors.black87,
-                    iconSize: 20,
-                    onPressed: _submitComment,
-                  ),
-                ),
-        ],
-      ),
-    );
-  }
-  
   @override
   void dispose() {
     _controller.dispose();

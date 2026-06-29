@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/community_post.dart';
 import '../models/comment.dart';
+import '../models/member.dart';
 import '../providers/community_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/auth_provider.dart';
@@ -422,7 +423,7 @@ class _CommentList extends ConsumerWidget {
                   ),
                   onPressed: () {
                     // 답글 대상 지정
-                    ref.read(activeParentCommentProvider(id).notifier).state = comment;
+                    ref.read(activeParentCommentProvider.notifier).updateState(id, comment);
                   },
                   child: const Text('답글', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF164687))),
                 ),
@@ -531,7 +532,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
           );
       _controller.clear();
       // 답글 모드 리셋
-      ref.read(activeParentCommentProvider(widget.id).notifier).state = null;
+      ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
       FocusScope.of(context).unfocus();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('댓글 작성 실패: $e')));
@@ -542,7 +543,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
 
   @override
   Widget build(BuildContext context) {
-    final activeParent = ref.watch(activeParentCommentProvider(widget.id));
+    final activeParent = ref.watch(activeParentCommentProvider)[widget.id];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -565,7 +566,7 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
                 GestureDetector(
                   onTap: () {
                     // 답글 취소
-                    ref.read(activeParentCommentProvider(widget.id).notifier).state = null;
+                    ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
                   },
                   child: const Icon(Icons.cancel_rounded, size: 16, color: Colors.grey),
                 ),
