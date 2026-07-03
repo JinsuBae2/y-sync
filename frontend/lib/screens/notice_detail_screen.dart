@@ -59,36 +59,37 @@ class NoticeDetailScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                       Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: notice.noticeType == 'NOTICE' 
-                                ? const Color(0xFFE53935) 
-                                : Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                notice.noticeType == 'NOTICE' 
-                                    ? Icons.push_pin_rounded 
-                                    : Icons.notifications_none_rounded,
-                                size: 14,
-                                color: notice.noticeType == 'NOTICE' ? Colors.white : Theme.of(context).colorScheme.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                notice.noticeType == 'NOTICE' ? '공지' : '소식',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: notice.noticeType == 'NOTICE' ? Colors.white : Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
+                      // 💡 [BugFix] 공지사항 배지 렌더링 괄호 정합성 복구
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: notice.noticeType == 'NOTICE' 
+                              ? const Color(0xFFE53935).withOpacity(0.08) 
+                              : Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(30),
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              notice.noticeType == 'NOTICE' 
+                                  ? Icons.campaign_rounded 
+                                  : Icons.info_outline_rounded,
+                              size: 14,
+                              color: notice.noticeType == 'NOTICE' ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              notice.noticeType == 'NOTICE' ? '공지' : '일반',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: notice.noticeType == 'NOTICE' ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       Text(
                         _formatDate(notice.createdAt),
                         style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500),

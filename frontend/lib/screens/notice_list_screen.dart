@@ -248,8 +248,8 @@ class NoticeCard extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: isNotice 
-                            ? const Color(0xFFE53935) // 💡 공지 뱃지용 다홍색 테마
-                            : Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                            ? const Color(0xFFE53935).withOpacity(0.08) // 💡 연한 다홍색 파스텔 톤
+                            : Theme.of(context).colorScheme.primary.withOpacity(0.08), // 💡 연한 블루 파스텔 톤
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Row(
@@ -257,18 +257,18 @@ class NoticeCard extends ConsumerWidget {
                         children: [
                           Icon(
                             isNotice 
-                                ? Icons.push_pin_rounded 
-                                : Icons.notifications_none_rounded,
+                                ? Icons.campaign_rounded // 💡 중요 공지는 확성기 아이콘
+                                : Icons.info_outline_rounded, // 💡 일반 공지는 정보 아이콘
                             size: 14,
-                            color: isNotice ? Colors.white : Theme.of(context).colorScheme.primary,
+                            color: isNotice ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isNotice ? '공지' : '소식',
+                            isNotice ? '공지' : '일반',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: isNotice ? Colors.white : Theme.of(context).colorScheme.primary,
+                              color: isNotice ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],

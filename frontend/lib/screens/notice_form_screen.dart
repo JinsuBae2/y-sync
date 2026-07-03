@@ -137,7 +137,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               items: const [
-                DropdownMenuItem(value: 'NEWS', child: Text('학과 소식 (NEWS)')),
+                DropdownMenuItem(value: 'NEWS', child: Text('일반 공지 (NEWS)')),
                 DropdownMenuItem(value: 'NOTICE', child: Text('중요 공지 (NOTICE)')),
               ],
               onChanged: (value) {
