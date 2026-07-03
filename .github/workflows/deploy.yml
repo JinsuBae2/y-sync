@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - develop
+    paths:
+      - 'backend/**'
+      - 'docker/**'
+      - '.github/workflows/**'
 
 jobs:
   deploy:
