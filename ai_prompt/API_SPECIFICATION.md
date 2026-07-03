@@ -111,7 +111,7 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
     {
       "title": "[안내] 도서관 연장 운영",
       "content": "시험기간 도서관 운영시간을 연장합니다.",
-      "noticeType": "INTERNAL",
+      "noticeType": "NEWS",
       "targetGrade": "ALL",
       "isPinned": true
     }
