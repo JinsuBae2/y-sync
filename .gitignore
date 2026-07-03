@@ -8,3 +8,6 @@
 
 backend/boot.log
 backend/cookies.txt
+
+# Agent Config
+.agents/
