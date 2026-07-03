@@ -208,7 +208,7 @@ class NoticeCard extends ConsumerWidget {
       orElse: () => false,
     );
 
-    final isOfficial = notice.noticeType == 'OFFICIAL';
+    final isNotice = notice.noticeType == 'NOTICE';
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -245,19 +245,33 @@ class NoticeCard extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: isOfficial ? Colors.red.shade500 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        color: isNotice 
+                            ? const Color(0xFFE53935) // 💡 공지 뱃지용 다홍색 테마
+                            : Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      child: Text(
-                        notice.noticeType,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: isOfficial ? Colors.white : Theme.of(context).colorScheme.primary,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isNotice 
+                                ? Icons.push_pin_rounded 
+                                : Icons.notifications_none_rounded,
+                            size: 14,
+                            color: isNotice ? Colors.white : Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isNotice ? '공지' : '소식',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isNotice ? Colors.white : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const Spacer(),

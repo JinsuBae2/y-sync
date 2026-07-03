@@ -18,7 +18,7 @@ class NoticeFormScreen extends ConsumerStatefulWidget {
 class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
-  String _noticeType = 'INTERNAL';
+  String _noticeType = 'NEWS';
   String _targetGrade = 'ALL';
   bool _isLoading = false;
   List<XFile> _images = [];
@@ -137,8 +137,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               items: const [
-                DropdownMenuItem(value: 'INTERNAL', child: Text('일반 공지 (INTERNAL)')),
-                DropdownMenuItem(value: 'OFFICIAL', child: Text('학교 공지 (OFFICIAL)')),
+                DropdownMenuItem(value: 'NEWS', child: Text('학과 소식 (NEWS)')),
+                DropdownMenuItem(value: 'NOTICE', child: Text('중요 공지 (NOTICE)')),
               ],
               onChanged: (value) {
                 if (value != null) {

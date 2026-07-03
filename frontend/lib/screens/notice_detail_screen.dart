@@ -60,19 +60,33 @@ class NoticeDetailScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: notice.noticeType == 'OFFICIAL' ? Colors.red.shade500 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+                            color: notice.noticeType == 'NOTICE' 
+                                ? const Color(0xFFE53935) 
+                                : Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                          child: Text(
-                            notice.noticeType,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: notice.noticeType == 'OFFICIAL' ? Colors.white : Theme.of(context).colorScheme.primary,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                notice.noticeType == 'NOTICE' 
+                                    ? Icons.push_pin_rounded 
+                                    : Icons.notifications_none_rounded,
+                                size: 14,
+                                color: notice.noticeType == 'NOTICE' ? Colors.white : Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                notice.noticeType == 'NOTICE' ? '공지' : '소식',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: notice.noticeType == 'NOTICE' ? Colors.white : Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       Text(
