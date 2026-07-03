@@ -293,10 +293,14 @@ class NoticeCard extends ConsumerWidget {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    if (notice.isPinned) // 💡 핀 고정 아이콘
+                    if (notice.isPinned) // 💡 핀 고정 벡터 아이콘
                       const Padding(
                         padding: EdgeInsets.only(right: 6),
-                        child: Text('📌', style: TextStyle(fontSize: 18)),
+                        child: Icon(
+                          Icons.push_pin_rounded,
+                          size: 18,
+                          color: Color(0xFF164687),
+                        ),
                       ),
                     Expanded(
                       child: Text(
