@@ -68,8 +68,8 @@ public class NoticeController {
         Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
-        // 기본적으로 INTERNAL, 프론트에서 넘어오면 해당 값 사용 가능 (추가 확장)
-        NoticeType type = NoticeType.INTERNAL;
+        // 기본적으로 NEWS, 프론트에서 넘어오면 해당 값 사용 가능 (추가 확장)
+        NoticeType type = NoticeType.NEWS;
         if (request.getNoticeType() != null) {
             type = NoticeType.valueOf(request.getNoticeType());
         }
@@ -89,7 +89,7 @@ public class NoticeController {
         String roleStr = authUtil.getLoginMemberRole();
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
-        NoticeType type = NoticeType.INTERNAL;
+        NoticeType type = NoticeType.NEWS;
         if (request.getNoticeType() != null) {
             type = NoticeType.valueOf(request.getNoticeType());
         }

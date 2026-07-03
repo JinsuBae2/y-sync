@@ -86,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
                     .title("2026 영남이공대 소프트웨어융합과 캡스톤 디자인 일정 안내")
                     .content("이번 학기 캡스톤 디자인 최종 발표가 6월 중순에 예정되어 있습니다. 팀별 결과 보고서를 미리 준비해주세요.")
                     .author(admin)
-                    .noticeType(NoticeType.OFFICIAL)
+                    .noticeType(NoticeType.NOTICE)
                     .aiSummary("6월 중순 캡스톤 디자인 발표 및 보고서 제출 사전 안내입니다.")
                     .eventStartDate(java.time.LocalDate.of(2026, 6, 15))
                     .eventEndDate(java.time.LocalDate.of(2026, 6, 15))
@@ -96,7 +96,7 @@ public class DataInitializer implements CommandLineRunner {
                     .title("학부 과방 및 전공 실습실 이용 수칙 안내")
                     .content("실습실 내 음식물 반입은 절대 금지됩니다. 퇴실 시 PC 전원을 꼭 꺼주시기 바랍니다. 파손 주의 부탁드립니다.")
                     .author(admin)
-                    .noticeType(NoticeType.OFFICIAL)
+                    .noticeType(NoticeType.NOTICE)
                     .aiSummary("실습실 내 음식물 반입 금지 및 퇴실 시 전원 확인 등 이용 수칙 안내입니다.")
                     .build());
 
@@ -104,7 +104,7 @@ public class DataInitializer implements CommandLineRunner {
                     .title("[공지] 영남이공대학교 장학금 신청 기간 안내")
                     .content("성적 장학금 및 복지 장학금 신청이 다음 주 월요일부터 시작됩니다. 학부 사무실에 서류를 제출해 주세요.")
                     .author(admin)
-                    .noticeType(NoticeType.OFFICIAL)
+                    .noticeType(NoticeType.NOTICE)
                     .aiSummary("다음 주부터 시작되는 성적/복지 장학금 신청 기간 및 방법 안내입니다.")
                     .build());
 
@@ -112,7 +112,7 @@ public class DataInitializer implements CommandLineRunner {
                     .title("2026학년도 하계 방학 특강(자바/코틀린) 모집")
                     .content("방학 중 자바와 코틀린 실무 역량을 키울 학생들을 모집합니다. 선착순 20명입니다.")
                     .author(admin)
-                    .noticeType(NoticeType.INTERNAL)
+                    .noticeType(NoticeType.NEWS)
                     .aiSummary("하계 방학 자바 및 코틀린 실무 특강 참여 학생 선착순 모집 안내입니다.")
                     .eventStartDate(java.time.LocalDate.of(2026, 7, 1))
                     .eventEndDate(java.time.LocalDate.of(2026, 7, 5))
@@ -122,7 +122,7 @@ public class DataInitializer implements CommandLineRunner {
                     .title("계명대-영남이공대 연합 해커톤 참가자 모집")
                     .content("인근 대학과의 연합 해커톤이 개최됩니다. 우승 팀에게는 상금과 부상이 주어집니다.")
                     .author(admin)
-                    .noticeType(NoticeType.INTERNAL)
+                    .noticeType(NoticeType.NEWS)
                     .aiSummary("타 대학 연합 해커톤 개최 소식 및 참가자 모집 안내입니다.")
                     .eventStartDate(java.time.LocalDate.of(2026, 8, 10))
                     .eventEndDate(java.time.LocalDate.of(2026, 8, 12))
