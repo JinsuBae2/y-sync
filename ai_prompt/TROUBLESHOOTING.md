@@ -66,4 +66,27 @@ public class MemberProfileController {
         ...
     }
 }
+
+---
+
+## 4. 공지사항 분류 타입(NoticeType) 개편 시 DB ENUM 불일치로 인한 500 에러 해결
+
+### 문제 현황
+- **원인**: 백엔드 `NoticeType` Enum을 `OFFICIAL/INTERNAL` ➡️ `NOTICE/NEWS` 로 변경한 뒤 원격 배포를 실행했으나, 기존 데이터베이스의 `notice` 테이블 `notice_type` 컬럼에 이미 예전 값(`OFFICIAL` 등)이 채워져 있어, 백엔드 기동 시 데이터를 파싱하지 못해 `IllegalArgumentException`과 함께 **500 Internal Server Error**가 발생하고 앱 화면이 멈추는 버그가 터졌습니다.
+- **실패 사례**: 단순히 데이터 업데이트 SQL을 때리려고 했으나, DB 구축 당시 해당 컬럼이 `ENUM('OFFICIAL', 'INTERNAL')` 타입으로 강력하게 설정되어 있어 새 값인 `'NOTICE'` 나 `'NEWS'` 를 입력하려 할 때 데이터 유실(Data truncated) 에러가 발생하며 SQL 실행이 무산되었습니다.
+
+### 해결 방안
+- **해결 패턴**:
+  1. MySQL 내 `notice_type` 컬럼의 강한 ENUM 제약을 일반 텍스트 타입인 `VARCHAR(255)`로 변경하는 쿼리를 먼저 수행하여 문장 입력을 가능케 유연성을 줍니다.
+  2. 그 후, 기존 데이터를 새 타입 명칭에 맞추어 치환하는 마이그레이션 쿼리를 순차적으로 실행하여 해결했습니다.
+  ```sql
+  -- 💡 1. 컬럼 타입 유연화 (Alter Table)
+  ALTER TABLE notice MODIFY COLUMN notice_type VARCHAR(255);
+  
+  -- 💡 2. 데이터 마이그레이션 (Update)
+  UPDATE notice SET notice_type = 'NOTICE' WHERE notice_type = 'OFFICIAL';
+  UPDATE notice SET notice_type = 'NEWS' WHERE notice_type = 'INTERNAL';
+  ```
+- **효과**: 백엔드 서버를 재시작하여 정상적으로 데이터 매핑을 활성화했고, 추가적인 호스팅 웹과 API 호출이 500 오류 없이 선명하게 배지 정보와 함께 복구되었습니다.
+
 ```
