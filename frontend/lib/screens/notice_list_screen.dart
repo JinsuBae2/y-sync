@@ -86,20 +86,17 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
               ),
             ),
           ),
-          // 💡 [개선] 학년 필터링 세그먼트 컨트롤 (iOS/Toss 스타일 슬라이딩 버블)
+          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 탭 필터 (Muted Text Tab)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(30),
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            color: Colors.white,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildSegmentTab(context, ref, '전체', 'ALL', selectedGrade),
-                _buildSegmentTab(context, ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildSegmentTab(context, ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildSegmentTab(context, ref, '3학년', 'GRADE_3', selectedGrade),
+                _buildTextTab(context, ref, '전체', 'ALL', selectedGrade),
+                _buildTextTab(context, ref, '1학년', 'GRADE_1', selectedGrade),
+                _buildTextTab(context, ref, '2학년', 'GRADE_2', selectedGrade),
+                _buildTextTab(context, ref, '3학년', 'GRADE_3', selectedGrade),
               ],
             ),
           ),
@@ -178,41 +175,40 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     );
   }
 
-  Widget _buildSegmentTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildTextTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          ref.read(noticeGradeProvider.notifier).updateGrade(value);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent, // 💡 선택 시 흰색 카드 버블 노출
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : [],
-          ),
-          child: Center(
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: () {
+        ref.read(noticeGradeProvider.notifier).updateGrade(value);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black54,
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? primaryColor : Colors.black38,
               ),
             ),
           ),
-        ),
+          const SizedBox(height: 6),
+          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 3,
+            width: 24,
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
       ),
     );
   }

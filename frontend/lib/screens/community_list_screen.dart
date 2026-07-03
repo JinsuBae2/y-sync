@@ -98,37 +98,31 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
               ),
             ),
           ),
-          // 💡 [개선] 학년 필터링 세그먼트 컨트롤 (iOS/Toss 스타일)
+          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 학년 탭 필터 (Muted Text Tab)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(30),
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            color: Colors.white,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildGradeSegmentTab(ref, '전체', 'ALL', selectedGrade),
-                _buildGradeSegmentTab(ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildGradeSegmentTab(ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildGradeSegmentTab(ref, '3학년', 'GRADE_3', selectedGrade),
+                _buildGradeTextTab(ref, '전체', 'ALL', selectedGrade),
+                _buildGradeTextTab(ref, '1학년', 'GRADE_1', selectedGrade),
+                _buildGradeTextTab(ref, '2학년', 'GRADE_2', selectedGrade),
+                _buildGradeTextTab(ref, '3학년', 'GRADE_3', selectedGrade),
               ],
             ),
           ),
-          // 💡 [개선] 카테고리 필터링 세그먼트 컨트롤 (iOS/Toss 스타일)
+          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 카테고리 탭 필터 (Muted Text Tab)
           Container(
-            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(30),
-            ),
+            padding: const EdgeInsets.only(bottom: 8),
+            color: Colors.white,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildCategorySegmentTab(context, ref, '전체', 'ALL', selectedCategory),
-                _buildCategorySegmentTab(context, ref, 'Q&A', 'QA', selectedCategory),
-                _buildCategorySegmentTab(context, ref, '팀원모집', 'TEAM', selectedCategory),
-                _buildCategorySegmentTab(context, ref, '자유', 'FREE', selectedCategory),
+                _buildCategoryTextTab(context, ref, '전체', 'ALL', selectedCategory),
+                _buildCategoryTextTab(context, ref, 'Q&A', 'QA', selectedCategory),
+                _buildCategoryTextTab(context, ref, '팀원모집', 'TEAM', selectedCategory),
+                _buildCategoryTextTab(context, ref, '자유', 'FREE', selectedCategory),
               ],
             ),
           ),
@@ -203,80 +197,78 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
     );
   }
 
-  Widget _buildGradeSegmentTab(WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildGradeTextTab(WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          ref.read(communityGradeProvider.notifier).updateGrade(value);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : [],
-          ),
-          child: Center(
+    const primaryColor = Color(0xFF164687);
+    return GestureDetector(
+      onTap: () {
+        ref.read(communityGradeProvider.notifier).updateGrade(value);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? const Color(0xFF164687) : Colors.black54,
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? primaryColor : Colors.black38,
               ),
             ),
           ),
-        ),
+          const SizedBox(height: 6),
+          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 3,
+            width: 24,
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCategorySegmentTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildCategoryTextTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          ref.read(communityCategoryProvider.notifier).updateCategory(value);
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : [],
-          ),
-          child: Center(
+    const primaryColor = Color(0xFF164687);
+    return GestureDetector(
+      onTap: () {
+        ref.read(communityCategoryProvider.notifier).updateCategory(value);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected ? const Color(0xFF164687) : Colors.black54,
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? primaryColor : Colors.black38,
               ),
             ),
           ),
-        ),
+          const SizedBox(height: 6),
+          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 3,
+            width: 24,
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
       ),
     );
   }

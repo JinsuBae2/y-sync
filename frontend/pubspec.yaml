@@ -52,6 +52,7 @@ dependencies:
   table_calendar: ^3.1.2
   time_planner: ^0.1.2+1
   file_picker: ^8.0.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

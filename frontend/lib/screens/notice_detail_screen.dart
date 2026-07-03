@@ -10,6 +10,7 @@ import 'notice_form_screen.dart';
 import '../widgets/deletion_reason_dialog.dart';
 import '../utils/image_url_helper.dart';
 import '../widgets/image_viewer_screen.dart';
+import '../widgets/linkify_text.dart';
 
 class NoticeDetailScreen extends ConsumerWidget {
   final Notice notice;
@@ -129,8 +130,8 @@ class NoticeDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   const Divider(height: 1, color: Colors.black12),
                   const SizedBox(height: 32),
-                  Text(
-                    notice.content,
+                  LinkifyText(
+                    text: notice.content,
                     style: const TextStyle(
                       fontSize: 16, 
                       height: 1.6,

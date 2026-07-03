@@ -11,6 +11,7 @@ import '../providers/comment_provider.dart';
 import '../widgets/deletion_reason_dialog.dart';
 import '../utils/image_url_helper.dart';
 import '../widgets/image_viewer_screen.dart';
+import '../widgets/linkify_text.dart';
 
 class CommunityDetailScreen extends ConsumerWidget {
   final CommunityPost post;
@@ -154,8 +155,8 @@ class CommunityDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 24),
-                  Text(
-                    post.content,
+                  LinkifyText(
+                    text: post.content,
                     style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
                   ),
                   const SizedBox(height: 24),
