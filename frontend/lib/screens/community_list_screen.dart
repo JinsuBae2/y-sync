@@ -98,29 +98,37 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
               ),
             ),
           ),
-          // 💡 상단 (Grade Filter): 학년 필터링 칩
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // 💡 [개선] 학년 필터링 세그먼트 컨트롤 (iOS/Toss 스타일)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(30),
+            ),
             child: Row(
               children: [
-                _buildGradeChip(ref, '전체', 'ALL', selectedGrade),
-                _buildGradeChip(ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildGradeChip(ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildGradeChip(ref, '3학년', 'GRADE_3', selectedGrade),
+                _buildGradeSegmentTab(ref, '전체', 'ALL', selectedGrade),
+                _buildGradeSegmentTab(ref, '1학년', 'GRADE_1', selectedGrade),
+                _buildGradeSegmentTab(ref, '2학년', 'GRADE_2', selectedGrade),
+                _buildGradeSegmentTab(ref, '3학년', 'GRADE_3', selectedGrade),
               ],
             ),
           ),
-          // 💡 하단 (Category Filter): 카테고리 필터링 칩
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+          // 💡 [개선] 카테고리 필터링 세그먼트 컨트롤 (iOS/Toss 스타일)
+          Container(
+            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(30),
+            ),
             child: Row(
               children: [
-                _buildCategoryChip(context, ref, '전체', 'ALL', selectedCategory),
-                _buildCategoryChip(context, ref, 'Q&A', 'QA', selectedCategory),
-                _buildCategoryChip(context, ref, '팀원모집', 'TEAM', selectedCategory),
-                _buildCategoryChip(context, ref, '자유', 'FREE', selectedCategory),
+                _buildCategorySegmentTab(context, ref, '전체', 'ALL', selectedCategory),
+                _buildCategorySegmentTab(context, ref, 'Q&A', 'QA', selectedCategory),
+                _buildCategorySegmentTab(context, ref, '팀원모집', 'TEAM', selectedCategory),
+                _buildCategorySegmentTab(context, ref, '자유', 'FREE', selectedCategory),
               ],
             ),
           ),
@@ -195,41 +203,79 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
     );
   }
 
-  Widget _buildGradeChip(WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildGradeSegmentTab(WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (selected) {
-          ref.read(communityGradeProvider.notifier).updateGrade(selected ? value : 'ALL');
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(communityGradeProvider.notifier).updateGrade(value);
         },
-        selectedColor: const Color(0xFF164687).withOpacity(0.15),
-        checkmarkColor: const Color(0xFF164687),
-        labelStyle: TextStyle(
-          color: isSelected ? const Color(0xFF164687) : Colors.black87,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? const Color(0xFF164687) : Colors.black54,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCategoryChip(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildCategorySegmentTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (selected) {
-          ref.read(communityCategoryProvider.notifier).updateCategory(selected ? value : 'ALL');
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(communityCategoryProvider.notifier).updateCategory(value);
         },
-        selectedColor: const Color(0xFF164687).withOpacity(0.15),
-        checkmarkColor: const Color(0xFF164687),
-        labelStyle: TextStyle(
-          color: isSelected ? const Color(0xFF164687) : Colors.black87,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? const Color(0xFF164687) : Colors.black54,
+              ),
+            ),
+          ),
         ),
       ),
     );

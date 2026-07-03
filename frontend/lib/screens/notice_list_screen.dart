@@ -86,16 +86,20 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
               ),
             ),
           ),
-          // 💡 학년 필터링 칩 (Grade Filter Chips) - 검색창 아래로 이동
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // 💡 [개선] 학년 필터링 세그먼트 컨트롤 (iOS/Toss 스타일 슬라이딩 버블)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(30),
+            ),
             child: Row(
               children: [
-                _buildGradeChip(context, ref, '전체', 'ALL', selectedGrade),
-                _buildGradeChip(context, ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildGradeChip(context, ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildGradeChip(context, ref, '3학년', 'GRADE_3', selectedGrade),
+                _buildSegmentTab(context, ref, '전체', 'ALL', selectedGrade),
+                _buildSegmentTab(context, ref, '1학년', 'GRADE_1', selectedGrade),
+                _buildSegmentTab(context, ref, '2학년', 'GRADE_2', selectedGrade),
+                _buildSegmentTab(context, ref, '3학년', 'GRADE_3', selectedGrade),
               ],
             ),
           ),
@@ -174,21 +178,40 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     );
   }
 
-  Widget _buildGradeChip(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildSegmentTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (selected) {
-          ref.read(noticeGradeProvider.notifier).updateGrade(selected ? value : 'ALL');
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(noticeGradeProvider.notifier).updateGrade(value);
         },
-        selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-        checkmarkColor: Theme.of(context).colorScheme.primary,
-        labelStyle: TextStyle(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent, // 💡 선택 시 흰색 카드 버블 노출
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black54,
+              ),
+            ),
+          ),
         ),
       ),
     );
