@@ -51,12 +51,11 @@ class LinkifyText extends StatelessWidget {
             ..onTap = () async {
               try {
                 final Uri uri = Uri.parse(urlString);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(
-                    uri,
-                    mode: LaunchMode.externalApplication, // 💡 외부 브라우저로 새창 기동
-                  );
-                }
+                // 💡 웹/모바일 보안 샌드박스 오동작 우회를 위해 canLaunchUrl 검사 없이 즉시 링크 실행
+                await launchUrl(
+                  uri,
+                  mode: LaunchMode.platformDefault,
+                );
               } catch (_) {
                 // 예외 처리
               }
