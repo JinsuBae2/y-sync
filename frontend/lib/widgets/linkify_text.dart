@@ -1,49 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-// 💡 [LinkifyText] 텍스트 내 URL을 감지하여 다음 기능을 제공하는 하이브리드 UI/UX 위젯
+// 💡 [LinkifyText] 텍스트 내 URL을 감지하여 복사 칩만 깔끔하게 제공하는 컴포넌트
 // 1. 일반 본문 텍스트: 모바일/웹 100% 드래그 선택 및 우클릭 복사 보장 (SelectableText.rich)
-// 2. 인라인 링크: 드래그 충돌 없이 원터치 클릭 연결 (WidgetSpan + GestureDetector)
-// 3. 인라인 복사 버튼: 링크 주소 바로 뒤에 [📋 복사] 미니 버튼 배치로 단독 복사 지원
-// 4. 하단 바로가기 카드: 본문 밑에 큼직한 원클릭 바로가기 아웃라인 카드 동적 노출
+// 2. 인라인 복사 버튼: 링크 주소 바로 뒤에 [📋 복사] 미니 버튼 배치로 단독 복사 지원 (클릭 이동은 제거하여 팝업 차단 이슈 원천 예방)
 class LinkifyText extends StatelessWidget {
   final String text;
   final TextStyle? style;
 
-  const LinkifyText({super.key, required this.text, this.style});
-
-  Future<void> _launchURL(BuildContext context, String urlString) async {
-    try {
-      final Uri uri = Uri.parse(urlString);
-      await launchUrl(
-        uri,
-        mode: LaunchMode.platformDefault, // 💡 웹/모바일 표준 브라우저 기동
-      );
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('링크를 열 수 없습니다: $urlString')));
-      }
-    }
-  }
-
-  String _simplifyUrl(String url) {
-    try {
-      final uri = Uri.parse(url);
-      return uri.host.isNotEmpty
-          ? uri.host
-          : url; // 도메인 도메인 호스트명만 추출 (예: zoom.us, meet.google.com)
-    } catch (_) {
-      return url;
-    }
-  }
+  const LinkifyText({
+    super.key,
+    required this.text,
+    this.style,
+  });
 
   @override
   Widget build(BuildContext context) {
     // 💡 URL 패턴 정규식
-    final urlRegex = RegExp(r'(https?:\/\/[^\s]+)', caseSensitive: false);
+    final urlRegex = RegExp(
+      r'(https?:\/\/[^\s]+)',
+      caseSensitive: false,
+    );
 
     final matches = urlRegex.allMatches(text);
     if (matches.isEmpty) {
@@ -52,41 +29,31 @@ class LinkifyText extends StatelessWidget {
 
     final List<InlineSpan> spans = [];
     int lastMatchEnd = 0;
-    final List<String> urlList = [];
 
     for (final match in matches) {
       // 💡 매칭 이전의 일반 텍스트 처리
       if (match.start > lastMatchEnd) {
-        spans.add(
-          TextSpan(
-            text: text.substring(lastMatchEnd, match.start),
-            style: style,
-          ),
-        );
+        spans.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: style,
+        ));
       }
 
       final urlString = match.group(0)!;
-      urlList.add(urlString);
 
-      // 💡 1. 하이퍼링크 텍스트 영역을 WidgetSpan + GestureDetector 조합으로 이식 (제스처 충돌 원천 해결)
+      // 💡 1. 하이퍼링크 주소는 클릭 없이 시각적 포인트(밑줄, 블루) 텍스트로만 처리 (제스처 충돌 방지)
       spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: GestureDetector(
-            onTap: () => _launchURL(context, urlString),
-            child: Text(
-              urlString,
-              style: (style ?? const TextStyle()).copyWith(
-                color: Colors.blue.shade700,
-                decoration: TextDecoration.underline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+        TextSpan(
+          text: urlString,
+          style: (style ?? const TextStyle()).copyWith(
+            color: Colors.blue.shade700,
+            decoration: TextDecoration.underline,
+            fontWeight: FontWeight.bold,
           ),
         ),
       );
 
-      // 💡 2. 링크 바로 뒤에 아주 작고 깜찍한 [📋 복사] 미니 아이콘 버튼 융합
+      // 💡 2. 링크 바로 뒤에 시인성이 극대화된 [📋 복사] 미니 칩 버튼 융합
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
@@ -103,11 +70,36 @@ class LinkifyText extends StatelessWidget {
             },
             borderRadius: BorderRadius.circular(4),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Icon(
-                Icons.content_copy_rounded,
-                size: 14,
-                color: Colors.blue.shade700,
+              padding: const EdgeInsets.only(left: 6, right: 2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF164687).withOpacity(0.08), // 브랜드 블루 옅은 8% 배경
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: const Color(0xFF164687).withOpacity(0.2), // 테두리 라인
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(
+                      Icons.content_copy_rounded,
+                      size: 10,
+                      color: Color(0xFF164687),
+                    ),
+                    SizedBox(width: 3),
+                    Text(
+                      '복사',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF164687),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -119,51 +111,15 @@ class LinkifyText extends StatelessWidget {
 
     // 💡 마지막 매칭 이후의 잔여 텍스트 처리
     if (lastMatchEnd < text.length) {
-      spans.add(TextSpan(text: text.substring(lastMatchEnd), style: style));
+      spans.add(TextSpan(
+        text: text.substring(lastMatchEnd),
+        style: style,
+      ));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 본문: 복사와 드래그가 100% 작동하는 영역
-        SelectableText.rich(TextSpan(children: spans)),
-
-        // 💡 3. 본문 하단에 감지된 링크들에 대한 큼직한 [🔗 첨부 링크 바로가기] 카드 노출
-        if (urlList.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          ...urlList.map(
-            (url) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _launchURL(context, url),
-                icon: const Icon(Icons.link_rounded, size: 18),
-                label: Text(
-                  '첨부 링크 바로가기 (${_simplifyUrl(url)})',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor: Theme.of(context).colorScheme.primary,
-                  side: BorderSide(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.3),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
+    // 💡 최종적으로 제스처 충돌이 전혀 없는 초경량 SelectableText.rich 리턴
+    return SelectableText.rich(
+      TextSpan(children: spans),
     );
   }
 }
