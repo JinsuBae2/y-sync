@@ -66,8 +66,8 @@ public class MemberProfileController {
         ...
     }
 }
+```
 
----
 
 ## 4. 공지사항 분류 타입(NoticeType) 개편 시 DB ENUM 불일치로 인한 500 에러 해결
 
@@ -89,4 +89,29 @@ public class MemberProfileController {
   ```
 - **효과**: 백엔드 서버를 재시작하여 정상적으로 데이터 매핑을 활성화했고, 추가적인 호스팅 웹과 API 호출이 500 오류 없이 선명하게 배지 정보와 함께 복구되었습니다.
 
-```
+---
+
+## 5. FCM 푸시 알림 중복(이중) 수신 버그 해결
+
+### 문제 현황
+- **원인**: 푸시 알림 발송 시 동일한 알림 메시지가 디바이스 및 웹 브라우저 화면에 **2번씩 중복 수신/노출**되는 현상이 발생했습니다.
+- **분석된 세 가지 중복 지점**:
+  1. **웹 서비스 워커 중복 호출**: 웹 환경에서 FCM Web SDK가 `payload.notification`을 기반으로 브라우저 네이티브 알림을 자동 띄움에도 불구하고, 서비스 워커([firebase-messaging-sw.js](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/web/firebase-messaging-sw.js)) 내 수동 호출이 이중으로 실행됨.
+  2. **포그라운드 인앱 팝업 중복 렌더링**: 앱 실행(포그라운드) 상태 수신 시 시스템 알림과 Flutter `flutter_local_notifications` 알림 배너가 동시에 동작함.
+  3. **백엔드 이중 전송 구조**: 백엔드 공지사항 발송 시 `sendNotificationToTopic("all")` 토픽 전송과 회원 개별 FCM 토큰 기반 멀티캐스트(`sendNotificationToTokens`) 전송이 중복하여 발송됨.
+
+### 해결 방안
+- **[firebase-messaging-sw.js](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/web/firebase-messaging-sw.js)**: `payload.notification`이 존재할 경우 서비스 워커 내부에서의 수동 알림 렌더링을 조기 리턴(`return`)하여 중복을 차단함.
+  ```javascript
+  messaging.onBackgroundMessage((payload) => {
+    // 💡 payload.notification이 존재하면 Firebase SDK가 자동으로 알림을 띄우므로 중복 노출 차단
+    if (payload.notification) {
+      return;
+    }
+    ...
+  });
+  ```
+- **[push_notification_service.dart](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/lib/services/push_notification_service.dart)**: 포그라운드 수신 로직을 웹/모바일 플랫폼별로 명확히 분기하여, 웹 환경은 브라우저 시스템 알림으로 일원화하고 모바일 환경은 커스텀 상단 플로팅 인앱 배너만 노출되도록 정리함.
+- **[NoticeEventListener.java](file:///c:/Users/YNC/Desktop/ysync/y-sync/backend/src/main/java/com/ync/ysync/event/NoticeEventListener.java)**: 불안정한 FCM 토픽 구독 방식 대신, 백엔드에서 공지 수신 동의를 마친 활성 회원의 FCM 토큰 목록을 조회하여 500개 단위 분할 멀티캐스트 전송 방식으로 전송 채널을 일원화함.
+
+- **효과**: 웹 브라우저 및 모바일 디바이스 환경 전반에서 푸시 알림이 중복 수신 없이 단 1회만 깔끔하게 노출되도록 정상화되었습니다.

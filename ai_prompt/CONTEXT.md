@@ -25,16 +25,28 @@ Y-Sync는 영남이공대학교 컴퓨터정보과 학생들의 학업 효율성
 
 ## 3. 핵심 비즈니스 도메인 및 구현 흐름 (Core Domains & Implementations)
 
-```mermaid
-graph TD
-    Member[회원 도메인] --> Auth[인증/보안 도메인]
-    Member --> Timetable[시간표 도메인]
-    Member --> Community[커뮤니티 도메인]
-    Community --> Comment[댓글/대댓글]
-    Community --> Report[신고 시스템]
-    Notice[공지사항 도메인] --> Notification[알림 센터 & FCM 알림]
-    Admin[어드민 도메인] --> Control[사용자 제재 & 게시물 기각/복원]
-```
+### 🌐 1. 전체 시스템 배포 아키텍처 다이어그램 (System Architecture)
+
+![Y-Sync 전체 시스템 배포 아키텍처](./images/system_architecture_diagram.png)
+
+---
+
+### 🧩 2. 서비스 비즈니스 도메인 아키텍처 다이어그램 (Domain Architecture)
+
+![Y-Sync 서비스 비즈니스 도메인 아키텍처](./images/domain_architecture_diagram.png)
+
+---
+
+### 🔄 3. 시스템 핵심 인증 & 푸시 알림 시퀀스 다이어그램 (Sequence Diagram)
+
+![Y-Sync 시스템 요청 & 푸시 알림 시퀀스](./images/sequence_diagram.png)
+
+
+* **1. 인증 및 정지 회원 차단**: Bearer JWT 검증 ➡️ DB 정지 상태 조회 ➡️ HTTP 403 차단 반환
+* **2. 공지사항 저장 및 푸시 알림**: 공지 저장 ➡️ DB 활성 FCM 토큰 조회 ➡️ `loop [토큰 500개 단위]` 멀티캐스트 전송 ➡️ 푸시 전달
+* **3. 예외 및 실패 처리**: DB 저장 오류(500) 핸들링 및 FCM 일부 실패 시 토큰 비활성화/기록 처리
+
+
 
 ### A. 회원 및 인증 (Member & Authentication)
 * **학번 기반 사전 등록 및 인증 가입**:
