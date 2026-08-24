@@ -1,14 +1,10 @@
-version: '3.8'
-
 services:
   ysync-mysql:
     image: mysql:8.0
     container_name: ysync-mysql
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_DATABASE: ysync_db
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-1234}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - mysql-data:/var/lib/mysql
     # 💡 1GB RAM 환경 맞춤 MySQL 메모리 극한 다이어트 설정
@@ -25,6 +21,7 @@ services:
       resources:
         limits:
           memory: 350M                      # MySQL 컨테이너가 사용할 수 있는 최대 물리 메모리 강제 제한
+    restart: unless-stopped
     networks:
       - ysync-network
 
@@ -39,11 +36,11 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_URL=jdbc:mysql://ysync-mysql:3306/ysync_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
       - DB_USERNAME=root
-      - DB_PASSWORD=${DB_PASSWORD:-1234}
-      - JWT_SECRET=${JWT_SECRET:-YSyncSuperSecretKeyYSyncSuperSecretKeyYSyncSuperSecretKeyYSyncSuperSecretKey}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - FIREBASE_CONFIG_PATH=file:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 외부 파이어베이스 키 설정 경로 지정
-      - MAIL_USERNAME=${MAIL_USERNAME}  # 💡 [Gmail 연동] 외부 메일 유저네임 주입
-      - MAIL_PASSWORD=${MAIL_PASSWORD}  # 💡 [Gmail 연동] 외부 메일 앱비밀번호 주입
+      - MAIL_USERNAME=${MAIL_USERNAME:?MAIL_USERNAME is required}  # 💡 [Gmail 연동] 외부 메일 유저네임 주입
+      - MAIL_PASSWORD=${MAIL_PASSWORD:?MAIL_PASSWORD is required}  # 💡 [Gmail 연동] 외부 메일 앱비밀번호 주입
       - UPLOAD_DIR=/app/uploads/        # 💡 [업로드 마운트] 리눅스 도커 디렉토리 주입
       - UPLOAD_RESOURCE_LOCATION=file:/app/uploads/ # 💡 [업로드 마운트] 리눅스 파일 스키마 주입
     volumes:
@@ -55,6 +52,7 @@ services:
       resources:
         limits:
           memory: 450M                      # 백엔드 컨테이너의 물리 메모리를 450MB로 강제 제한하여 OS 셧다운 방지
+    restart: unless-stopped
     networks:
       - ysync-network
 
@@ -81,6 +79,7 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
     networks:
       - ysync-network
     depends_on:
@@ -92,4 +91,3 @@ volumes:
 networks:
   ysync-network:
     driver: bridge
-

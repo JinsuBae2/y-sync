@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataAccessException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -54,7 +55,6 @@ public class GlobalExceptionHandler {
         log.warn("🚨 요청 JSON 바인딩 실패: {}", e.getMessage());
         Map<String, String> response = new HashMap<>();
         response.put("message", "요청 형식이 올바르지 않거나 파싱할 수 없는 값이 존재합니다. (날짜/Enum 등 데이터 형식을 확인해 주세요.)");
-        response.put("details", e.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
@@ -76,13 +76,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    // 💡 존재하지 않는 정적 리소스 및 경로 요청은 서버 오류가 아닌 404로 처리합니다.
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.debug("요청한 리소스를 찾을 수 없습니다: {}", e.getResourcePath());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "요청한 리소스를 찾을 수 없습니다.");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
     // 💡 데이터베이스 관련 예외 처리 (500 Internal Server Error)
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<Map<String, String>> handleDataAccessException(DataAccessException e) {
         log.error("🔥 데이터베이스 내부 오류 발생: ", e);
         Map<String, String> response = new HashMap<>();
         response.put("message", "데이터베이스 작업 중 오류가 발생했습니다. DB 스키마 또는 데이터를 확인해 주세요.");
-        response.put("details", e.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
@@ -92,7 +100,6 @@ public class GlobalExceptionHandler {
         log.warn("🚨 권한 부족 예외 발생: {}", e.getMessage());
         Map<String, String> response = new HashMap<>();
         response.put("message", "해당 작업을 수행할 권한이 없습니다.");
-        response.put("details", e.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
@@ -102,9 +109,6 @@ public class GlobalExceptionHandler {
         log.error("🔥 예상치 못한 시스템 내부 오류 발생: ", e);
         Map<String, String> response = new HashMap<>();
         response.put("message", "서버 내부 오류가 발생했습니다. 관리자에게 문의해 주세요.");
-        response.put("details", e.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }
-
-
