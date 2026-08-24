@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Test and Build Spring Boot JAR
+        working-directory: backend
+        run: |
+          chmod +x gradlew
+          ./gradlew test bootJar
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.4'
+          channel: stable
+          cache: true
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyze Flutter
+        working-directory: frontend
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+
+      - name: Run Flutter Tests
+        working-directory: frontend
+        run: flutter test
+
+      - name: Build Flutter Web
+        working-directory: frontend
+        run: flutter build web --release
+
+  configuration:
+    name: Configuration
+    runs-on: ubuntu-latest
+    env:
+      DB_PASSWORD: ci-db-password
+      JWT_SECRET: ci-jwt-secret
+      MAIL_USERNAME: ci@example.com
+      MAIL_PASSWORD: ci-mail-password
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose
+        run: docker compose -f docker/docker-compose.yml config --quiet
+
+      - name: Verify MySQL Is Not Published
+        run: |
+          if docker compose -f docker/docker-compose.yml config \
+            | sed -n '/ysync-mysql:/,/ysync-nginx:/p' \
+            | grep -Eq 'published:|target: 3306'; then
+            echo 'MySQL port 3306 must not be published.' >&2
+            exit 1
+          fi
+
+  gate:
+    name: Gate
+    if: always()
+    needs:
+      - backend
+      - frontend
+      - configuration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify Required Jobs
+        env:
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          CONFIGURATION_RESULT: ${{ needs.configuration.result }}
+        run: |
+          if [ "$BACKEND_RESULT" != success ] \
+            || [ "$FRONTEND_RESULT" != success ] \
+            || [ "$CONFIGURATION_RESULT" != success ]; then
+            echo 'One or more required CI jobs failed.' >&2
+            exit 1
+          fi

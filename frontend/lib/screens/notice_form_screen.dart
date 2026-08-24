@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,10 +18,13 @@ class NoticeFormScreen extends ConsumerStatefulWidget {
 class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
-  String _noticeType = 'INTERNAL';
+  String _noticeType = 'NEWS';
   String _targetGrade = 'ALL';
   bool _isLoading = false;
   List<XFile> _images = [];
+  bool _isEvent = false;
+  DateTime _eventStartDate = DateTime.now();
+  DateTime _eventEndDate = DateTime.now();
 
   // 💡 기기에서 이미지를 여러 장 선택하는 함수
   Future<void> _pickImages() async {
@@ -49,6 +53,11 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     if (isEdit) {
       _noticeType = widget.notice!.noticeType;
       _targetGrade = widget.notice!.targetGrade;
+      _isEvent = widget.notice!.eventStartDate != null;
+      if (_isEvent) {
+        _eventStartDate = DateTime.parse(widget.notice!.eventStartDate!);
+        _eventEndDate = DateTime.parse(widget.notice!.eventEndDate!);
+      }
     }
   }
 
@@ -74,16 +83,18 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
 
     try {
       final notifier = ref.read(noticeNotifierProvider);
-      final List<String> paths = _images.map((e) => e.path).toList();
+      final startStr = _isEvent ? "${_eventStartDate.year}-${_eventStartDate.month.toString().padLeft(2, '0')}-${_eventStartDate.day.toString().padLeft(2, '0')}" : null;
+      final endStr = _isEvent ? "${_eventEndDate.year}-${_eventEndDate.month.toString().padLeft(2, '0')}-${_eventEndDate.day.toString().padLeft(2, '0')}" : null;
+
       if (widget.notice == null) {
-        await notifier.createNotice(title, content, _noticeType, targetGrade: _targetGrade, imagePaths: paths);
+        await notifier.createNotice(title, content, _noticeType, targetGrade: _targetGrade, images: _images, eventStartDate: startStr, eventEndDate: endStr);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('공지사항이 등록되었습니다.')),
           );
         }
       } else {
-        await notifier.updateNotice(widget.notice!.id, title, content, _noticeType, targetGrade: _targetGrade, imagePaths: paths);
+        await notifier.updateNotice(widget.notice!.id, title, content, _noticeType, targetGrade: _targetGrade, images: _images, eventStartDate: startStr, eventEndDate: endStr);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('공지사항이 수정되었습니다.')),
@@ -113,13 +124,6 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? '공지사항 수정' : '새 공지사항 쓰기'),
-        actions: [
-          TextButton.icon(
-            onPressed: _isLoading ? null : _submit,
-            icon: const Icon(Icons.check, color: Color(0xFF164687)),
-            label: const Text('등록', style: TextStyle(color: Color(0xFF164687), fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -133,8 +137,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
               items: const [
-                DropdownMenuItem(value: 'INTERNAL', child: Text('일반 공지 (INTERNAL)')),
-                DropdownMenuItem(value: 'OFFICIAL', child: Text('학교 공지 (OFFICIAL)')),
+                DropdownMenuItem(value: 'NEWS', child: Text('일반 공지 (NEWS)')),
+                DropdownMenuItem(value: 'NOTICE', child: Text('중요 공지 (NOTICE)')),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -186,6 +190,64 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
             ),
             const SizedBox(height: 16),
             const Divider(color: Colors.black12, thickness: 1, height: 1),
+            // 💡 학사 일정 연동 섹션 추가
+            SwitchListTile(
+              title: const Text('학사 일정(캘린더)에 연동', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('캘린더에 연동되면 학생들이 달력에서 볼 수 있습니다.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              value: _isEvent,
+              activeColor: const Color(0xFF164687),
+              onChanged: (bool value) {
+                setState(() => _isEvent = value);
+              },
+            ),
+            if (_isEvent) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _eventStartDate,
+                            firstDate: DateTime(2025),
+                            lastDate: DateTime(2030),
+                          );
+                          if (date != null) {
+                            setState(() {
+                              _eventStartDate = date;
+                              if (_eventEndDate.isBefore(_eventStartDate)) {
+                                _eventEndDate = _eventStartDate;
+                              }
+                            });
+                          }
+                        },
+                        child: Text('시작일: ${_eventStartDate.year}-${_eventStartDate.month.toString().padLeft(2, '0')}-${_eventStartDate.day.toString().padLeft(2, '0')}'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: _eventEndDate,
+                            firstDate: _eventStartDate,
+                            lastDate: DateTime(2030),
+                          );
+                          if (date != null) {
+                            setState(() => _eventEndDate = date);
+                          }
+                        },
+                        child: Text('종료일: ${_eventEndDate.year}-${_eventEndDate.month.toString().padLeft(2, '0')}-${_eventEndDate.day.toString().padLeft(2, '0')}'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const Divider(color: Colors.black12, thickness: 1, height: 1),
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -212,7 +274,6 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               ),
             ),
             const Divider(color: Colors.black12, thickness: 1, height: 1),
-            const SizedBox(height: 16),
             const SizedBox(height: 16),
             // 💡 -------------------------
             // 이미지 추가 버튼 및 가로 스크롤 미리보기 영역
@@ -245,7 +306,9 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey.shade300),
                             image: DecorationImage(
-                              image: FileImage(File(_images[index].path)),
+                              image: kIsWeb
+                                  ? NetworkImage(_images[index].path) as ImageProvider
+                                  : FileImage(File(_images[index].path)) as ImageProvider,
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -272,22 +335,32 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               ),
             // -------------------------
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF164687),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(isEdit ? '수정하기' : '등록하기', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 10,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20, // 💡 키보드 대응
+        ),
+        color: Colors.white,
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF164687),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            onPressed: _isLoading ? null : _submit,
+            child: _isLoading 
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(isEdit ? '수정하기' : '등록하기', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
         ),
       ),
     );

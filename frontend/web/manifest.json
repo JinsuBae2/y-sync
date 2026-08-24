@@ -1,11 +1,11 @@
 {
-    "name": "y_sync",
-    "short_name": "y_sync",
+    "name": "Y-Sync",
+    "short_name": "Y-Sync",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#164687",
+    "theme_color": "#164687",
+    "description": "영남이공대학교 컴퓨터정보과 학과 동기 전용 소통 플랫폼",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -36,6 +36,13 @@ public class Comment {
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id", nullable = true)
+    private Comment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<Comment> children = new java.util.ArrayList<>();
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -44,11 +51,12 @@ public class Comment {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Comment(String content, Notice notice, CommunityPost communityPost, Member member) {
+    public Comment(String content, Notice notice, CommunityPost communityPost, Member member, Comment parent) {
         this.content = content;
         this.notice = notice;
         this.communityPost = communityPost;
         this.member = member;
+        this.parent = parent;
     }
 
     // 관리자 삭제 필드
@@ -61,5 +69,10 @@ public class Comment {
     public void deleteByAdmin(String reason) {
         this.isDeleted = true;
         this.deletionReason = reason;
+    }
+
+    public void restoreByAdmin() {
+        this.isDeleted = false;
+        this.deletionReason = null;
     }
 }

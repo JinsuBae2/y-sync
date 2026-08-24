@@ -6,6 +6,7 @@ import '../providers/mypage_provider.dart'; // 💡 추가
 import '../providers/scrap_provider.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
+import '../widgets/notification_action_button.dart'; // 💡 추가
 
 class NoticeListScreen extends ConsumerStatefulWidget {
   const NoticeListScreen({super.key});
@@ -45,6 +46,9 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: const [
+          NotificationActionButton(), // 💡 추가
+        ],
       ),
       body: Column(
         children: [
@@ -82,16 +86,17 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
               ),
             ),
           ),
-          // 💡 학년 필터링 칩 (Grade Filter Chips) - 검색창 아래로 이동
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 탭 필터 (Muted Text Tab)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            color: Colors.white,
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildGradeChip(context, ref, '전체', 'ALL', selectedGrade),
-                _buildGradeChip(context, ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildGradeChip(context, ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildGradeChip(context, ref, '3학년', 'GRADE_3', selectedGrade),
+                _buildTextTab(context, ref, '전체', 'ALL', selectedGrade),
+                _buildTextTab(context, ref, '1학년', 'GRADE_1', selectedGrade),
+                _buildTextTab(context, ref, '2학년', 'GRADE_2', selectedGrade),
+                _buildTextTab(context, ref, '3학년', 'GRADE_3', selectedGrade),
               ],
             ),
           ),
@@ -170,22 +175,40 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     );
   }
 
-  Widget _buildGradeChip(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
+  Widget _buildTextTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
     final isSelected = value == selectedValue;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (selected) {
-          ref.read(noticeGradeProvider.notifier).updateGrade(selected ? value : 'ALL');
-        },
-        selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-        checkmarkColor: Theme.of(context).colorScheme.primary,
-        labelStyle: TextStyle(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: () {
+        ref.read(noticeGradeProvider.notifier).updateGrade(value);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? primaryColor : Colors.black38,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: 3,
+            width: 24,
+            decoration: BoxDecoration(
+              color: isSelected ? primaryColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -204,7 +227,7 @@ class NoticeCard extends ConsumerWidget {
       orElse: () => false,
     );
 
-    final isOfficial = notice.noticeType == 'OFFICIAL';
+    final isNotice = notice.noticeType == 'NOTICE';
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -241,19 +264,33 @@ class NoticeCard extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: isOfficial ? Colors.red.shade500 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        color: isNotice 
+                            ? const Color(0xFFE53935).withOpacity(0.08) // 💡 연한 다홍색 파스텔 톤
+                            : Theme.of(context).colorScheme.primary.withOpacity(0.08), // 💡 연한 블루 파스텔 톤
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      child: Text(
-                        notice.noticeType,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                          color: isOfficial ? Colors.white : Theme.of(context).colorScheme.primary,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isNotice 
+                                ? Icons.campaign_rounded // 💡 중요 공지는 확성기 아이콘
+                                : Icons.info_outline_rounded, // 💡 일반 공지는 정보 아이콘
+                            size: 14,
+                            color: isNotice ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isNotice ? '공지' : '일반',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isNotice ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const Spacer(),
@@ -275,10 +312,14 @@ class NoticeCard extends ConsumerWidget {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    if (notice.isPinned) // 💡 핀 고정 아이콘
+                    if (notice.isPinned) // 💡 핀 고정 벡터 아이콘
                       const Padding(
                         padding: EdgeInsets.only(right: 6),
-                        child: Text('📌', style: TextStyle(fontSize: 18)),
+                        child: Icon(
+                          Icons.push_pin_rounded,
+                          size: 18,
+                          color: Color(0xFF164687),
+                        ),
                       ),
                     Expanded(
                       child: Text(

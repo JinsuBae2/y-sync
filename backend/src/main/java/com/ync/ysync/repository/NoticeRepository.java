@@ -20,4 +20,7 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
 
     // 💡 특정 작성자가 쓴 공지사항을 최신순으로 조회합니다. (마이페이지용)
     List<Notice> findAllByAuthorIdOrderByIsPinnedDescCreatedAtDesc(Long authorId);
+
+    // 💡 특정 기간(예: 조회하려는 월)에 걸쳐 있는 일정이 등록된 공지사항을 조회합니다.
+    List<Notice> findAllByEventStartDateLessThanEqualAndEventEndDateGreaterThanEqual(java.time.LocalDate endDate, java.time.LocalDate startDate);
 }

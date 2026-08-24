@@ -3,9 +3,11 @@ package com.ync.ysync.controller;
 import com.ync.ysync.domain.AdminRequest;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
+import com.ync.ysync.domain.Report;
 import com.ync.ysync.repository.AdminRequestRepository;
 import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.CommentRepository;
+import com.ync.ysync.repository.ReportRepository;
 import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Comment;
 import com.ync.ysync.repository.MemberRepository;
@@ -35,6 +37,7 @@ public class AdminController {
     private final CommunityPostRepository communityPostRepository;
     private final NoticeRepository noticeRepository;
     private final CommentRepository commentRepository;
+    private final ReportRepository reportRepository;
     private final AuthUtil authUtil;
 
     // 💡 관리자 권한 신청 (일반 유저용)
@@ -117,6 +120,18 @@ public class AdminController {
         return ResponseEntity.ok("게시글이 관리자에 의해 삭제되었습니다.");
     }
 
+    // 💡 관리자 게시물 복구
+    @PostMapping("/posts/{id}/restore")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> restorePostByAdmin(@PathVariable Long id) {
+        CommunityPost post = communityPostRepository.findById(id).orElse(null);
+        if (post == null) return ResponseEntity.notFound().build();
+
+        post.restoreByAdmin();
+        communityPostRepository.save(post);
+        return ResponseEntity.ok("게시글이 성공적으로 복구되었습니다.");
+    }
+
     // 💡 관리자 댓글 삭제 (소프트 딜리트)
     @DeleteMapping("/comments/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
@@ -139,7 +154,147 @@ public class AdminController {
         return ResponseEntity.ok("댓글이 관리자에 의해 삭제되었습니다.");
     }
 
+    // 💡 누적 신고 목록 조회 (ADMIN, SUPER_ADMIN 전용)
+    @GetMapping("/reports")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<List<AdminReportSummaryResponse>> getReportedTargets() {
+        List<Object[]> groupedReports = reportRepository.findReportCountsGroupedByTarget();
+        List<AdminReportSummaryResponse> responses = groupedReports.stream()
+                .map(row -> {
+                    Report.TargetType targetType = (Report.TargetType) row[0];
+                    Long targetId = (Long) row[1];
+                    Long count = (Long) row[2];
+
+                    String title = "";
+                    String content = "";
+                    String authorName = "";
+                    Long authorId = null;
+                    boolean isAuthorSuspended = false;
+                    boolean isDeleted = false;
+                    String deletionReason = "";
+
+                    if (targetType == Report.TargetType.POST) {
+                        CommunityPost post = communityPostRepository.findById(targetId).orElse(null);
+                        if (post != null) {
+                            title = post.getTitle();
+                            content = post.getContent();
+                            authorName = post.isAnonymous() ? "익명" : post.getMember().getName();
+                            authorId = post.getMember().getId();
+                            isAuthorSuspended = post.getMember().isSuspended();
+                            isDeleted = post.isDeleted();
+                            deletionReason = post.getDeletionReason();
+                        } else {
+                            title = "존재하지 않는 게시글";
+                            content = "삭제되었거나 존재하지 않는 게시글입니다.";
+                        }
+                    } else if (targetType == Report.TargetType.COMMENT) {
+                        Comment comment = commentRepository.findById(targetId).orElse(null);
+                        if (comment != null) {
+                            title = "댓글";
+                            content = comment.getContent();
+                            authorName = comment.getMember().getName();
+                            authorId = comment.getMember().getId();
+                            isAuthorSuspended = comment.getMember().isSuspended();
+                            isDeleted = comment.isDeleted();
+                            deletionReason = comment.getDeletionReason();
+                        } else {
+                            title = "존재하지 않는 댓글";
+                            content = "삭제되었거나 존재하지 않는 댓글입니다.";
+                        }
+                    }
+
+                    List<String> reasons = reportRepository.findAllByTargetTypeAndTargetId(targetType, targetId).stream()
+                            .map(Report::getReason)
+                            .collect(Collectors.toList());
+
+                    return AdminReportSummaryResponse.builder()
+                            .targetType(targetType.name())
+                            .targetId(targetId)
+                            .reportCount(count)
+                            .title(title)
+                            .content(content)
+                            .authorName(authorName)
+                            .authorId(authorId)
+                            .isAuthorSuspended(isAuthorSuspended)
+                            .isDeleted(isDeleted)
+                            .deletionReason(deletionReason)
+                            .reasons(reasons)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
+    }
+
+    // 💡 신고 기각 및 대상 복구 (ADMIN, SUPER_ADMIN 전용)
+    @PostMapping("/reports/dismiss")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> dismissReport(@RequestBody ReportDismissRequest request) {
+        Report.TargetType targetType;
+        try {
+            targetType = Report.TargetType.valueOf(request.getTargetType().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("올바르지 않은 대상 타입입니다.");
+        }
+
+        Long targetId = request.getTargetId();
+
+        // 1. 신고 내역 삭제
+        reportRepository.deleteByTargetTypeAndTargetId(targetType, targetId);
+
+        // 2. 대상 복구 (소프트 딜리트 상태인 경우 복구)
+        if (targetType == Report.TargetType.POST) {
+            CommunityPost post = communityPostRepository.findById(targetId).orElse(null);
+            if (post != null && post.isDeleted()) {
+                post.restoreByAdmin();
+                communityPostRepository.save(post);
+            }
+        } else if (targetType == Report.TargetType.COMMENT) {
+            Comment comment = commentRepository.findById(targetId).orElse(null);
+            if (comment != null && comment.isDeleted()) {
+                comment.restoreByAdmin();
+                if (comment.getCommunityPost() != null) {
+                    CommunityPost post = comment.getCommunityPost();
+                    post.incrementCommentCount();
+                    communityPostRepository.save(post);
+                } else if (comment.getNotice() != null) {
+                    Notice notice = comment.getNotice();
+                    notice.incrementCommentCount();
+                    noticeRepository.save(notice);
+                }
+                commentRepository.save(comment);
+            }
+        }
+
+        return ResponseEntity.ok("신고가 기각되고 대상이 복구되었습니다.");
+    }
+
+    @Data
+    public static class ReportDismissRequest {
+        private String targetType;
+        private Long targetId;
+    }
+
     // 💡 통계 및 DTO 클래스들
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminReportSummaryResponse {
+        private String targetType;
+        private Long targetId;
+        private Long reportCount;
+        private String title;
+        private String content;
+        private String authorName;
+        private Long authorId;
+        private boolean isAuthorSuspended;
+        private boolean isDeleted;
+        private String deletionReason;
+        private List<String> reasons;
+    }
+
     public static class AdminRequestDto {
         
         @Data

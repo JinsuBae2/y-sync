@@ -1,6 +1,7 @@
 package com.ync.ysync.config;
 
-import com.ync.ysync.service.MemberService;
+import com.ync.ysync.domain.Member;
+import com.ync.ysync.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,9 +22,11 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final MemberRepository memberRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String loginId;
@@ -38,12 +41,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             loginId = jwtUtil.extractLoginId(jwt);
             role = jwtUtil.extractClaim(jwt, claims -> claims.get("role", String.class));
-            
+
             if (loginId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt, loginId)) {
+                    // 💡 차단 유저 가드
+                    boolean suspended = memberRepository.findByLoginId(loginId)
+                            .map(Member::isSuspended)
+                            .orElse(false);
+
+                    if (suspended) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"message\": \"차단된 계정입니다. 관리자에게 문의하세요.\"}");
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            loginId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
+                            loginId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
@@ -51,7 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             // Invalid token
         }
-        
+
         filterChain.doFilter(request, response);
     }
 }

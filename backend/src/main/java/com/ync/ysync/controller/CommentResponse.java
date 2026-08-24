@@ -5,8 +5,11 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -21,9 +24,13 @@ public class CommentResponse {
     private LocalDateTime updatedAt;
     private boolean isDeleted;
     private String deletionReason;
+    private Long parentId; // 💡 부모 댓글 ID 추가
+    
+    @Setter
+    private List<CommentResponse> children = new ArrayList<>();
 
     @Builder
-    public CommentResponse(Long id, String content, Long noticeId, Long communityPostId, Long memberId, String authorName, LocalDateTime createdAt, LocalDateTime updatedAt, boolean isDeleted, String deletionReason) {
+    public CommentResponse(Long id, String content, Long noticeId, Long communityPostId, Long memberId, String authorName, LocalDateTime createdAt, LocalDateTime updatedAt, boolean isDeleted, String deletionReason, Long parentId) {
         this.id = id;
         this.content = content;
         this.noticeId = noticeId;
@@ -34,6 +41,7 @@ public class CommentResponse {
         this.updatedAt = updatedAt;
         this.isDeleted = isDeleted;
         this.deletionReason = deletionReason;
+        this.parentId = parentId;
     }
 
     public static CommentResponse from(Comment comment) {
@@ -48,6 +56,7 @@ public class CommentResponse {
                 .updatedAt(comment.getUpdatedAt())
                 .isDeleted(comment.isDeleted())
                 .deletionReason(comment.getDeletionReason())
+                .parentId(comment.getParent() != null ? comment.getParent().getId() : null) // 💡 parentId 파싱 추가
                 .build();
     }
 }

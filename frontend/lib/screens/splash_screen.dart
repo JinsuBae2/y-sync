@@ -7,6 +7,7 @@ import '../models/member.dart';
 import 'login_screen.dart';
 import 'main_tab_screen.dart';
 import 'pin_setup_screen.dart';
+import 'deep_link_loading_screen.dart'; // 💡 웹 딥링크 이동용
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -132,7 +133,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (authState is AsyncData<Member?>) {
       final member = authState.value;
       if (member != null && mounted) {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MainTabScreen()));
+        // 💡 URL 쿼리 파라미터를 읽어 웹 딥링크 처리
+        final queryParams = Uri.base.queryParameters;
+        final targetType = queryParams['targetType'];
+        final targetId = queryParams['targetId'];
+
+        if (targetType != null && targetId != null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainTabScreen()),
+          );
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => DeepLinkLoadingScreen(
+                targetType: targetType,
+                targetId: targetId,
+              ),
+            ),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainTabScreen()),
+          );
+        }
       } else if (member == null && mounted) {
         _navigateToLogin();
       }
@@ -151,7 +173,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (_isLocalAuthPassed) {
         next.whenData((member) {
           if (member != null) {
-            Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MainTabScreen()));
+            // 💡 URL 쿼리 파라미터를 읽어 웹 딥링크 처리
+            final queryParams = Uri.base.queryParameters;
+            final targetType = queryParams['targetType'];
+            final targetId = queryParams['targetId'];
+
+            if (targetType != null && targetId != null) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const MainTabScreen()),
+              );
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => DeepLinkLoadingScreen(
+                    targetType: targetType,
+                    targetId: targetId,
+                  ),
+                ),
+              );
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const MainTabScreen()),
+              );
+            }
           } else {
             _navigateToLogin();
           }

@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../models/community_post.dart';
 import '../models/comment.dart';
+import '../models/member.dart';
 import '../providers/community_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
 import '../widgets/deletion_reason_dialog.dart';
+import '../utils/image_url_helper.dart';
+import '../widgets/image_viewer_screen.dart';
+import '../widgets/linkify_text.dart';
 
 class CommunityDetailScreen extends ConsumerWidget {
   final CommunityPost post;
@@ -71,13 +76,20 @@ class CommunityDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('${post.category} 게시글'),
-        actions: canDelete ? [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: '삭제',
-            onPressed: () => _confirmDelete(context, ref),
-          ),
-        ] : null,
+        actions: [
+          if (canDelete)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: '삭제',
+              onPressed: () => _confirmDelete(context, ref),
+            ),
+          if (currentMember != null && currentMember.id != post.memberId)
+            IconButton(
+              icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
+              tooltip: '신고',
+              onPressed: () => _showReportBottomSheet(context, ref, 'POST', post.id),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -143,45 +155,55 @@ class CommunityDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 24),
-                  Text(
-                    post.content,
+                  LinkifyText(
+                    text: post.content,
                     style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
                   ),
                   const SizedBox(height: 24),
                   if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
                     ...post.imageUrls!.map((url) {
-                      final cleanImageBase = imageBaseUrl.replaceAll('http://', '').replaceAll('https://', '');
-                      final imageUrl = url.startsWith('/') 
-                          ? '$imageBaseUrl$url' 
-                          : url.replaceAll('localhost:8080', cleanImageBase).replaceAll('localhost', cleanImageBase);
+                      final imageUrl = getCleanImageUrl(url);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            imageUrl,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                width: double.infinity,
-                                height: 200,
-                                color: Colors.grey.shade100,
-                                child: const Center(child: CircularProgressIndicator()),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) => Container(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ImageViewerScreen(
+                                  imageUrls: post.imageUrls!.map((u) => getCleanImageUrl(u)).toList(),
+                                  initialIndex: post.imageUrls!.indexOf(url),
+                                ),
+                              ),
+                            );
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              imageUrl,
                               width: double.infinity,
-                              height: 150,
-                              color: Colors.grey.shade100,
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
-                                  SizedBox(height: 8),
-                                  Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.grey)),
-                                ],
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: double.infinity,
+                                  height: 200,
+                                  color: Colors.grey.shade100,
+                                  child: const Center(child: CircularProgressIndicator()),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: double.infinity,
+                                height: 150,
+                                color: Colors.grey.shade100,
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -290,57 +312,32 @@ class _CommentList extends ConsumerWidget {
             child: Center(child: Text('첫 댓글을 남겨보세요!', style: TextStyle(color: Colors.grey))),
           );
         }
-        return ListView.separated(
+        return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: comments.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
             final comment = comments[index];
-            final isAdmin = currentMember?.role == 'ADMIN' || currentMember?.role == 'SUPER_ADMIN';
-            final isMyComment = currentMember != null && comment.authorName == currentMember.name;
-            final canDelete = (isMyComment || isAdmin) && !comment.isDeleted;
-
-            return Row(
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: comment.isDeleted ? Colors.grey.shade200 : Colors.amber.shade100,
-                  child: Text(
-                    comment.isDeleted ? '-' : comment.authorName.substring(0, 1), 
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)
+                // 💡 최상위 부모 댓글 타일
+                _buildCommentTile(context, ref, comment, currentMember, isSubComment: false),
+                
+                // 💡 자식 대댓글 목록 들여쓰기 렌더링
+                if (comment.children != null && comment.children!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 28.0, top: 4.0, bottom: 8.0),
+                    child: Column(
+                      children: comment.children!.map((child) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: _buildCommentTile(context, ref, child, currentMember, isSubComment: true),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(comment.isDeleted ? '익명' : comment.authorName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          const SizedBox(width: 8),
-                          Text(_formatDate(comment.createdAt), style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content, 
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: comment.isDeleted ? Colors.red.shade300 : Colors.black87,
-                          fontStyle: comment.isDeleted ? FontStyle.italic : FontStyle.normal,
-                        )
-                      ),
-                    ],
-                  ),
-                ),
-                if (canDelete)
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16, color: Colors.grey),
-                    onPressed: () => _confirmDeleteComment(context, ref, comment, isAdmin),
-                  ),
+                const Divider(height: 1, color: Colors.black12),
               ],
             );
           },
@@ -348,6 +345,108 @@ class _CommentList extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, st) => Text('에러: $err'),
+    );
+  }
+
+  Widget _buildCommentTile(
+    BuildContext context,
+    WidgetRef ref,
+    Comment comment,
+    Member? currentMember, {
+    required bool isSubComment,
+  }) {
+    final isAdmin = currentMember?.role == 'ADMIN' || currentMember?.role == 'SUPER_ADMIN';
+    final isMyComment = currentMember != null && comment.authorName == currentMember.name;
+    final canDelete = (isMyComment || isAdmin) && !comment.isDeleted;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: isSubComment ? const Color(0xFF164687).withOpacity(0.03) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isSubComment) ...[
+            const Icon(Icons.subdirectory_arrow_right_rounded, size: 16, color: Colors.grey),
+            const SizedBox(width: 8),
+          ],
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: comment.isDeleted ? Colors.grey.shade200 : (isSubComment ? Colors.blue.shade50 : Colors.amber.shade100),
+            child: Text(
+              comment.isDeleted ? '-' : comment.authorName.substring(0, 1),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      comment.isDeleted ? '익명' : comment.authorName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: isSubComment ? Colors.blueGrey.shade800 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(_formatDate(comment.createdAt), style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: comment.isDeleted ? Colors.red.shade300 : Colors.black87,
+                    fontStyle: comment.isDeleted ? FontStyle.italic : FontStyle.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 💡 부모 댓글일 때만 [답글] 버튼을 노출합니다.
+              if (!isSubComment && !comment.isDeleted && currentMember != null)
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () {
+                    // 답글 대상 지정
+                    ref.read(activeParentCommentProvider.notifier).updateState(id, comment);
+                  },
+                  child: const Text('답글', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF164687))),
+                ),
+              if (canDelete)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16, color: Colors.grey),
+                  onPressed: () => _confirmDeleteComment(context, ref, comment, isAdmin),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
+                )
+              else if (currentMember != null && !comment.isDeleted)
+                IconButton(
+                  icon: const Icon(Icons.report_gmailerrorred_rounded, size: 16, color: Colors.redAccent),
+                  tooltip: '신고',
+                  onPressed: () => _showReportBottomSheet(context, ref, 'COMMENT', comment.id),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -420,14 +519,21 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
   final _controller = TextEditingController();
   bool _isSubmitting = false;
 
-  void _submit() async {
+  void _submit(Comment? activeParent) async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(commentNotifierProvider).createComment(widget.source, widget.id, text);
+      await ref.read(commentNotifierProvider).createComment(
+            widget.source,
+            widget.id,
+            text,
+            parentId: activeParent?.id, // 💡 대댓글 parentId 주입
+          );
       _controller.clear();
+      // 답글 모드 리셋
+      ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
       FocusScope.of(context).unfocus();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('댓글 작성 실패: $e')));
@@ -438,25 +544,60 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + MediaQuery.of(context).padding.bottom),
-      decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              decoration: const InputDecoration(hintText: '댓글을 입력하세요...', border: InputBorder.none),
+    final activeParent = ref.watch(activeParentCommentProvider)[widget.id];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 💡 답글 작성 대상 표시 인디케이터 바
+        if (activeParent != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: const Color(0xFF164687).withOpacity(0.08),
+            child: Row(
+              children: [
+                const Icon(Icons.reply_rounded, size: 16, color: Color(0xFF164687)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${activeParent.authorName}님에게 답글 작성 중...',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF164687)),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    // 답글 취소
+                    ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
+                  },
+                  child: const Icon(Icons.cancel_rounded, size: 16, color: Colors.grey),
+                ),
+              ],
             ),
           ),
-          _isSubmitting
-              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-              : IconButton(
-                  icon: Icon(Icons.send_rounded, color: Theme.of(context).colorScheme.secondary),
-                  onPressed: _submit,
+        Container(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + MediaQuery.of(context).padding.bottom),
+          decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: activeParent != null ? '답글을 입력하세요...' : '댓글을 입력하세요...',
+                    border: InputBorder.none,
+                  ),
                 ),
-        ],
-      ),
+              ),
+              _isSubmitting
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                  : IconButton(
+                      icon: Icon(Icons.send_rounded, color: Theme.of(context).colorScheme.secondary),
+                      onPressed: () => _submit(activeParent),
+                    ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -465,4 +606,73 @@ class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
     _controller.dispose();
     super.dispose();
   }
+}
+
+void _showReportBottomSheet(BuildContext context, WidgetRef ref, String targetType, int targetId) {
+  final reasons = [
+    '스팸홍보/도배글입니다.',
+    '음란물/선정적인 내용입니다.',
+    '욕설/생명경시/혐오/비하성 내용입니다.',
+    '개인정보 노출/권리침해 신고입니다.',
+    '기타 부적절한 내용입니다.',
+  ];
+
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Text(
+                  '신고 사유 선택',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ),
+              const Divider(),
+              ...reasons.map((reason) {
+                return ListTile(
+                  title: Text(reason, style: const TextStyle(fontSize: 14)),
+                  leading: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      await ref.read(communityNotifierProvider).reportTarget(
+                        targetType: targetType,
+                        targetId: targetId,
+                        reason: reason,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('신고가 성공적으로 접수되었습니다. 신고 기준 누적 시 자동 숨김 처리됩니다.')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        String errorMessage = e.toString();
+                        if (e is DioException && e.response?.data != null) {
+                          errorMessage = e.response?.data.toString() ?? e.toString();
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('신고 실패: $errorMessage')),
+                        );
+                      }
+                    }
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

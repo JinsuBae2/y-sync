@@ -6,14 +6,15 @@ import '../providers/auth_provider.dart';
 import '../models/community_post.dart';
 import '../models/my_comment.dart';
 import '../models/notice.dart';
-import 'community_detail_screen.dart';
-import 'notice_detail_screen.dart';
 import '../providers/admin_provider.dart';
 import 'notice_form_screen.dart';
-import 'community_list_screen.dart';
 import 'scrap_list_screen.dart'; // 💡 추가
-import '../providers/community_provider.dart'; // 💡 추가
+import 'admin_dashboard_screen.dart'; // 💡 추가
 import 'auth_settings_screen.dart';
+import 'notification_settings_screen.dart';
+import 'login_screen.dart';
+import 'my_posts_screen.dart';
+import 'my_comments_screen.dart';
 
 class MyPageScreen extends ConsumerWidget {
   const MyPageScreen({super.key});
@@ -149,6 +150,30 @@ class MyPageScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
+            // 💡 학과 관리자 페이지 이동 메뉴 (ADMIN 또는 SUPER_ADMIN 전용)
+            if (member.role == 'ADMIN' || member.role == 'SUPER_ADMIN') ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF164687)),
+                  title: const Text('학과 관리자 페이지', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  trailing: const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
             // 💡 내가 스크랩한 글 (새 화면 진입용 타일)
             Container(
               decoration: BoxDecoration(
@@ -173,208 +198,129 @@ class MyPageScreen extends ConsumerWidget {
 
             // 💡 내가 쓴 공지사항 (관리자 전용)
             if (member.role == 'ADMIN' && notices != null) ...[
-              _buildActivityTile(
-                context,
-                icon: Icons.campaign_rounded,
-                title: '내가 작성한 공지사항',
-                count: notices.length,
-                children: notices
-                    .map(
-                      (notice) => ListTile(
-                        title: Text(
-                          notice.title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.campaign_rounded, color: Color(0xFF0A192F)),
+                  title: const Text('내가 작성한 공지사항', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        subtitle: Text(
-                          notice.createdAt.toString().split('T')[0],
-                          style: const TextStyle(fontSize: 12),
+                        child: Text(
+                          notices.length.toString(),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
-                        trailing: const Icon(Icons.chevron_right, size: 20),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  NoticeDetailScreen(notice: notice),
-                            ),
-                          );
-                        },
                       ),
-                    )
-                    .toList(),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MyPostsScreen(
+                          posts: const [],
+                          notices: notices,
+                          isNoticeOnly: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 12),
             ],
 
             // 내가 쓴 게시글
-            _buildActivityTile(
-              context,
-              icon: Icons.article_outlined,
-              title: '내가 쓴 게시글',
-              count: posts.length,
-              children: posts
-                  .map(
-                    (post) => ListTile(
-                      title: Text(
-                        post.isDeleted ? '관리자에 의해 삭제되었습니다. (사유: ${post.deletionReason ?? "없음"})' : post.title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: post.isDeleted ? Colors.red.shade400 : Colors.black87,
-                          fontStyle: post.isDeleted ? FontStyle.italic : FontStyle.normal,
-                        ),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.article_outlined, color: Color(0xFF0A192F)),
+                title: const Text('내가 쓴 게시글', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      subtitle: Text(
-                        post.createdAt.toString().split('T')[0],
-                        style: const TextStyle(fontSize: 12),
+                      child: Text(
+                        posts.length.toString(),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                CommunityDetailScreen(post: post),
-                          ),
-                        );
-                      },
                     ),
-                  )
-                  .toList(),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MyPostsScreen(posts: posts)),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 12),
 
             // 내가 남긴 댓글
-            _buildActivityTile(
-              context,
-              icon: Icons.comment_outlined,
-              title: '내가 남긴 댓글',
-              count: comments.length,
-              children: comments
-                  .map(
-                    (comment) => ListTile(
-                      title: Text(
-                        comment.isDeleted ? '관리자에 의해 삭제되었습니다. (사유: ${comment.deletionReason ?? "없음"})' : comment.content,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: comment.isDeleted ? Colors.red.shade400 : Colors.black87,
-                          fontStyle: comment.isDeleted ? FontStyle.italic : FontStyle.normal,
-                        ),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.comment_outlined, color: Color(0xFF0A192F)),
+                title: const Text('내가 남긴 댓글', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      subtitle: Text(
-                        '원문: ${comment.postTitle}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.blueGrey,
-                        ),
+                      child: Text(
+                        comments.length.toString(),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () async {
-                        // 💡 댓글 클릭 시 해당 게시글 상세로 이동
-                        try {
-                          // 댓글 로딩 피드백 (간단한 스낵바)
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('게시글을 불러오는 중...'), duration: Duration(milliseconds: 500)),
-                            );
-                          }
-                          final post = await ref.read(communityNotifierProvider).getPost(comment.postId);
-                          if (context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => CommunityDetailScreen(post: post)),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('게시글을 불러올 수 없습니다: $e')),
-                            );
-                          }
-                        }
-                      },
                     ),
-                  )
-                  .toList(),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MyCommentsScreen(comments: comments)),
+                  );
+                },
+              ),
             ),
 
-            const SizedBox(height: 32),
 
-            // 💡 관리역역 (권한에 따라 노출)
-            if (member.role == 'SUPER_ADMIN' || member.role == 'ADMIN') ...[
-              const Text(
-                '관리자 도구',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0A192F),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // 💡 관리자 임명 관리 (SUPER_ADMIN 전용)
-              if (member.role == 'SUPER_ADMIN') ...[
-                ListTile(
-                  leading: const Icon(
-                    Icons.admin_panel_settings_rounded,
-                    color: Colors.amber,
-                  ),
-                  title: const Text(
-                    '관리자 임명 관리',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: const Text('접수된 관리자 신청 건을 검토합니다.'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showAdminManagementList(context, ref),
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              ListTile(
-                leading: const Icon(
-                  Icons.auto_stories_rounded,
-                  color: Colors.blue,
-                ),
-                title: const Text(
-                  '공식 공지사항 작성',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NoticeFormScreen(),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_sweep_rounded,
-                  color: Colors.blue,
-                ),
-                title: const Text(
-                  '전체 게시글 관리',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      // 💡 관리자용 전체 게시글 화면으로 이동
-                      builder: (context) => const CommunityListScreen(isAdminMode: true),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-            ],
 
             // 💡 일반 유저 전용 메뉴 (관리자 신청)
             if (member.role == 'USER') ...[
@@ -427,6 +373,23 @@ class MyPageScreen extends ConsumerWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const AuthSettingsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.notifications_active_rounded,
+                color: Colors.orangeAccent,
+              ),
+              title: const Text(
+                '알림 설정',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
                 );
               },
             ),
@@ -779,9 +742,10 @@ class MyPageScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.pop(context);
               ref.read(authProvider.notifier).logout();
-              Navigator.of(
-                context,
-              ).pushNamedAndRemoveUntil('/login', (route) => false);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
             },
             child: const Text('로그아웃', style: TextStyle(color: Colors.red)),
           ),

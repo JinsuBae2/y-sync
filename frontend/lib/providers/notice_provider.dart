@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
@@ -12,15 +14,22 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // Secure storage instance
 final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
 
-const String apiBaseUrl = String.fromEnvironment(
+const String _rawApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080/api/v1',
+  defaultValue: 'https://168-107-29-144.sslip.io/api/v1',
 );
 
-const String imageBaseUrl = String.fromEnvironment(
+// 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
+const String apiBaseUrl = _rawApiBaseUrl == '' ? 'https://168-107-29-144.sslip.io/api/v1' : _rawApiBaseUrl;
+
+const String _rawImageBaseUrl = String.fromEnvironment(
   'IMAGE_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
+  defaultValue: 'https://168-107-29-144.sslip.io',
 );
+
+// 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
+const String imageBaseUrl = _rawImageBaseUrl == '' ? 'https://168-107-29-144.sslip.io' : _rawImageBaseUrl;
+
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
@@ -123,7 +132,7 @@ class NoticeNotifier {
     return Notice.fromJson(response.data);
   }
 
-  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths}) async {
+  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<XFile>? images, String? eventStartDate, String? eventEndDate}) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
     
@@ -136,17 +145,31 @@ class NoticeNotifier {
           'noticeType': noticeType,
           'targetGrade': targetGrade,
           'isPinned': false,
+          'eventStartDate': eventStartDate,
+          'eventEndDate': eventEndDate,
         }),
         contentType: MediaType('application', 'json'),
       ),
     ));
 
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      for (String path in imagePaths) {
-        formData.files.add(MapEntry(
-          'images',
-          await MultipartFile.fromFile(path),
-        ));
+    if (images != null && images.isNotEmpty) {
+      for (XFile file in images) {
+        if (kIsWeb) {
+          final bytes = await file.readAsBytes();
+          formData.files.add(MapEntry(
+            'images',
+            MultipartFile.fromBytes(
+              bytes,
+              filename: file.name,
+              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
+            ),
+          ));
+        } else {
+          formData.files.add(MapEntry(
+            'images',
+            await MultipartFile.fromFile(file.path),
+          ));
+        }
       }
     }
 
@@ -154,7 +177,7 @@ class NoticeNotifier {
     ref.invalidate(noticesProvider);
   }
 
-  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<String>? imagePaths}) async {
+  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<XFile>? images, String? eventStartDate, String? eventEndDate}) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
     
@@ -167,17 +190,31 @@ class NoticeNotifier {
           'noticeType': noticeType,
           'targetGrade': targetGrade,
           'isPinned': false,
+          'eventStartDate': eventStartDate,
+          'eventEndDate': eventEndDate,
         }),
         contentType: MediaType('application', 'json'),
       ),
     ));
 
-    if (imagePaths != null && imagePaths.isNotEmpty) {
-      for (String path in imagePaths) {
-        formData.files.add(MapEntry(
-          'images',
-          await MultipartFile.fromFile(path),
-        ));
+    if (images != null && images.isNotEmpty) {
+      for (XFile file in images) {
+        if (kIsWeb) {
+          final bytes = await file.readAsBytes();
+          formData.files.add(MapEntry(
+            'images',
+            MultipartFile.fromBytes(
+              bytes,
+              filename: file.name,
+              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
+            ),
+          ));
+        } else {
+          formData.files.add(MapEntry(
+            'images',
+            await MultipartFile.fromFile(file.path),
+          ));
+        }
       }
     }
 

@@ -5,7 +5,6 @@ import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.service.MemberService;
-import com.ync.ysync.service.SocialAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +24,16 @@ import java.util.Optional;
 public class MemberController {
 
     private final MemberService memberService;
-    private final SocialAuthService socialAuthService;
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+
+    @GetMapping("/check-duplicate")
+    @Operation(summary = "아이디 중복 확인", description = "입력한 아이디(학번)가 이미 등록되어 있는지 확인합니다.")
+    public ResponseEntity<Map<String, Boolean>> checkDuplicate(@RequestParam String loginId) {
+        boolean isDuplicate = memberRepository.findByLoginId(loginId).isPresent();
+        log.info("아이디 중복 확인 요청 - LoginID: {}, 중복여부: {}", loginId, isDuplicate);
+        return ResponseEntity.ok(Map.of("isDuplicate", isDuplicate));
+    }
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
@@ -43,41 +49,85 @@ public class MemberController {
         return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
     }
 
-    @PostMapping("/social-login")
-    @Operation(summary = "소셜 로그인", description = "구글 또는 카카오의 AccessToken을 검증하고, 가입된 회원이면 JWT를 발급하며, 미가입 시 202 상태코드와 임시 식별자를 반환합니다.")
-    public ResponseEntity<?> socialLogin(@RequestBody SocialLoginRequest request) {
-        String socialId = socialAuthService.getSocialId(request.getAccessToken(), request.getProvider());
-        Member member = memberService.socialLogin(socialId, request.getProvider());
-
-        if (member != null) {
-            String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
-            log.info("소셜 로그인 성공 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-            return ResponseEntity.ok(Map.of("token", token, "message", "로그인 성공"));
-        } else {
-            log.info("소셜 로그인 미가입자 발견 - Provider: {}, SocialID: {}", request.getProvider(), socialId);
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(Map.of("socialId", socialId, "provider", request.getProvider().name(), "message", "가입되지 않은 소셜 계정입니다. 학번을 입력하여 가입을 진행해주세요."));
+    @PostMapping("/verify-student")
+    @Operation(summary = "학생 사전 정보 검증 (1차)", description = "학번과 이름을 입력받아 DB의 사전 등록 정보와 일치하는지 1차 확인합니다.")
+    public ResponseEntity<?> verifyStudent(@RequestBody Map<String, String> request) {
+        String loginId = request.get("loginId");
+        String name = request.get("name");
+        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
+        }
+        try {
+            memberService.verifyStudentForSignup(loginId, name);
+            return ResponseEntity.ok(Map.of("message", "학생 정보가 정상적으로 확인되었습니다. 이메일 인증을 진행할 수 있습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    @PostMapping("/social-signup")
-    @Operation(summary = "소셜 회원가입", description = "소셜 로그인 후 반환된 socialId와 provider, 그리고 추가 정보(학번, 이름)를 이용해 회원가입을 완료하고 JWT를 발급합니다.")
-    public ResponseEntity<?> socialSignup(@RequestBody SocialSignupRequest request) {
-        try {
-            Member member = memberService.socialSignup(request.getLoginId(), request.getName(), request.getSocialId(), request.getProvider(), request.getPassword());
-            String token = jwtUtil.generateToken(member.getLoginId(), member.getRole().name());
-            log.info("소셜 회원가입 성공 - LoginID: {}, Provider: {}", member.getLoginId(), request.getProvider());
-            return ResponseEntity.ok(Map.of("token", token, "message", "소셜 회원가입 성공"));
-        } catch (IllegalArgumentException e) {
-            if ("REQUIRE_PASSWORD".equals(e.getMessage())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "REQUIRE_PASSWORD"));
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    @PostMapping("/verify-student/send-code")
+    @Operation(summary = "이메일 인증 코드 전송 (2차)", description = "학번과 이름을 대조 확인한 뒤 입력한 이메일(@ync.ac.kr)로 6자리 인증 메일을 전송합니다.")
+    public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
+        String loginId = request.get("loginId");
+        String name = request.get("name");
+        String email = request.get("email");
+        if (loginId == null || loginId.trim().isEmpty() || name == null || name.trim().isEmpty() || email == null
+                || email.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번, 이름, 이메일을 모두 입력해 주세요."));
         }
+        try {
+            memberService.sendVerificationEmail(loginId, name, email);
+            return ResponseEntity.ok(Map.of("message", "인증 코드가 이메일로 전송되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("인증 이메일 발송 실패", e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "이메일 발송 중 오류가 발생했습니다."));
+        }
+    }
+
+    @PostMapping("/verify-student/verify-code")
+    @Operation(summary = "이메일 인증 코드 검증", description = "이메일로 수신된 6자리 인증 코드를 확인합니다.")
+    public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> request) {
+        String loginId = request.get("loginId");
+        String code = request.get("code");
+        if (loginId == null || code == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "학번과 인증 코드를 모두 입력해 주세요."));
+        }
+        try {
+            boolean isSuccess = memberService.verifyCode(loginId, code);
+            return ResponseEntity.ok(Map.of("success", isSuccess, "message", "인증이 성공적으로 완료되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/social-login")
+    @Operation(summary = "소셜 로그인 (비활성화)", description = "이메일 인증 가입 도입으로 인해 비활성화된 API입니다.")
+    public ResponseEntity<?> socialLogin(@RequestBody SocialLoginRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "소셜 로그인 기능은 비활성화되었습니다. 학번 로그인을 이용해 주세요."));
+    }
+
+    @PostMapping("/social-signup")
+    @Operation(summary = "소셜 회원가입 (비활성화)", description = "이메일 인증 가입 도입으로 인해 비활성화된 API입니다.")
+    public ResponseEntity<?> socialSignup(@RequestBody SocialSignupRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", "소셜 회원가입 기능은 비활성화되었습니다. 학번 로그인을 이용해 주세요."));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout() {
+        String loginId = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (loginId != null && !loginId.equals("anonymousUser")) {
+            Optional<Member> memberOpt = memberRepository.findByLoginId(loginId);
+            if (memberOpt.isPresent()) {
+                Member member = memberOpt.get();
+                member.setFcmToken(null); // 💡 로그아웃 시 FCM 토큰 클리어
+                memberRepository.save(member);
+                log.info("로그아웃 처리 - DB 내 FCM 토큰 삭제 완료: {}", loginId);
+            }
+        }
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok("로그아웃 성공");
     }
@@ -89,7 +139,7 @@ public class MemberController {
         if (loginId == null || loginId.equals("anonymousUser")) {
             return ResponseEntity.status(401).body("로그인이 필요합니다.");
         }
-        
+
         Optional<Member> memberOpt = memberRepository.findByLoginId(loginId);
         if (memberOpt.isPresent()) {
             memberService.updateFcmToken(memberOpt.get().getId(), request.getFcmToken());
