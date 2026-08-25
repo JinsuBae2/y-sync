@@ -19,7 +19,6 @@ class AcademicCalendarView extends ConsumerStatefulWidget {
 
 class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   double _horizontalRatio = 0.55; // PC/Web 가로 분할 비율 (55%가 캘린더)
-  double _verticalRatio = 0.50; // 모바일 세로 분할 비율 (50%가 캘린더)
   final CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -71,6 +70,7 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         lastDay: DateTime.utc(2030, 12, 31),
         focusedDay: _focusedDay,
         calendarFormat: _calendarFormat,
+        sixWeekMonthsEnforced: true,
         rowHeight: rowHeight,
         daysOfWeekHeight: daysOfWeekHeight,
         locale: 'ko_KR', // 💡 한국어 로캘 지정
@@ -411,51 +411,16 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                   ],
                 );
               } else {
-                // 📱 Mobile Layout: Vertical split with horizontal drag divider
-                final totalHeight = constraints.maxHeight;
+                // 💡 모바일은 달력 전체를 먼저 배치해 마지막 주 날짜가 잘리지 않도록 합니다.
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Top panel: Calendar Card
-                    SizedBox(
-                      height: totalHeight * _verticalRatio,
-                      child: SingleChildScrollView(
-                        child: _buildCalendarCard(
-                          rowHeight: 40.0, // More compact on mobile
-                          daysOfWeekHeight: 24.0,
-                          allEvents: allEvents,
-                          theme: theme,
-                        ),
-                      ),
+                    _buildCalendarCard(
+                      rowHeight: constraints.maxHeight < 500 ? 34.0 : 38.0,
+                      daysOfWeekHeight: 24.0,
+                      allEvents: allEvents,
+                      theme: theme,
                     ),
-                    // Resizable divider handle
-                    GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onVerticalDragUpdate: (details) {
-                        setState(() {
-                          _verticalRatio += details.delta.dy / totalHeight;
-                          _verticalRatio = _verticalRatio.clamp(0.30, 0.65);
-                        });
-                      },
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.resizeUpDown,
-                        child: Container(
-                          height: 12,
-                          color: AppDesignTokens.background,
-                          child: Center(
-                            child: Container(
-                              width: 45,
-                              height: 3,
-                              decoration: BoxDecoration(
-                                color: AppDesignTokens.divider,
-                                borderRadius: BorderRadius.circular(1.5),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Bottom panel: Event List
                     Expanded(
                       child: _buildEventList(
                         selectedDayEvents: selectedDayEvents,

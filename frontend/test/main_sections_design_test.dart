@@ -132,6 +132,20 @@ void main() {
               ),
             ],
           ),
+          personalTimetableEntriesProvider.overrideWith(
+            (ref) async => [
+              TimetableEntry(
+                id: 2,
+                grade: 'PERSONAL',
+                dayOfWeek: 'TUESDAY',
+                subjectName: '내 선택 과목',
+                professorName: '',
+                classroom: '온라인',
+                startPeriod: 3,
+                endPeriod: 4,
+              ),
+            ],
+          ),
         ],
         child: const MaterialApp(home: ScheduleTabScreen()),
       ),
@@ -139,13 +153,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('수강신청 마감'), findsOneWidget);
+    final lastDay = DateTime(today.year, today.month + 1, 0).day.toString();
+    final lastDateBottom = tester.getBottomLeft(find.text(lastDay).last).dy;
+    final eventHeaderTop = tester
+        .getTopLeft(find.text('${today.month}월 ${today.day}일 일정'))
+        .dy;
+    expect(lastDateBottom, lessThan(eventHeaderTop));
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('과 시간표'));
+    await tester.tap(find.text('시간표'));
     await tester.pumpAndSettle();
 
+    expect(find.text('학과 시간표'), findsOneWidget);
+    expect(find.text('개인 시간표'), findsOneWidget);
     expect(find.text('1학년'), findsOneWidget);
     expect(find.text('모바일 프로그래밍'), findsOneWidget);
+
+    await tester.tap(find.text('개인 시간표'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('내 선택 과목'), findsOneWidget);
+    expect(find.byTooltip('내 수업 추가'), findsOneWidget);
+    await tester.tap(find.byTooltip('내 수업 추가'));
+    await tester.pumpAndSettle();
+    expect(find.text('내 수업 추가'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
