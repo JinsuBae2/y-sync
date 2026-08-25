@@ -21,6 +21,24 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Google 로그인은 추후 기능 추가 안내를 표시한다', (tester) async {
+    _setMobileViewport(tester);
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Google로 계속'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('소셜 로그인 준비 중'), findsOneWidget);
+    expect(
+      find.text('Google 로그인은 추후 업데이트에서 제공할 예정입니다.\n지금은 학번으로 로그인해 주세요.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('회원가입은 학생 확인 단계를 먼저 보여준다', (tester) async {
     _setMobileViewport(tester);
     await tester.pumpWidget(
