@@ -1,5 +1,6 @@
 package com.ync.ysync.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ync.ysync.domain.AdminRequest;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
@@ -15,8 +16,10 @@ import com.ync.ysync.domain.Notice;
 import com.ync.ysync.repository.NoticeRepository;
 import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder; // 💡 추가
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -277,7 +280,7 @@ public class AdminController {
     }
 
     // 💡 통계 및 DTO 클래스들
-    @Data
+    @Getter
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
@@ -289,10 +292,22 @@ public class AdminController {
         private String content;
         private String authorName;
         private Long authorId;
+        @Getter(AccessLevel.NONE)
         private boolean isAuthorSuspended;
+        @Getter(AccessLevel.NONE)
         private boolean isDeleted;
         private String deletionReason;
         private List<String> reasons;
+
+        @JsonProperty("isAuthorSuspended")
+        public boolean isAuthorSuspended() {
+            return isAuthorSuspended;
+        }
+
+        @JsonProperty("isDeleted")
+        public boolean isDeleted() {
+            return isDeleted;
+        }
     }
 
     public static class AdminRequestDto {

@@ -56,16 +56,18 @@ class AdminNotifier extends AsyncNotifier<List<AdminRequest>> {
   // 💡 신고 기각 및 대상 복구
   Future<void> dismissReport(String targetType, int targetId) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/admin/reports/dismiss', data: {
-      'targetType': targetType,
-      'targetId': targetId,
-    });
+    await dio.post(
+      '/admin/reports/dismiss',
+      data: {'targetType': targetType, 'targetId': targetId},
+    );
   }
 }
 
-final adminProvider = AsyncNotifierProvider<AdminNotifier, List<AdminRequest>>(() {
-  return AdminNotifier();
-});
+final adminProvider = AsyncNotifierProvider<AdminNotifier, List<AdminRequest>>(
+  () {
+    return AdminNotifier();
+  },
+);
 
 class AdminReportSummary {
   final String targetType;
@@ -103,18 +105,20 @@ class AdminReportSummary {
       content: json['content'] ?? '',
       authorName: json['authorName'] ?? '',
       authorId: json['authorId'],
-      isAuthorSuspended: json['isAuthorSuspended'] ?? false,
-      isDeleted: json['isDeleted'] ?? false,
+      isAuthorSuspended:
+          json['isAuthorSuspended'] ?? json['authorSuspended'] ?? false,
+      isDeleted: json['isDeleted'] ?? json['deleted'] ?? false,
       deletionReason: json['deletionReason'],
       reasons: List<String>.from(json['reasons'] ?? []),
     );
   }
 }
 
-final adminReportsProvider = FutureProvider<List<AdminReportSummary>>((ref) async {
+final adminReportsProvider = FutureProvider<List<AdminReportSummary>>((
+  ref,
+) async {
   final dio = ref.watch(dioProvider);
   final response = await dio.get('/admin/reports');
   final list = response.data as List<dynamic>;
   return list.map((json) => AdminReportSummary.fromJson(json)).toList();
 });
-

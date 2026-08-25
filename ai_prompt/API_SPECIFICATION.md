@@ -8,6 +8,8 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 - **기본 URL**: `http://localhost:8080/api/v1` (개발 환경)
 - **정적 파일 제공 URL**: `http://localhost:8080/uploads/**` (업로드된 로컬 이미지 등 외부 서빙 용도)
 - **인증 방식**: HTTP Request Header 내 `Authorization: Bearer [JWT]` 토큰 인증 수행.
+- **Boolean JSON 계약**: 의미상 `is`로 시작하는 상태값은 `isRead`, `isPinned`, `isDeleted`, `isAuthorSuspended`처럼 `isX` 키를 공식 계약으로 사용합니다. Lombok/Jackson의 자동 이름 변환에 의존하지 않고 백엔드 DTO에 `@JsonProperty`를 명시합니다.
+- **이전 버전 호환**: 배포 중 구형 응답과 신형 앱이 섞일 수 있으므로 Flutter 파서는 당분간 `read`, `pinned`, `deleted`, `authorSuspended` 키도 fallback으로 허용합니다. 새 API와 요청은 공식 `isX` 키만 사용합니다.
 
 ---
 
@@ -264,6 +266,36 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 
 ---
 
+### 📅 Timetable (학과·개인 시간표)
+
+#### 1. 학과 시간표 조회 (`GET /timetable/{grade}`)
+- **Path Variable**: `grade`는 `GRADE_1`, `GRADE_2`, `GRADE_3` 중 하나입니다.
+- **Response (200 OK)**: 해당 학년의 학과 공용 수업 목록을 반환합니다.
+- 학과 시간표의 등록·수정·삭제는 기존 `/timetable` 관리자 API를 사용하며 `ADMIN` 또는 `SUPER_ADMIN`만 실행할 수 있습니다.
+
+#### 2. 개인 시간표 조회·추가 (`GET`, `POST /timetable/personal`)
+- **인증**: Bearer JWT 필수. 서버는 토큰의 회원 ID를 사용하며 클라이언트가 소유자 ID를 전달하지 않습니다.
+- **Request Body (POST)**
+  ```json
+  {
+    "dayOfWeek": "MONDAY",
+    "subjectName": "모바일 프로그래밍",
+    "professorName": "홍길동",
+    "classroom": "공학관 301호",
+    "startPeriod": 1,
+    "endPeriod": 2
+  }
+  ```
+- `dayOfWeek`는 월요일부터 금요일까지, 교시는 1~9교시 범위입니다. 과목명은 필수이고 교수명과 강의실은 선택입니다.
+- 같은 회원의 동일 요일·교시가 겹치면 등록을 거부하며, 다른 회원의 시간표와는 독립적으로 저장합니다.
+- **Response (200 OK)**: 개인 수업 또는 개인 수업 목록을 반환합니다. 응답은 회원 정보나 비밀번호를 포함하지 않습니다.
+
+#### 3. 개인 시간표 수정·삭제 (`PUT`, `DELETE /timetable/personal/{id}`)
+- 로그인한 회원이 소유한 항목만 수정하거나 삭제할 수 있습니다.
+- 수정 요청 본문은 개인 시간표 추가와 동일하며, 삭제 성공 시 `{ "message": "개인 시간표 수업이 삭제되었습니다." }`를 반환합니다.
+
+---
+
 ### 🔔 Notification Center (알림 센터)
 
 #### 1. 수신한 알림 내역 최신순 조회 (`GET /notifications`)
@@ -293,7 +325,12 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 
 #### 2. 모든 알림 일괄 읽음 처리 (`PUT /notifications/read`)
 - **Response (200 OK)**
-  `"전체 읽음 처리 완료"` (String)
+  ```json
+  {
+    "updatedCount": 3
+  }
+  ```
+  `updatedCount`는 이번 요청에서 실제로 읽음 처리된 알림 수입니다. 이미 모든 알림이 읽힌 상태라면 `0`을 반환합니다.
 
 #### 3. 개별 알림 읽음 처리 (`PUT /notifications/{id}/read`)
 - **Response (200 OK)**
@@ -302,4 +339,3 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 #### 4. 개별 알림 삭제 (`DELETE /notifications/{id}`)
 - **Response (200 OK)**
   `"알림 삭제 완료"` (String)
-

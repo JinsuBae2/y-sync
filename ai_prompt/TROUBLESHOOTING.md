@@ -9,7 +9,7 @@ Y-Sync 프로젝트 개발 과정에서 직면했던 크리티컬한 에러들�
 ### 문제 현황
 - **원인**: Flutter Web 환경에서 릴리즈 컴파일(`--release` 난독화/최적화) 진행 시, `file_picker` 패키지의 static late 인스턴스가 컴파일러 최적화에 의해 유실되거나 초기화 시점이 어긋나, 어드민 학생 대량 등록(CSV 파일 업로드) 팝업 클릭 시 `LateInitializationError`와 함께 앱이 크래시되는 현상이 발견되었습니다.
 - **해결 방안**: 외부 라이브러리 의존성을 제거하고 플랫폼 스텁을 제작하여 우회했습니다.
-  * **[csv_picker_web.dart](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/lib/utils/csv_picker_web.dart)**: Web 환경일 경우, `dart:html` 패키지의 `FileUploadInputElement`를 동적으로 생성 및 클릭 이벤트를 강제 실행하여 파일을 가로채는 순수 HTML5 업로드 기법으로 전면 대체했습니다.
+  * **[csv_picker_web.dart](../frontend/lib/utils/csv_picker_web.dart)**: Web 환경일 경우, `dart:html` 패키지의 `FileUploadInputElement`를 동적으로 생성 및 클릭 이벤트를 강제 실행하여 파일을 가로채는 순수 HTML5 업로드 기법으로 전면 대체했습니다.
   * 모바일 앱용 stub과 Web 업로더를 추상화 레이어로 래핑하여 플랫폼 안정성을 극대화했습니다.
 
 ---
@@ -96,12 +96,12 @@ public class MemberProfileController {
 ### 문제 현황
 - **원인**: 푸시 알림 발송 시 동일한 알림 메시지가 디바이스 및 웹 브라우저 화면에 **2번씩 중복 수신/노출**되는 현상이 발생했습니다.
 - **분석된 세 가지 중복 지점**:
-  1. **웹 서비스 워커 중복 호출**: 웹 환경에서 FCM Web SDK가 `payload.notification`을 기반으로 브라우저 네이티브 알림을 자동 띄움에도 불구하고, 서비스 워커([firebase-messaging-sw.js](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/web/firebase-messaging-sw.js)) 내 수동 호출이 이중으로 실행됨.
+  1. **웹 서비스 워커 중복 호출**: 웹 환경에서 FCM Web SDK가 `payload.notification`을 기반으로 브라우저 네이티브 알림을 자동 띄움에도 불구하고, 서비스 워커([firebase-messaging-sw.js](../frontend/web/firebase-messaging-sw.js)) 내 수동 호출이 이중으로 실행됨.
   2. **포그라운드 인앱 팝업 중복 렌더링**: 앱 실행(포그라운드) 상태 수신 시 시스템 알림과 Flutter `flutter_local_notifications` 알림 배너가 동시에 동작함.
   3. **백엔드 이중 전송 구조**: 백엔드 공지사항 발송 시 `sendNotificationToTopic("all")` 토픽 전송과 회원 개별 FCM 토큰 기반 멀티캐스트(`sendNotificationToTokens`) 전송이 중복하여 발송됨.
 
 ### 해결 방안
-- **[firebase-messaging-sw.js](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/web/firebase-messaging-sw.js)**: `payload.notification`이 존재할 경우 서비스 워커 내부에서의 수동 알림 렌더링을 조기 리턴(`return`)하여 중복을 차단함.
+- **[firebase-messaging-sw.js](../frontend/web/firebase-messaging-sw.js)**: `payload.notification`이 존재할 경우 서비스 워커 내부에서의 수동 알림 렌더링을 조기 리턴(`return`)하여 중복을 차단함.
   ```javascript
   messaging.onBackgroundMessage((payload) => {
     // 💡 payload.notification이 존재하면 Firebase SDK가 자동으로 알림을 띄우므로 중복 노출 차단
@@ -111,7 +111,35 @@ public class MemberProfileController {
     ...
   });
   ```
-- **[push_notification_service.dart](file:///c:/Users/YNC/Desktop/ysync/y-sync/frontend/lib/services/push_notification_service.dart)**: 포그라운드 수신 로직을 웹/모바일 플랫폼별로 명확히 분기하여, 웹 환경은 브라우저 시스템 알림으로 일원화하고 모바일 환경은 커스텀 상단 플로팅 인앱 배너만 노출되도록 정리함.
-- **[NoticeEventListener.java](file:///c:/Users/YNC/Desktop/ysync/y-sync/backend/src/main/java/com/ync/ysync/event/NoticeEventListener.java)**: 불안정한 FCM 토픽 구독 방식 대신, 백엔드에서 공지 수신 동의를 마친 활성 회원의 FCM 토큰 목록을 조회하여 500개 단위 분할 멀티캐스트 전송 방식으로 전송 채널을 일원화함.
+- **[push_notification_service.dart](../frontend/lib/services/push_notification_service.dart)**: 포그라운드 수신 로직을 웹/모바일 플랫폼별로 명확히 분기하여, 웹 환경은 브라우저 시스템 알림으로 일원화하고 모바일 환경은 커스텀 상단 플로팅 인앱 배너만 노출되도록 정리함.
+- **[NoticeEventListener.java](../backend/src/main/java/com/ync/ysync/event/NoticeEventListener.java)**: 불안정한 FCM 토픽 구독 방식 대신, 백엔드에서 공지 수신 동의를 마친 활성 회원의 FCM 토큰 목록을 조회하여 500개 단위 분할 멀티캐스트 전송 방식으로 전송 채널을 일원화함.
 
 - **효과**: 웹 브라우저 및 모바일 디바이스 환경 전반에서 푸시 알림이 중복 수신 없이 단 1회만 깔끔하게 노출되도록 정상화되었습니다.
+
+---
+
+## 6. Lombok boolean 필드의 JSON 키 축약으로 인한 상태 불일치 해결
+
+### 문제 현황
+- **증상**: 알림 전체 읽음 API는 DB를 정상 갱신했지만 Flutter가 계속 미읽음으로 표시했고, 고정 공지 및 관리자 블라인드 상태도 화면에 반영되지 않을 수 있었습니다.
+- **원인**: Java 필드명을 `isRead`, `isPinned`, `isDeleted`처럼 선언해도 Lombok이 생성한 boolean getter를 Jackson이 해석하면서 JSON 키가 `read`, `pinned`, `deleted`로 축약될 수 있습니다. 프론트엔드는 공식 계약인 `isX`만 읽어 기본값 `false`를 사용했습니다.
+
+### 해결 방안
+- 백엔드 Response DTO는 Lombok의 해당 getter 생성을 막고 `@JsonProperty("isX")`가 붙은 getter를 명시해 공식 키를 고정합니다.
+- boolean Request DTO도 `@JsonProperty("isPinned")`를 사용하고, 이전 클라이언트의 `pinned` 입력은 `@JsonAlias`로 한시 허용합니다.
+- Flutter 모델은 공식 `isX`를 우선 파싱하고 이전 응답의 `x`를 fallback으로 처리합니다.
+- `BooleanJsonContractTest`와 `boolean_json_contract_test.dart`에서 신형/구형 키 직렬화 및 파싱을 회귀 테스트합니다.
+- 전체 읽음 API는 문자열 대신 `{ "updatedCount": N }`을 반환하고, 프론트엔드는 성공한 경우에만 목록과 미읽음 카운트를 갱신합니다.
+
+---
+
+## 7. 모바일 학사 달력의 마지막 주 날짜가 잘리는 문제 해결
+
+### 문제 현황
+- **증상**: 작은 모바일 화면에서 월간 달력의 마지막 주가 하단 일정 목록에 가려져 날짜가 일부 보이지 않았습니다.
+- **원인**: 달력과 일정 목록을 고정 비율로 나누고 달력 영역을 내부 스크롤로 감싸면서, 월별 주 수와 실제 달력 높이가 비율 영역보다 커질 수 있었습니다.
+
+### 해결 방안
+- 모바일에서는 고정 세로 비율과 드래그 구분선을 제거하고 달력 카드의 실제 높이를 먼저 배치합니다.
+- `TableCalendar`의 `sixWeekMonthsEnforced`를 활성화해 월 변경에도 달력 높이가 흔들리지 않게 하고, 가용 높이가 작은 화면에서는 행 높이만 안전 범위로 줄입니다.
+- 일정 목록만 남은 영역에서 확장되도록 구성하고, 모바일 위젯 테스트에서 해당 월의 마지막 날짜가 일정 헤더 위에 노출되는지 검증합니다.

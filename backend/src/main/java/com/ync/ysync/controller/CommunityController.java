@@ -1,13 +1,17 @@
 package com.ync.ysync.controller;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ync.ysync.domain.CommunityPost;
 import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.service.CommunityService;
 import com.ync.ysync.config.AuthUtil;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -103,10 +107,12 @@ public class CommunityController {
         private String content;
         private boolean anonymous;
         private Grade targetGrade;
+        @JsonProperty("isPinned")
+        @JsonAlias("pinned")
         private boolean isPinned;
     }
 
-    @Data
+    @Getter
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
@@ -119,13 +125,25 @@ public class CommunityController {
         private String authorName;
         private Long memberId;
         private LocalDateTime createdAt;
+        @Getter(AccessLevel.NONE)
         private boolean isDeleted;
         private String deletionReason;
         private String targetGrade;
+        @Getter(AccessLevel.NONE)
         private boolean isPinned;
         private long viewCount;
         private long commentCount;
         private List<String> imageUrls;
+
+        @JsonProperty("isDeleted")
+        public boolean isDeleted() {
+            return isDeleted;
+        }
+
+        @JsonProperty("isPinned")
+        public boolean isPinned() {
+            return isPinned;
+        }
 
         public static CommunityResponse from(CommunityPost post) {
             return CommunityResponse.builder()

@@ -6,7 +6,7 @@ import '../providers/timetable_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_design_tokens.dart';
 
-// 💡 에브리타임 스타일의 과 시간표 그리드를 보여주는 뷰입니다.
+// 💡 학과 공용 시간표와 학생 개인 시간표를 전환해 보여주는 뷰입니다.
 class TimetableView extends ConsumerStatefulWidget {
   const TimetableView({super.key});
 
@@ -17,6 +17,7 @@ class TimetableView extends ConsumerStatefulWidget {
 class _TimetableViewState extends ConsumerState<TimetableView> {
   final List<String> _gradeOptions = ['GRADE_1', 'GRADE_2', 'GRADE_3'];
   final List<String> _gradeLabels = ['1학년', '2학년', '3학년'];
+  bool _isPersonal = false;
 
   // 요일 매핑 헬퍼
   int _getDayIndex(String dayOfWeek) {
@@ -60,7 +61,9 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
   @override
   Widget build(BuildContext context) {
     final selectedGrade = ref.watch(selectedTimetableGradeProvider);
-    final timetableAsync = ref.watch(timetableEntriesProvider);
+    final timetableAsync = _isPersonal
+        ? ref.watch(personalTimetableEntriesProvider)
+        : ref.watch(timetableEntriesProvider);
 
     final authState = ref.watch(authProvider);
     final currentUser = authState.asData?.value;
@@ -74,53 +77,80 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
         children: [
           Container(
             height: 44,
-            margin: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            margin: const EdgeInsets.fromLTRB(20, 4, 20, 10),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: AppDesignTokens.paleBlue,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
-              children: List.generate(_gradeOptions.length, (idx) {
-                final isSelected = _gradeOptions[idx] == selectedGrade;
-                return Expanded(
-                  child: Material(
-                    color: isSelected
-                        ? AppDesignTokens.surface
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    child: InkWell(
+              children: [
+                _buildModeOption(
+                  label: '학과 시간표',
+                  icon: Icons.school_outlined,
+                  selected: !_isPersonal,
+                  onTap: () => setState(() => _isPersonal = false),
+                ),
+                _buildModeOption(
+                  label: '개인 시간표',
+                  icon: Icons.person_outline_rounded,
+                  selected: _isPersonal,
+                  onTap: () => setState(() => _isPersonal = true),
+                ),
+              ],
+            ),
+          ),
+          if (!_isPersonal)
+            Container(
+              height: 44,
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppDesignTokens.divider),
+              ),
+              child: Row(
+                children: List.generate(_gradeOptions.length, (idx) {
+                  final isSelected = _gradeOptions[idx] == selectedGrade;
+                  return Expanded(
+                    child: Material(
+                      color: isSelected
+                          ? AppDesignTokens.surface
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(6),
-                      onTap: () => ref
-                          .read(selectedTimetableGradeProvider.notifier)
-                          .updateGrade(_gradeOptions[idx]),
-                      child: Container(
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          border: isSelected
-                              ? Border.all(color: AppDesignTokens.divider)
-                              : null,
-                        ),
-                        child: Text(
-                          _gradeLabels[idx],
-                          style: TextStyle(
-                            color: isSelected
-                                ? AppDesignTokens.navy
-                                : AppDesignTokens.muted,
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w600,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(6),
+                        onTap: () => ref
+                            .read(selectedTimetableGradeProvider.notifier)
+                            .updateGrade(_gradeOptions[idx]),
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: isSelected
+                                ? Border.all(color: AppDesignTokens.divider)
+                                : null,
+                          ),
+                          child: Text(
+                            _gradeLabels[idx],
+                            style: TextStyle(
+                              color: isSelected
+                                  ? AppDesignTokens.navy
+                                  : AppDesignTokens.muted,
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
-          ),
           Expanded(
             child: timetableAsync.when(
               loading: () => const Center(
@@ -153,7 +183,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                     minutesDuration: durationMinutes,
                     child: GestureDetector(
                       onTap: () {
-                        if (isAdmin) {
+                        if (_isPersonal || isAdmin) {
                           _showAddEditEntryDialog(entry: entry);
                         }
                       },
@@ -177,24 +207,26 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const Spacer(),
-                            Text(
-                              entry.classroom,
-                              style: TextStyle(
-                                color: AppDesignTokens.muted,
-                                fontSize: 10,
+                            if (entry.classroom.isNotEmpty)
+                              Text(
+                                entry.classroom,
+                                style: TextStyle(
+                                  color: AppDesignTokens.muted,
+                                  fontSize: 10,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              entry.professorName,
-                              style: TextStyle(
-                                color: AppDesignTokens.subtle,
-                                fontSize: 9,
+                            if (entry.professorName.isNotEmpty)
+                              Text(
+                                entry.professorName,
+                                style: TextStyle(
+                                  color: AppDesignTokens.subtle,
+                                  fontSize: 9,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           ],
                         ),
                       ),
@@ -226,7 +258,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
           ),
         ],
       ),
-      floatingActionButton: isAdmin
+      floatingActionButton: currentUser != null && (_isPersonal || isAdmin)
           ? FloatingActionButton(
               backgroundColor: AppDesignTokens.blue,
               foregroundColor: Colors.white,
@@ -234,16 +266,67 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 borderRadius: BorderRadius.circular(8),
               ),
               onPressed: () => _showAddEditEntryDialog(),
-              tooltip: '수업 등록',
+              tooltip: _isPersonal ? '내 수업 추가' : '학과 수업 추가',
               child: const Icon(Icons.add),
             )
           : null,
     );
   }
 
+  Widget _buildModeOption({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Material(
+        color: selected ? AppDesignTokens.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              border: selected
+                  ? Border.all(color: AppDesignTokens.divider)
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 17,
+                  color: selected
+                      ? AppDesignTokens.blue
+                      : AppDesignTokens.muted,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? AppDesignTokens.navy
+                        : AppDesignTokens.muted,
+                    fontSize: 13,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // 💡 수업 등록 및 수정 다이얼로그 (중복 검증 오류 대응 탑재)
   void _showAddEditEntryDialog({TimetableEntry? entry}) {
     final currentGrade = ref.read(selectedTimetableGradeProvider);
+    final isPersonalEntry = _isPersonal;
     final subjectController = TextEditingController(
       text: entry?.subjectName ?? '',
     );
@@ -262,7 +345,11 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(entry == null ? '신규 수업 등록' : '수업 정보 수정'),
+          title: Text(
+            entry == null
+                ? (isPersonalEntry ? '내 수업 추가' : '학과 수업 등록')
+                : (isPersonalEntry ? '내 수업 수정' : '학과 수업 수정'),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -276,15 +363,15 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 ),
                 TextField(
                   controller: professorController,
-                  decoration: const InputDecoration(
-                    labelText: '담당 교수',
+                  decoration: InputDecoration(
+                    labelText: isPersonalEntry ? '담당 교수 (선택)' : '담당 교수',
                     hintText: '예: 홍길동 교수',
                   ),
                 ),
                 TextField(
                   controller: classroomController,
-                  decoration: const InputDecoration(
-                    labelText: '강의실',
+                  decoration: InputDecoration(
+                    labelText: isPersonalEntry ? '강의실 (선택)' : '강의실',
                     hintText: '예: 정보관 303호',
                   ),
                 ),
@@ -367,7 +454,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
               TextButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  _confirmDelete(entry.id);
+                  _confirmDelete(entry.id, personal: isPersonalEntry);
                 },
                 child: const Text('삭제', style: TextStyle(color: Colors.red)),
               ),
@@ -380,14 +467,39 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 final subject = subjectController.text.trim();
                 final professor = professorController.text.trim();
                 final classroom = classroomController.text.trim();
-                if (subject.isEmpty || professor.isEmpty || classroom.isEmpty) {
+                if (subject.isEmpty ||
+                    (!isPersonalEntry &&
+                        (professor.isEmpty || classroom.isEmpty))) {
                   return;
                 }
 
                 final dayOfWeekStr = _getDayString(selectedDayIdx);
 
                 try {
-                  if (entry == null) {
+                  if (isPersonalEntry && entry == null) {
+                    await ref
+                        .read(timetableNotifierProvider)
+                        .createPersonalEntry(
+                          dayOfWeek: dayOfWeekStr,
+                          subjectName: subject,
+                          professorName: professor,
+                          classroom: classroom,
+                          startPeriod: startPeriod,
+                          endPeriod: endPeriod,
+                        );
+                  } else if (isPersonalEntry) {
+                    await ref
+                        .read(timetableNotifierProvider)
+                        .updatePersonalEntry(
+                          id: entry!.id,
+                          dayOfWeek: dayOfWeekStr,
+                          subjectName: subject,
+                          professorName: professor,
+                          classroom: classroom,
+                          startPeriod: startPeriod,
+                          endPeriod: endPeriod,
+                        );
+                  } else if (entry == null) {
                     await ref
                         .read(timetableNotifierProvider)
                         .createEntry(
@@ -434,7 +546,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
     );
   }
 
-  void _confirmDelete(int entryId) {
+  void _confirmDelete(int entryId, {required bool personal}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -448,7 +560,13 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(timetableNotifierProvider).deleteEntry(entryId);
+              if (personal) {
+                await ref
+                    .read(timetableNotifierProvider)
+                    .deletePersonalEntry(entryId);
+              } else {
+                await ref.read(timetableNotifierProvider).deleteEntry(entryId);
+              }
             },
             child: const Text('삭제', style: TextStyle(color: Colors.red)),
           ),

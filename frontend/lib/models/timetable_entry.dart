@@ -22,7 +22,7 @@ class TimetableEntry {
   factory TimetableEntry.fromJson(Map<String, dynamic> json) {
     return TimetableEntry(
       id: json['id'],
-      grade: json['grade'],
+      grade: json['grade'] ?? 'PERSONAL',
       dayOfWeek: json['dayOfWeek'],
       subjectName: json['subjectName'],
       professorName: json['professorName'],

@@ -1,5 +1,6 @@
 package com.ync.ysync.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List; // 💡 추가
 import java.util.stream.Collectors; // 💡 추가
 
@@ -10,7 +11,9 @@ import com.ync.ysync.repository.NoticeRepository; // 💡 추가
 import com.ync.ysync.config.AuthUtil;
 import com.ync.ysync.service.MemberService;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -155,7 +158,7 @@ public class MemberProfileController {
         private boolean commentEnabled;
     }
 
-    @Data
+    @Getter
     @AllArgsConstructor
     public static class MyCommentResponse {
         private Long id;
@@ -164,7 +167,13 @@ public class MemberProfileController {
         private String category;
         private Long postId;
         private String createdAt;
+        @Getter(AccessLevel.NONE)
         private boolean isDeleted;
         private String deletionReason;
+
+        @JsonProperty("isDeleted")
+        public boolean isDeleted() {
+            return isDeleted;
+        }
     }
 }

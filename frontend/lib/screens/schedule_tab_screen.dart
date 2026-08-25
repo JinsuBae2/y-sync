@@ -57,7 +57,7 @@ class _ScheduleTabScreenState extends State<ScheduleTabScreen>
                       ),
                       SizedBox(height: 5),
                       Text(
-                        '학사 일정과 학년별 시간표를 확인하세요',
+                        '학사 일정과 학과·개인 시간표를 확인하세요',
                         style: TextStyle(
                           color: AppDesignTokens.muted,
                           fontSize: 14,
@@ -96,7 +96,7 @@ class _ScheduleTabScreenState extends State<ScheduleTabScreen>
                     ),
                     tabs: const [
                       Tab(text: '학사 일정'),
-                      Tab(text: '과 시간표'),
+                      Tab(text: '시간표'),
                     ],
                   ),
                 ),
