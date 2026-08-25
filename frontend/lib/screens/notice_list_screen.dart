@@ -6,6 +6,7 @@ import '../providers/mypage_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/scrap_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/content_filter_bar.dart';
 import '../widgets/notification_action_button.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
@@ -250,45 +251,14 @@ class _GradeFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: AppDesignTokens.contentPadding,
-        itemCount: _NoticeListScreenState._grades.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final grade = _NoticeListScreenState._grades[index];
-          final selected = grade.$1 == selectedGrade;
-          return Material(
-            color: selected ? AppDesignTokens.navy : AppDesignTokens.surface,
-            borderRadius: BorderRadius.circular(8),
-            child: InkWell(
-              onTap: () => onChanged(grade.$1),
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: selected
-                        ? AppDesignTokens.navy
-                        : AppDesignTokens.divider,
-                  ),
-                ),
-                child: Text(
-                  grade.$2,
-                  style: TextStyle(
-                    color: selected ? Colors.white : AppDesignTokens.muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+    return Padding(
+      padding: AppDesignTokens.contentPadding,
+      child: ContentFilterBar(
+        label: '학년',
+        icon: Icons.school_outlined,
+        options: _NoticeListScreenState._grades,
+        selectedValue: selectedGrade,
+        onChanged: onChanged,
       ),
     );
   }
