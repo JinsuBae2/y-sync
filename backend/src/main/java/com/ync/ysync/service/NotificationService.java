@@ -33,8 +33,8 @@ public class NotificationService {
      * 회원의 모든 알림을 읽음 처리
      */
     @Transactional
-    public void markAllAsRead(Long memberId) {
-        notificationRepository.markAllAsReadByMemberId(memberId);
+    public int markAllAsRead(Long memberId) {
+        return notificationRepository.markAllAsReadByMemberId(memberId);
     }
 
     /**

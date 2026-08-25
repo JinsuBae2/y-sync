@@ -17,17 +17,14 @@ class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
 
   // 💡 전체 읽음 처리
   Future<void> markAllAsRead() async {
-    try {
-      final dio = ref.read(dioProvider);
-      await dio.put('/notifications/read');
-      
-      // 로컬 데이터 캐시 갱신
-      state = const AsyncValue.loading();
-      final freshData = await _fetchNotifications();
-      state = AsyncValue.data(freshData);
-    } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
-    }
+    final dio = ref.read(dioProvider);
+    await dio.put('/notifications/read');
+
+    state = state.whenData(
+      (notifications) => notifications
+          .map((notification) => notification.copyWith(isRead: true))
+          .toList(),
+    );
   }
 
   // 💡 개별 알림 읽음 처리
@@ -35,7 +32,7 @@ class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
     try {
       final dio = ref.read(dioProvider);
       await dio.put('/notifications/$notificationId/read');
-      
+
       // 로컬 상태 즉시 변경하여 로딩 딜레이 방지
       state.whenData((list) {
         final updatedList = list.map((n) {
@@ -77,9 +74,10 @@ class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
   }
 }
 
-final notificationsProvider = AsyncNotifierProvider<NotificationNotifier, List<AppNotification>>(() {
-  return NotificationNotifier();
-});
+final notificationsProvider =
+    AsyncNotifierProvider<NotificationNotifier, List<AppNotification>>(() {
+      return NotificationNotifier();
+    });
 
 // 💡 미읽음 알림 개수 계산을 위한 Provider
 final unreadNotificationCountProvider = Provider<int>((ref) {

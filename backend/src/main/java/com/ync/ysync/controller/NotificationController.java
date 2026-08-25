@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -49,9 +50,9 @@ public class NotificationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
 
-        notificationService.markAllAsRead(memberId);
-        log.info("[Notification API] 회원 ID {}의 전체 알림 읽음 처리 완료", memberId);
-        return ResponseEntity.ok("전체 읽음 처리 완료");
+        int updatedCount = notificationService.markAllAsRead(memberId);
+        log.info("[Notification API] 회원 ID {}의 전체 알림 {}건 읽음 처리 완료", memberId, updatedCount);
+        return ResponseEntity.ok(Map.of("updatedCount", updatedCount));
     }
 
     /**
