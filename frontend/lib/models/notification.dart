@@ -1,6 +1,4 @@
-/**
- * 💡 인앱 알림 데이터를 나타내는 Flutter 데이터 모델 클래스입니다.
- */
+/// 인앱 알림 데이터를 나타내는 모델입니다.
 class AppNotification {
   final int id;
   final String title;
@@ -27,8 +25,20 @@ class AppNotification {
       body: json['body'] as String? ?? '',
       targetType: json['targetType'] as String? ?? '',
       targetId: json['targetId'] as int? ?? 0,
-      isRead: json['isRead'] as bool? ?? false,
+      isRead: (json['isRead'] ?? json['read']) as bool? ?? false,
       createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+
+  AppNotification copyWith({bool? isRead}) {
+    return AppNotification(
+      id: id,
+      title: title,
+      body: body,
+      targetType: targetType,
+      targetId: targetId,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
     );
   }
 }
