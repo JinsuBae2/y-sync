@@ -140,8 +140,7 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
             itemCount: posts.length,
-            separatorBuilder: (_, _) =>
-                const Divider(height: 1, color: AppDesignTokens.divider),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) => CommunityPostCard(
               post: posts[index],
               onOpen: () async {
@@ -431,133 +430,150 @@ class CommunityPostCard extends ConsumerWidget {
     final hasImage = imageUrls != null && imageUrls.isNotEmpty;
 
     return Material(
+      key: ValueKey('community-post-${post.id}'),
       color: post.isPinned
-          ? AppDesignTokens.paleBlue.withValues(alpha: 0.42)
-          : Colors.transparent,
+          ? AppDesignTokens.paleBlue.withValues(alpha: 0.58)
+          : AppDesignTokens.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppDesignTokens.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
+          child: Column(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _PostLabel(post: post),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${post.authorName} · ${_shortDate(post.createdAt)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppDesignTokens.muted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                        Row(
+                          children: [
+                            _PostLabel(post: post),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${post.authorName} · ${_shortDate(post.createdAt)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppDesignTokens.muted,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          post.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppDesignTokens.navy,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          post.content,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppDesignTokens.muted,
+                            fontSize: 14,
+                            height: 1.45,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      post.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppDesignTokens.navy,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      post.content,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppDesignTokens.muted,
-                        fontSize: 14,
-                        height: 1.45,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.visibility_outlined,
-                          size: 15,
-                          color: AppDesignTokens.subtle,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${post.viewCount}',
-                          style: const TextStyle(
-                            color: AppDesignTokens.subtle,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 15,
-                          color: AppDesignTokens.subtle,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${post.commentCount}',
-                          style: const TextStyle(
-                            color: AppDesignTokens.subtle,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          tooltip: isScrapped ? '스크랩 해제' : '스크랩',
-                          onPressed: () => ref
-                              .read(scrapNotifierProvider)
-                              .toggleScrap('COMMUNITY', post.id),
-                          icon: Icon(
-                            isScrapped
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_border_rounded,
-                            size: 21,
-                            color: isScrapped
-                                ? AppDesignTokens.blue
-                                : AppDesignTokens.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              if (hasImage) ...[
-                const SizedBox(width: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    getCleanImageUrl(imageUrls.first),
-                    width: 76,
-                    height: 76,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
+                  ),
+                  if (hasImage) ...[
+                    const SizedBox(width: 14),
+                    Container(
+                      key: ValueKey('community-post-thumbnail-${post.id}'),
                       width: 76,
                       height: 76,
-                      color: AppDesignTokens.paleBlue,
-                      child: const Icon(
-                        Icons.image_not_supported_outlined,
-                        color: AppDesignTokens.muted,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppDesignTokens.divider),
+                      ),
+                      child: Image.network(
+                        getCleanImageUrl(imageUrls.first),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: AppDesignTokens.paleBlue,
+                          child: const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: AppDesignTokens.muted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.visibility_outlined,
+                    size: 15,
+                    color: AppDesignTokens.subtle,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${post.viewCount}',
+                    style: const TextStyle(
+                      color: AppDesignTokens.subtle,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 15,
+                    color: AppDesignTokens.subtle,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${post.commentCount}',
+                    style: const TextStyle(
+                      color: AppDesignTokens.subtle,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const Spacer(),
+                  SizedBox.square(
+                    dimension: 36,
+                    child: IconButton(
+                      key: ValueKey('community-post-bookmark-${post.id}'),
+                      padding: EdgeInsets.zero,
+                      tooltip: isScrapped ? '스크랩 해제' : '스크랩',
+                      onPressed: () => ref
+                          .read(scrapNotifierProvider)
+                          .toggleScrap('COMMUNITY', post.id),
+                      icon: Icon(
+                        isScrapped
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        size: 21,
+                        color: isScrapped
+                            ? AppDesignTokens.blue
+                            : AppDesignTokens.muted,
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ],
           ),
         ),
