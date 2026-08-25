@@ -5,6 +5,7 @@ import '../models/calendar_event.dart';
 import '../providers/calendar_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notice_provider.dart';
+import '../theme/app_design_tokens.dart';
 import 'notice_detail_screen.dart';
 
 // 💡 학사 일정을 캘린더 형식으로 보여주는 뷰입니다.
@@ -12,13 +13,14 @@ class AcademicCalendarView extends ConsumerStatefulWidget {
   const AcademicCalendarView({super.key});
 
   @override
-  ConsumerState<AcademicCalendarView> createState() => _AcademicCalendarViewState();
+  ConsumerState<AcademicCalendarView> createState() =>
+      _AcademicCalendarViewState();
 }
 
 class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   double _horizontalRatio = 0.55; // PC/Web 가로 분할 비율 (55%가 캘린더)
-  double _verticalRatio = 0.50;   // 모바일 세로 분할 비율 (50%가 캘린더)
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  double _verticalRatio = 0.50; // 모바일 세로 분할 비율 (50%가 캘린더)
+  final CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
@@ -29,17 +31,21 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   }
 
   // 💡 특정 날짜에 해당하는 일정들을 필터링하여 반환하는 헬퍼 함수
-  List<CalendarEvent> _getEventsForDay(DateTime day, List<CalendarEvent> allEvents) {
+  List<CalendarEvent> _getEventsForDay(
+    DateTime day,
+    List<CalendarEvent> allEvents,
+  ) {
     return allEvents.where((event) {
       try {
         final start = DateTime.parse(event.startDate);
         final end = DateTime.parse(event.endDate);
-        
+
         final compareDay = DateTime(day.year, day.month, day.day);
         final compareStart = DateTime(start.year, start.month, start.day);
         final compareEnd = DateTime(end.year, end.month, end.day);
-        
-        return compareDay.compareTo(compareStart) >= 0 && compareDay.compareTo(compareEnd) <= 0;
+
+        return compareDay.compareTo(compareStart) >= 0 &&
+            compareDay.compareTo(compareEnd) <= 0;
       } catch (_) {
         return false;
       }
@@ -54,17 +60,11 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     required ThemeData theme,
   }) {
     return Container(
-      margin: const EdgeInsets.all(12),
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: AppDesignTokens.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppDesignTokens.divider),
       ),
       child: TableCalendar(
         firstDay: DateTime.utc(2025, 1, 1),
@@ -77,20 +77,49 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         headerStyle: const HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
-          titleTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          leftChevronIcon: Icon(
+            Icons.chevron_left_rounded,
+            color: AppDesignTokens.navy,
+          ),
+          rightChevronIcon: Icon(
+            Icons.chevron_right_rounded,
+            color: AppDesignTokens.navy,
+          ),
+          titleTextStyle: TextStyle(
+            color: AppDesignTokens.navy,
+            fontWeight: FontWeight.w800,
+            fontSize: 17,
+          ),
         ),
-        calendarStyle: CalendarStyle(
+        daysOfWeekStyle: const DaysOfWeekStyle(
+          weekdayStyle: TextStyle(
+            color: AppDesignTokens.muted,
+            fontWeight: FontWeight.w600,
+          ),
+          weekendStyle: TextStyle(
+            color: AppDesignTokens.muted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        calendarStyle: const CalendarStyle(
+          outsideTextStyle: TextStyle(color: AppDesignTokens.divider),
+          weekendTextStyle: TextStyle(color: AppDesignTokens.navy),
+          defaultTextStyle: TextStyle(color: AppDesignTokens.navy),
           todayDecoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.2),
+            color: AppDesignTokens.paleBlue,
             shape: BoxShape.circle,
           ),
           todayTextStyle: TextStyle(
-            color: theme.colorScheme.primary,
+            color: AppDesignTokens.blue,
             fontWeight: FontWeight.bold,
           ),
           selectedDecoration: BoxDecoration(
-            color: theme.colorScheme.primary,
+            color: AppDesignTokens.navy,
             shape: BoxShape.circle,
+          ),
+          selectedTextStyle: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
           ),
         ),
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
@@ -113,19 +142,14 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             if (events.isEmpty) return null;
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: events.take(4).map((event) {
-                final ev = event as CalendarEvent;
-                Color markerColor = theme.colorScheme.primary;
-                try {
-                  markerColor = Color(int.parse(ev.color.replaceFirst('#', '0xff')));
-                } catch (_) {}
+              children: events.take(3).map((event) {
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 1.0),
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: markerColor,
+                    color: AppDesignTokens.blue,
                   ),
                 );
               }).toList(),
@@ -142,92 +166,168 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     required bool isAdmin,
     required ThemeData theme,
   }) {
-    return selectedDayEvents.isEmpty
-        ? const Center(
-            child: Text(
-              '등록된 일정이 없습니다.',
-              style: TextStyle(color: Colors.grey, fontSize: 15),
-            ),
-          )
-        : ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            itemCount: selectedDayEvents.length,
-            itemBuilder: (context, index) {
-              final event = selectedDayEvents[index];
-              final isNoticeLink = event.type == 'NOTICE';
-              Color eventColor = theme.colorScheme.primary;
-              try {
-                eventColor = Color(int.parse(event.color.replaceFirst('#', '0xff')));
-              } catch (_) {}
+    final selectedDate = _selectedDay ?? _focusedDay;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border(
-                    left: BorderSide(color: eventColor, width: 5),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+          child: Row(
+            children: [
+              Text(
+                '${selectedDate.month}월 ${selectedDate.day}일 일정',
+                style: const TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
-                child: ListTile(
-                  title: Text(
-                    event.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                '${selectedDayEvents.length}건',
+                style: const TextStyle(
+                  color: AppDesignTokens.blue,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: AppDesignTokens.divider),
+        Expanded(
+          child: selectedDayEvents.isEmpty
+              ? const Center(
+                  child: Text(
+                    '등록된 일정이 없습니다.',
+                    style: TextStyle(
+                      color: AppDesignTokens.muted,
+                      fontSize: 14,
+                    ),
                   ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (event.description != null && event.description!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, bottom: 4),
-                          child: Text(
-                            event.description!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                )
+              : ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                  itemCount: selectedDayEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = selectedDayEvents[index];
+                    final isNoticeLink = event.type == 'NOTICE';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: AppDesignTokens.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppDesignTokens.divider),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+                        leading: Container(
+                          width: 4,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isNoticeLink
+                                ? AppDesignTokens.blue
+                                : AppDesignTokens.navy,
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                      Text(
-                        '기간: ${event.startDate} ~ ${event.endDate}',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        title: Text(
+                          event.title,
+                          style: const TextStyle(
+                            color: AppDesignTokens.navy,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (event.description != null &&
+                                event.description!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 4,
+                                  bottom: 4,
+                                ),
+                                child: Text(
+                                  event.description!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppDesignTokens.muted,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            Text(
+                              '기간: ${event.startDate} ~ ${event.endDate}',
+                              style: const TextStyle(
+                                color: AppDesignTokens.subtle,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: isNoticeLink
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppDesignTokens.paleBlue,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '공지 연결',
+                                  style: TextStyle(
+                                    color: AppDesignTokens.blue,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              )
+                            : (isAdmin
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          tooltip: '일정 수정',
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 20,
+                                            color: AppDesignTokens.blue,
+                                          ),
+                                          onPressed: () =>
+                                              _showAddEditEventDialog(
+                                                event: event,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          tooltip: '일정 삭제',
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            size: 20,
+                                            color: AppDesignTokens.coral,
+                                          ),
+                                          onPressed: () =>
+                                              _confirmDelete(event.id),
+                                        ),
+                                      ],
+                                    )
+                                  : null),
+                        onTap: isNoticeLink && event.noticeId != null
+                            ? () => _navigateToNoticeDetail(event.noticeId!)
+                            : null,
                       ),
-                    ],
-                  ),
-                  trailing: isNoticeLink
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            '공지연동',
-                            style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      : (isAdmin
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
-                                  onPressed: () => _showAddEditEventDialog(event: event),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                                  onPressed: () => _confirmDelete(event.id),
-                                ),
-                              ],
-                            )
-                          : null),
-                  onTap: isNoticeLink && event.noticeId != null
-                      ? () => _navigateToNoticeDetail(event.noticeId!)
-                      : null,
+                    );
+                  },
                 ),
-              );
-            },
-          );
+        ),
+      ],
+    );
   }
 
   @override
@@ -235,16 +335,23 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
     final currentUser = authState.asData?.value;
-    final isAdmin = currentUser != null && (currentUser.role == 'ADMIN' || currentUser.role == 'SUPER_ADMIN');
+    final isAdmin =
+        currentUser != null &&
+        (currentUser.role == 'ADMIN' || currentUser.role == 'SUPER_ADMIN');
 
     final eventsAsync = ref.watch(calendarEventsProvider);
 
     return Scaffold(
+      backgroundColor: AppDesignTokens.background,
       body: eventsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('일정을 불러오는 중 오류가 발생했습니다: $err')),
+        error: (err, stack) =>
+            Center(child: Text('일정을 불러오는 중 오류가 발생했습니다: $err')),
         data: (allEvents) {
-          final selectedDayEvents = _getEventsForDay(_selectedDay ?? _focusedDay, allEvents);
+          final selectedDayEvents = _getEventsForDay(
+            _selectedDay ?? _focusedDay,
+            allEvents,
+          );
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -279,13 +386,13 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                         cursor: SystemMouseCursors.resizeLeftRight,
                         child: Container(
                           width: 10,
-                          color: Colors.grey.shade100,
+                          color: AppDesignTokens.background,
                           child: Center(
                             child: Container(
                               width: 3,
                               height: 50,
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade400,
+                                color: AppDesignTokens.divider,
                                 borderRadius: BorderRadius.circular(1.5),
                               ),
                             ),
@@ -334,13 +441,13 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                         cursor: SystemMouseCursors.resizeUpDown,
                         child: Container(
                           height: 12,
-                          color: Colors.grey.shade100,
+                          color: AppDesignTokens.background,
                           child: Center(
                             child: Container(
                               width: 45,
                               height: 3,
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade400,
+                                color: AppDesignTokens.divider,
                                 borderRadius: BorderRadius.circular(1.5),
                               ),
                             ),
@@ -365,6 +472,11 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               onPressed: () => _showAddEditEventDialog(),
               tooltip: '학사 일정 추가',
               child: const Icon(Icons.add),
@@ -392,9 +504,9 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('공지사항을 가져오는 데 실패했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('공지사항을 가져오는 데 실패했습니다.')));
       }
     }
   }
@@ -407,7 +519,10 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         title: const Text('일정 삭제'),
         content: const Text('선택한 학사 일정을 삭제하시겠습니까?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -423,11 +538,17 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   // 💡 학사 일정 신규 등록 및 수정 다이얼로그 (ColorPicker 탑재)
   void _showAddEditEventDialog({CalendarEvent? event}) {
     final titleController = TextEditingController(text: event?.title ?? '');
-    final descController = TextEditingController(text: event?.description ?? '');
-    
-    DateTime start = event != null ? DateTime.parse(event.startDate) : (_selectedDay ?? DateTime.now());
-    DateTime end = event != null ? DateTime.parse(event.endDate) : (_selectedDay ?? DateTime.now());
-    
+    final descController = TextEditingController(
+      text: event?.description ?? '',
+    );
+
+    DateTime start = event != null
+        ? DateTime.parse(event.startDate)
+        : (_selectedDay ?? DateTime.now());
+    DateTime end = event != null
+        ? DateTime.parse(event.endDate)
+        : (_selectedDay ?? DateTime.now());
+
     String selectedColor = event?.color ?? '#4A90E2';
 
     final colorsMap = {
@@ -449,11 +570,17 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
               children: [
                 TextField(
                   controller: titleController,
-                  decoration: const InputDecoration(labelText: '일정명', hintText: '예: 1학기 중간고사'),
+                  decoration: const InputDecoration(
+                    labelText: '일정명',
+                    hintText: '예: 1학기 중간고사',
+                  ),
                 ),
                 TextField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: '상세 설명', hintText: '예: 강의실 시험 공지 참고'),
+                  decoration: const InputDecoration(
+                    labelText: '상세 설명',
+                    hintText: '예: 강의실 시험 공지 참고',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 // 날짜 선택기
@@ -475,7 +602,9 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                             });
                           }
                         },
-                        child: Text('시작일:\n${start.year}-${start.month}-${start.day}'),
+                        child: Text(
+                          '시작일:\n${start.year}-${start.month}-${start.day}',
+                        ),
                       ),
                     ),
                     Expanded(
@@ -493,7 +622,9 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                             });
                           }
                         },
-                        child: Text('종료일:\n${end.year}-${end.month}-${end.day}'),
+                        child: Text(
+                          '종료일:\n${end.year}-${end.month}-${end.day}',
+                        ),
                       ),
                     ),
                   ],
@@ -501,10 +632,12 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                 const SizedBox(height: 16),
                 // 색상 선택 드롭다운
                 DropdownButtonFormField<String>(
-                  value: selectedColor,
+                  initialValue: selectedColor,
                   decoration: const InputDecoration(labelText: '구분 색상'),
                   items: colorsMap.entries.map((entry) {
-                    final colorValue = Color(int.parse(entry.value.replaceFirst('#', '0xff')));
+                    final colorValue = Color(
+                      int.parse(entry.value.replaceFirst('#', '0xff')),
+                    );
                     return DropdownMenuItem<String>(
                       value: entry.value,
                       child: Row(
@@ -513,7 +646,10 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                             width: 16,
                             height: 16,
                             margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: colorValue),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colorValue,
+                            ),
                           ),
                           Text(entry.key),
                         ],
@@ -530,19 +666,26 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('취소'),
+            ),
             TextButton(
               onPressed: () async {
                 final title = titleController.text.trim();
                 if (title.isEmpty) return;
-                
-                final startStr = "${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}";
-                final endStr = "${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}";
-                
+
+                final startStr =
+                    "${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}";
+                final endStr =
+                    "${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}";
+
                 Navigator.pop(ctx);
-                
+
                 if (event == null) {
-                  await ref.read(calendarNotifierProvider).createEvent(
+                  await ref
+                      .read(calendarNotifierProvider)
+                      .createEvent(
                         title,
                         descController.text.trim(),
                         startStr,
@@ -550,7 +693,9 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                         selectedColor,
                       );
                 } else {
-                  await ref.read(calendarNotifierProvider).updateEvent(
+                  await ref
+                      .read(calendarNotifierProvider)
+                      .updateEvent(
                         event.id,
                         title,
                         descController.text.trim(),
