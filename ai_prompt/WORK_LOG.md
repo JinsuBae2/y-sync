@@ -39,10 +39,10 @@
 - **무엇을(What)**: Flutter PWA 핵심 파일이 배포 직후 새 버전을 재검증하도록 Firebase `Cache-Control` 헤더를 추가했습니다.
 - **왜(Why)**: 운영 `main.dart.js`에는 새 커뮤니티 카드 코드가 포함됐지만 앱 셸과 서비스 워커가 `max-age=3600`으로 캐시돼 설치형 PWA에는 이전 화면이 남았기 때문입니다.
 - **어떻게(How)**: 앱 셸과 서비스 워커는 `no-store`까지 적용하고, 대용량 JavaScript는 ETag 조건부 재검증이 가능한 `no-cache`를 적용했습니다. JSON 설정을 직접 파싱하는 회귀 테스트로 핵심 경로의 헤더를 검증합니다.
-- **검증(Verification)**: 운영 번들에서 새 커뮤니티 카드 식별자를 확인했고 기존 Hosting 응답의 1시간 캐시 헤더를 재현했습니다. 수정 후 Firebase JSON 파싱, 캐시 헤더 회귀 테스트, 대상 Flutter 분석이 통과했습니다.
-- **추적(Tracking)**: 기능 커밋 `e0ec432`, 브랜치 `fix/pwa-cache-update`, PR 생성 전
-- **상태(Status)**: 로컬 구현·검증 완료, 원격 push 및 PR 진행 전, 운영 미배포
-- **위험 및 후속 작업(Risks/Follow-up)**: 이미 실행 중인 구형 서비스 워커는 최초 1회 앱 종료와 Safari 새로고침이 필요할 수 있습니다. 배포 후 실제 응답 헤더를 다시 확인합니다.
+- **검증(Verification)**: 운영 번들에서 새 커뮤니티 카드 식별자를 확인했고 기존 Hosting 응답의 1시간 캐시 헤더를 재현했습니다. Firebase JSON 파싱, 캐시 헤더 회귀 테스트, PR #16·#17 CI와 프론트엔드 Production Deploy가 통과했습니다. 운영의 `/`, `index.html`, 서비스 워커는 `no-cache, no-store`, 나머지 핵심 PWA 파일은 `no-cache` 응답을 확인했습니다.
+- **추적(Tracking)**: 기능 커밋 `e0ec432`, 문서 커밋 `dc5684d`, PR #16, `develop` 병합 커밋 `571ebf1`, 릴리스 PR #17, `main` 병합 커밋 `064c349`, Actions 실행 `32812490437`
+- **상태(Status)**: PR #16 및 릴리스 PR #17 병합, Firebase Hosting 운영 배포 및 헤더 검증 완료
+- **위험 및 후속 작업(Risks/Follow-up)**: 이미 실행 중인 구형 서비스 워커는 최초 1회 앱 종료와 Safari 새로고침이 필요할 수 있습니다. 이후 배포부터는 핵심 파일이 즉시 재검증됩니다.
 
 ---
 
