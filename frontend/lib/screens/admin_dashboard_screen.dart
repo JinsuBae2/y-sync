@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'admin_member_tab.dart';
+
+import '../theme/app_design_tokens.dart';
 import 'admin_approval_tab.dart';
+import 'admin_member_tab.dart';
 import 'admin_post_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -10,19 +12,36 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  int _selectedIndex = 0; // 데스크톱용 인덱스
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  int _selectedIndex = 0;
+
+  static const _destinations =
+      <({String label, String description, IconData icon})>[
+        (
+          label: '회원 관리',
+          description: '학생 계정과 권한',
+          icon: Icons.people_outline_rounded,
+        ),
+        (
+          label: '권한 승인',
+          description: '관리자 신청 처리',
+          icon: Icons.verified_user_outlined,
+        ),
+        (label: '콘텐츠 관리', description: '게시글과 신고', icon: Icons.article_outlined),
+      ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: _destinations.length, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      setState(() {
-        _selectedIndex = _tabController.index;
-      });
+      if (_tabController.indexIsChanging ||
+          _selectedIndex == _tabController.index) {
+        return;
+      }
+      setState(() => _selectedIndex = _tabController.index);
     });
   }
 
@@ -35,129 +54,115 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 900;
-        
-        if (isDesktop) {
-          return _buildDesktopLayout();
-        } else {
-          return _buildMobileLayout();
-        }
-      },
+      builder: (context, constraints) => constraints.maxWidth >= 900
+          ? _DesktopAdminShell(
+              selectedIndex: _selectedIndex,
+              onSelected: _selectDestination,
+              onExit: () => Navigator.pop(context),
+            )
+          : _MobileAdminShell(tabController: _tabController),
     );
   }
 
-  // 📱 모바일 레이아웃 (상단 TabBar + TabBarView)
-  Widget _buildMobileLayout() {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text(
-          '학과 관리자 페이지',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF164687),
-          labelColor: const Color(0xFF164687),
-          unselectedLabelColor: Colors.grey,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-          tabs: const [
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.people_alt_rounded, size: 18),
-                  SizedBox(width: 8),
-                  Text('학생 정보 관리'),
-                ],
-              ),
-            ),
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.how_to_reg_rounded, size: 18),
-                  SizedBox(width: 8),
-                  Text('관리자 승인 대기'),
-                ],
-              ),
-            ),
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.article_rounded, size: 18),
-                  SizedBox(width: 8),
-                  Text('게시글 관리'),
-                ],
-              ),
-            ),
-          ],
-        ),
+  void _selectDestination(int index) {
+    setState(() => _selectedIndex = index);
+    _tabController.animateTo(index);
+  }
+}
+
+class _MobileAdminShell extends StatelessWidget {
+  const _MobileAdminShell({required this.tabController});
+
+  final TabController tabController;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppDesignTokens.background,
+    appBar: AppBar(
+      backgroundColor: AppDesignTokens.background,
+      foregroundColor: AppDesignTokens.navy,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      titleSpacing: 0,
+      title: const Text(
+        '관리자',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          AdminMemberTab(isDesktop: false),
-          AdminApprovalTab(isDesktop: false),
-          AdminPostManagementScreen(isTabMode: true),
+      bottom: TabBar(
+        controller: tabController,
+        indicatorColor: AppDesignTokens.blue,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: AppDesignTokens.navy,
+        unselectedLabelColor: AppDesignTokens.muted,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        tabs: const [
+          Tab(text: '회원'),
+          Tab(text: '권한 승인'),
+          Tab(text: '콘텐츠'),
         ],
       ),
-    );
-  }
+    ),
+    body: TabBarView(
+      controller: tabController,
+      children: const [
+        AdminMemberTab(),
+        AdminApprovalTab(),
+        AdminPostManagementScreen(isTabMode: true),
+      ],
+    ),
+  );
+}
 
-  // 💻 데스크톱 레이아웃 (좌측 고정 사이드 바 + 우측 메인 작업 영역)
-  Widget _buildDesktopLayout() {
-    final themeColor = const Color(0xFF164687);
-    final darkNavy = const Color(0xFF0A192F);
+class _DesktopAdminShell extends StatelessWidget {
+  const _DesktopAdminShell({
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.onExit,
+  });
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      body: Row(
-        children: [
-          // 좌측 사이드바 네비게이션
-          Container(
-            width: 260,
-            color: darkNavy,
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppDesignTokens.background,
+    body: Row(
+      children: [
+        Container(
+          width: 248,
+          decoration: const BoxDecoration(
+            color: AppDesignTokens.surface,
+            border: Border(right: BorderSide(color: AppDesignTokens.divider)),
+          ),
+          child: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 사이드바 헤더 영역
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-                  color: darkNavy.withBlue(60),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(22, 24, 22, 26),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.sync_rounded, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
+                      _AdminLogo(),
+                      SizedBox(width: 12),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Y-Sync Admin',
-                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                              'Y-Sync',
+                              style: TextStyle(
+                                color: AppDesignTokens.navy,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
-                            SizedBox(height: 2),
                             Text(
-                              '소프트웨어융합과',
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                              '관리자 콘솔',
+                              style: TextStyle(
+                                color: AppDesignTokens.muted,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
@@ -165,136 +170,157 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                
-                // 네비게이션 메뉴들
-                _buildSidebarItem(
-                  index: 0,
-                  icon: Icons.people_alt_rounded,
-                  title: '학생 정보 관리',
-                  activeColor: themeColor,
-                ),
-                _buildSidebarItem(
-                  index: 1,
-                  icon: Icons.how_to_reg_rounded,
-                  title: '관리자 승인 대기',
-                  activeColor: themeColor,
-                ),
-                _buildSidebarItem(
-                  index: 2,
-                  icon: Icons.article_rounded,
-                  title: '전체 게시글 관리',
-                  activeColor: themeColor,
-                ),
-                
+                for (
+                  var index = 0;
+                  index < _AdminDashboardScreenState._destinations.length;
+                  index++
+                )
+                  _SidebarDestination(
+                    destination:
+                        _AdminDashboardScreenState._destinations[index],
+                    selected: selectedIndex == index,
+                    onTap: () => onSelected(index),
+                  ),
                 const Spacer(),
-                
-                // 뒤로가기 (마이페이지로 이동)
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.logout_rounded, size: 16),
+                    onPressed: onExit,
+                    icon: const Icon(Icons.close_rounded, size: 18),
                     label: const Text('관리자 종료'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white30),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      foregroundColor: AppDesignTokens.navy,
+                      side: const BorderSide(color: AppDesignTokens.divider),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          
-          // 우측 메인 영역
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 상단 헤더
-                Container(
-                  height: 70,
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _selectedIndex == 0
-                            ? '학생 정보 관리 대시보드'
-                            : (_selectedIndex == 1 ? '관리자 승인 처리 패널' : '전체 게시글 모니터링 타워'),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black87),
-                      ),
-                      Text(
-                        '운영 모드: 데스크톱 브라우저',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 74,
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                alignment: Alignment.centerLeft,
+                decoration: const BoxDecoration(
+                  color: AppDesignTokens.surface,
+                  border: Border(
+                    bottom: BorderSide(color: AppDesignTokens.divider),
                   ),
                 ),
-                
-                // 내용 본문
-                Expanded(
-                  child: IndexedStack(
-                    index: _selectedIndex,
-                    children: const [
-                      AdminMemberTab(isDesktop: true),
-                      AdminApprovalTab(isDesktop: true),
-                      AdminPostManagementScreen(isTabMode: true),
-                    ],
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _AdminDashboardScreenState
+                          ._destinations[selectedIndex]
+                          .label,
+                      style: const TextStyle(
+                        color: AppDesignTokens.navy,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _AdminDashboardScreenState
+                          ._destinations[selectedIndex]
+                          .description,
+                      style: const TextStyle(
+                        color: AppDesignTokens.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: IndexedStack(
+                  index: selectedIndex,
+                  children: const [
+                    AdminMemberTab(isDesktop: true),
+                    AdminApprovalTab(isDesktop: true),
+                    AdminPostManagementScreen(isTabMode: true),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildSidebarItem({
-    required int index,
-    required IconData icon,
-    required String title,
-    required Color activeColor,
-  }) {
-    final isSelected = _selectedIndex == index;
+class _AdminLogo extends StatelessWidget {
+  const _AdminLogo();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 40,
+    height: 40,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: AppDesignTokens.paleBlue,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: const Icon(Icons.sync_rounded, color: AppDesignTokens.blue),
+  );
+}
+
+class _SidebarDestination extends StatelessWidget {
+  const _SidebarDestination({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ({String label, String description, IconData icon}) destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+    child: Material(
+      color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedIndex = index;
-            _tabController.index = index;
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: isSelected ? activeColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
-              Icon(icon, color: isSelected ? Colors.white : Colors.white70, size: 20),
-              const SizedBox(width: 16),
+              Icon(
+                destination.icon,
+                size: 20,
+                color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
+              ),
+              const SizedBox(width: 12),
               Text(
-                title,
+                destination.label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white70,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: selected
+                      ? AppDesignTokens.navy
+                      : AppDesignTokens.muted,
                   fontSize: 14,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
