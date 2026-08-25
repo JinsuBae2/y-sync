@@ -28,7 +28,7 @@ class MyComment {
       category: json['category'],
       postId: json['postId'],
       createdAt: json['createdAt'],
-      isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
+      isDeleted: json['isDeleted'] ?? json['deleted'] ?? false,
       deletionReason: json['deletionReason'],
     );
   }

@@ -37,7 +37,7 @@ class Comment {
       authorName: json['authorName'] ?? '',
       createdAt: json['createdAt'] ?? '',
       updatedAt: json['updatedAt'],
-      isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
+      isDeleted: json['isDeleted'] ?? json['deleted'] ?? false,
       deletionReason: json['deletionReason'],
       parentId: json['parentId'],
       children: json['children'] != null

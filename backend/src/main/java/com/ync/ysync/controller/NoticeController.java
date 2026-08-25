@@ -1,5 +1,7 @@
 package com.ync.ysync.controller;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.MemberRole;
 import com.ync.ysync.domain.Notice;
@@ -131,6 +133,8 @@ public class NoticeController {
         private String content;
         private String noticeType; // Optional, can be null
         private Grade targetGrade;
+        @JsonProperty("isPinned")
+        @JsonAlias("pinned")
         private boolean isPinned;
         private java.time.LocalDate eventStartDate;
         private java.time.LocalDate eventEndDate;

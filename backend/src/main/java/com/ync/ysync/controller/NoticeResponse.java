@@ -1,5 +1,6 @@
 package com.ync.ysync.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ync.ysync.domain.Grade;
 import com.ync.ysync.domain.Notice;
 import lombok.AccessLevel;
@@ -20,12 +21,18 @@ public class NoticeResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String targetGrade;
+    @Getter(AccessLevel.NONE)
     private boolean isPinned;
     private long viewCount;
     private long commentCount;
     private java.util.List<String> imageUrls; // 💡 추가
     private java.time.LocalDate eventStartDate;
     private java.time.LocalDate eventEndDate;
+
+    @JsonProperty("isPinned")
+    public boolean isPinned() {
+        return isPinned;
+    }
 
     @Builder
     public NoticeResponse(Long id, String title, String content, String authorName, String noticeType, LocalDateTime createdAt, LocalDateTime updatedAt, String targetGrade, boolean isPinned, long viewCount, long commentCount, java.util.List<String> imageUrls, java.time.LocalDate eventStartDate, java.time.LocalDate eventEndDate) {

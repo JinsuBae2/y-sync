@@ -45,13 +45,15 @@ class CommunityPost {
       authorName: json['authorName'],
       memberId: json['memberId'],
       createdAt: json['createdAt'],
-      isDeleted: json['deleted'] ?? json['isDeleted'] ?? false,
+      isDeleted: json['isDeleted'] ?? json['deleted'] ?? false,
       deletionReason: json['deletionReason'],
       targetGrade: json['targetGrade'] ?? 'ALL',
-      isPinned: json['isPinned'] ?? false,
+      isPinned: json['isPinned'] ?? json['pinned'] ?? false,
       viewCount: json['viewCount'] ?? 0,
       commentCount: json['commentCount'] ?? 0,
-      imageUrls: json['imageUrls'] != null ? List<String>.from(json['imageUrls']) : null,
+      imageUrls: json['imageUrls'] != null
+          ? List<String>.from(json['imageUrls'])
+          : null,
     );
   }
 }

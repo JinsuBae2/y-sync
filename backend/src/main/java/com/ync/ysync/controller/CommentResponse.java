@@ -1,5 +1,6 @@
 package com.ync.ysync.controller;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ync.ysync.domain.Comment;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -22,12 +23,18 @@ public class CommentResponse {
     private String authorName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @Getter(AccessLevel.NONE)
     private boolean isDeleted;
     private String deletionReason;
     private Long parentId; // 💡 부모 댓글 ID 추가
     
     @Setter
     private List<CommentResponse> children = new ArrayList<>();
+
+    @JsonProperty("isDeleted")
+    public boolean isDeleted() {
+        return isDeleted;
+    }
 
     @Builder
     public CommentResponse(Long id, String content, Long noticeId, Long communityPostId, Long memberId, String authorName, LocalDateTime createdAt, LocalDateTime updatedAt, boolean isDeleted, String deletionReason, Long parentId) {
