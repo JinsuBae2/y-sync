@@ -63,11 +63,18 @@ class NotificationCenterScreen extends ConsumerWidget {
   }
 
   Future<void> _markAllAsRead(BuildContext context, WidgetRef ref) async {
-    await ref.read(notificationsProvider.notifier).markAllAsRead();
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('모든 알림을 읽음 처리했습니다.')));
+    try {
+      await ref.read(notificationsProvider.notifier).markAllAsRead();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('모든 알림을 읽음 처리했습니다.')));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('알림 읽음 처리에 실패했습니다.')));
+    }
   }
 }
 
@@ -84,7 +91,9 @@ class _NotificationList extends ConsumerWidget {
 
     return RefreshIndicator(
       color: AppDesignTokens.blue,
-      onRefresh: () async => ref.invalidate(notificationsProvider),
+      onRefresh: () async {
+        final _ = await ref.refresh(notificationsProvider.future);
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
