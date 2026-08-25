@@ -21,25 +21,21 @@ class ContentFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 36,
+      height: 44,
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: AppDesignTokens.paleBlue,
-              borderRadius: BorderRadius.circular(18),
-            ),
+          SizedBox(
+            width: 46,
             child: Row(
               children: [
-                Icon(icon, size: 15, color: AppDesignTokens.blue),
-                const SizedBox(width: 5),
+                Icon(icon, size: 16, color: AppDesignTokens.muted),
+                const SizedBox(width: 4),
                 Text(
                   label,
                   style: const TextStyle(
-                    color: AppDesignTokens.blue,
+                    color: AppDesignTokens.muted,
                     fontSize: 12,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -47,64 +43,70 @@ class ContentFilterBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: options.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 7),
-              itemBuilder: (context, index) {
-                final option = options[index];
-                final selected = option.$1 == selectedValue;
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => onChanged(option.$1),
-                    borderRadius: BorderRadius.circular(18),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      curve: Curves.easeOut,
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? AppDesignTokens.blue
-                            : AppDesignTokens.surface,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: selected
-                              ? AppDesignTokens.blue
-                              : AppDesignTokens.divider,
-                        ),
-                        boxShadow: selected
-                            ? [
-                                BoxShadow(
-                                  color: AppDesignTokens.blue.withValues(
-                                    alpha: 0.18,
-                                  ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Text(
-                        option.$2,
-                        style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : AppDesignTokens.muted,
-                          fontSize: 12,
-                          fontWeight: selected
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                        ),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppDesignTokens.divider),
+              ),
+              child: Row(
+                children: [
+                  for (final option in options)
+                    Expanded(
+                      child: _FilterOption(
+                        label: option.$2,
+                        selected: option.$1 == selectedValue,
+                        onTap: () => onChanged(option.$1),
                       ),
                     ),
-                  ),
-                );
-              },
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FilterOption extends StatelessWidget {
+  const _FilterOption({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }
