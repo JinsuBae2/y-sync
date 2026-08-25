@@ -98,7 +98,11 @@ void main() {
           ),
         ],
         child: MaterialApp(
-          home: HomeScreen(onOpenCommunity: () {}, onOpenSchedule: () {}),
+          home: HomeScreen(
+            onOpenNotices: () {},
+            onOpenCommunity: () {},
+            onOpenSchedule: () {},
+          ),
         ),
       ),
     );

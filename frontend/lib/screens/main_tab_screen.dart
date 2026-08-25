@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_design_tokens.dart';
 import 'community_list_screen.dart';
 import 'home_screen.dart';
+import 'notice_list_screen.dart';
 import 'schedule_tab_screen.dart';
 import 'mypage_screen.dart';
 
@@ -58,9 +59,11 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
     final pageController = _getOrCreatePageController(_currentIndex);
     final screens = <Widget>[
       HomeScreen(
-        onOpenCommunity: () => _selectTab(1),
-        onOpenSchedule: () => _selectTab(2),
+        onOpenNotices: () => _selectTab(1),
+        onOpenCommunity: () => _selectTab(2),
+        onOpenSchedule: () => _selectTab(3),
       ),
+      const NoticeListScreen(),
       const CommunityListScreen(),
       const ScheduleTabScreen(),
       const MyPageScreen(),
@@ -134,18 +137,24 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
                       _buildSidebarItem(0, Icons.home_rounded, '홈', themeColor),
                       _buildSidebarItem(
                         1,
+                        Icons.campaign_outlined,
+                        '공지사항',
+                        themeColor,
+                      ),
+                      _buildSidebarItem(
+                        2,
                         Icons.forum_outlined,
                         '커뮤니티',
                         themeColor,
                       ),
                       _buildSidebarItem(
-                        2,
+                        3,
                         Icons.calendar_month_outlined,
                         '일정 및 시간표',
                         themeColor,
                       ),
                       _buildSidebarItem(
-                        3,
+                        4,
                         Icons.person_outline_rounded,
                         '내정보',
                         themeColor,
@@ -215,6 +224,11 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home_rounded),
                     label: '홈',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.campaign_outlined),
+                    selectedIcon: Icon(Icons.campaign_rounded),
+                    label: '공지',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.forum_outlined),
