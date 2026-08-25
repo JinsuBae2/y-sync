@@ -31,6 +31,21 @@
 
 ---
 
+## 2026-08-25 - Firebase Hosting PWA 캐시 갱신 정책 보완
+
+- **누가(Who)**: 배진수(운영 PWA 구버전 화면 제보), Codex(원인 검증·설정 수정·테스트·문서화)
+- **언제(When)**: 2026-08-25, Asia/Seoul
+- **어디서(Where)**: `fix/pwa-cache-update` 브랜치, Firebase Hosting 설정과 Flutter 설정 회귀 테스트
+- **무엇을(What)**: Flutter PWA 핵심 파일이 배포 직후 새 버전을 재검증하도록 Firebase `Cache-Control` 헤더를 추가했습니다.
+- **왜(Why)**: 운영 `main.dart.js`에는 새 커뮤니티 카드 코드가 포함됐지만 앱 셸과 서비스 워커가 `max-age=3600`으로 캐시돼 설치형 PWA에는 이전 화면이 남았기 때문입니다.
+- **어떻게(How)**: 앱 셸과 서비스 워커는 `no-store`까지 적용하고, 대용량 JavaScript는 ETag 조건부 재검증이 가능한 `no-cache`를 적용했습니다. JSON 설정을 직접 파싱하는 회귀 테스트로 핵심 경로의 헤더를 검증합니다.
+- **검증(Verification)**: 운영 번들에서 새 커뮤니티 카드 식별자를 확인했고 기존 Hosting 응답의 1시간 캐시 헤더를 재현했습니다. 수정 후 Firebase JSON 파싱, 캐시 헤더 회귀 테스트, 대상 Flutter 분석이 통과했습니다.
+- **추적(Tracking)**: 기능 커밋 `e0ec432`, 브랜치 `fix/pwa-cache-update`, PR 생성 전
+- **상태(Status)**: 로컬 구현·검증 완료, 원격 push 및 PR 진행 전, 운영 미배포
+- **위험 및 후속 작업(Risks/Follow-up)**: 이미 실행 중인 구형 서비스 워커는 최초 1회 앱 종료와 Safari 새로고침이 필요할 수 있습니다. 배포 후 실제 응답 헤더를 다시 확인합니다.
+
+---
+
 ## 2026-08-25 - 커뮤니티 게시글 카드 구분 및 즐겨찾기 정렬 개선
 
 - **누가(Who)**: 배진수(화면 문제 제보·검토), Codex(UI 수정·회귀 테스트·문서화)

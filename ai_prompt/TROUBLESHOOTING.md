@@ -143,3 +143,17 @@ public class MemberProfileController {
 - 모바일에서는 고정 세로 비율과 드래그 구분선을 제거하고 달력 카드의 실제 높이를 먼저 배치합니다.
 - `TableCalendar`의 `sixWeekMonthsEnforced`를 활성화해 월 변경에도 달력 높이가 흔들리지 않게 하고, 가용 높이가 작은 화면에서는 행 높이만 안전 범위로 줄입니다.
 - 일정 목록만 남은 영역에서 확장되도록 구성하고, 모바일 위젯 테스트에서 해당 월의 마지막 날짜가 일정 헤더 위에 노출되는지 검증합니다.
+
+---
+
+## 8. Firebase 배포 후 설치형 PWA에 이전 화면이 남는 문제 해결
+
+### 문제 현황
+- **증상**: Firebase Hosting 배포와 운영 번들 갱신이 성공했는데도 홈 화면에 설치한 PWA에서 이전 UI가 계속 표시됐습니다.
+- **원인**: `index.html`, `main.dart.js`, `flutter_service_worker.js`가 기본 `Cache-Control: max-age=3600`으로 제공되어 브라우저와 서비스 워커가 최대 1시간 이전 앱 셸을 재사용할 수 있었습니다.
+
+### 해결 방안
+- Firebase Hosting에서 `/`, `index.html`, `flutter_service_worker.js`는 `no-cache, no-store, must-revalidate`로 설정합니다.
+- `flutter_bootstrap.js`, `main.dart.js`, `version.json`, `manifest.json`은 `no-cache, must-revalidate`로 설정해 ETag 조건부 요청은 유지합니다.
+- `firebase_hosting_config_test.dart`가 핵심 파일의 재검증 헤더를 CI에서 보호합니다.
+- 이미 구버전을 실행 중인 설치형 PWA는 앱을 완전히 종료하고 Safari에서 운영 URL을 새로고침한 뒤 다시 실행합니다. 그래도 갱신되지 않을 때만 해당 사이트 데이터 또는 설치된 PWA를 제거하고 다시 추가합니다.
