@@ -16,15 +16,18 @@
 * **커밋 전 빌드 검증**: 커밋을 날리기 직전 반드시 백엔드/프론트엔드의 컴파일 빌드 테스트를 통과했는지 확인해야 합니다. 빌드가 깨진 커밋은 원격 저장소에 Push되어서는 안 됩니다.
 
 ### C. 백엔드/프론트엔드 빌드 검증 파이프라인
-변경 사항이 생기면 아래 명령어로 빌드 안정성을 사전 검사합니다.
-* **백엔드 수정 시**: `y-sync/backend` 경로에서 `./gradlew compileJava` 수행하여 무결성 확인.
-* **프론트엔드 수정 시**: `y-sync/frontend` 경로에서 `flutter build web --release` 최종 통과 확인. (※ 빌드는 불필요한 배포 지연을 방지하기 위해 개발 완료 후 마지막에 한 번만 실행하는 것을 권장합니다.)
+변경 사항이 생기면 아래 명령어로 테스트와 빌드 안정성을 사전 검사합니다.
+* **백엔드 수정 시**: `y-sync/backend` 경로에서 가까운 단위 테스트를 먼저 실행하고, 완료 시 `./gradlew test bootJar`로 전체 검증합니다.
+* **프론트엔드 수정 시**: `y-sync/frontend` 경로에서 가까운 테스트와 `flutter analyze`를 먼저 실행하고, 완료 시 `flutter test && flutter build web --release`로 전체 검증합니다.
+* **설정 수정 시**: `docker compose -f docker/docker-compose.yml config`와 CI의 운영 포트 노출 검사를 통과해야 합니다.
 
-### D. 윈도우 파워쉘 환경 및 보안 정책 우회 규칙
-* **파워쉘 스크립트 차단 에러 대응**: 윈도우 파워쉘 보안 정책(`PSSecurityException`)으로 인해 `firebase` 또는 `npx` 명령 실행 시 스크립트 로드 불가 오류가 발생할 수 있습니다.
-* **해결책**: 명령어 뒤에 반드시 **`.cmd` 배치 파일 확장자**를 명시하여 호출합니다.
-  - ❌ `firebase deploy --only hosting` (에러 발생 가능)
-  - ⭕ `firebase.cmd deploy --only hosting` (정상 작동 보장)
+### D. OS별 CLI 환경 및 명령 우회 규칙 (Windows vs Mac)
+* **Windows 파워쉘 스크립트 우회**: 윈도우 파워쉘 보안 정책(`PSSecurityException`)으로 인해 `firebase` 명령 실행 시 `.cmd` 확장자를 붙여 호출합니다.
+  - ❌ Windows: `firebase deploy --only hosting` (에러 발생 가능)
+  - ⭕ Windows: `firebase.cmd deploy --only hosting` (정상 작동 보장)
+* **macOS (Mac) 터미널 환경**: Mac Zsh/Bash 터미널 환경에서는 `.cmd` 없이 표준 CLI 명령어를 사용합니다.
+  - ⭕ macOS: `firebase deploy --only hosting`
+  - 💡 Mac 환경 세팅 및 전체 이관 방법은 [MAC_MIGRATION_GUIDE.md](./MAC_MIGRATION_GUIDE.md) 가이드 문서를 참고하십시오.
 
 ### E. 컨트롤러 NPE 방지 및 JWT 가드 규칙
 * **빈(Bean) 주입 규칙**: 컨트롤러 내부 핸들러 메소드 매개변수에 `AuthUtil`을 직접 선언하여 요청 맵핑 시 null이 삽입되는 버그를 원천 차단하십시오. 반드시 클래스 필드 주입과 생성자(`@RequiredArgsConstructor`) 주입을 사용해야 합니다.
@@ -89,6 +92,8 @@
 * **DTO 정의**:
   - Request DTO는 요청 성격이 명확히 보이도록 접미사를 맞춥니다 (예: `ReportDismissRequest`).
   - Response DTO는 응답 구조를 명확히 투영하도록 설계합니다 (예: `AdminReportSummaryResponse`).
+  - boolean 필드의 공식 JSON 키가 `isX`라면 `@JsonProperty("isX")`를 명시하고 Jackson 직렬화 테스트를 추가합니다. Lombok이 `isX`를 `x`로 자동 변경하도록 두지 않습니다.
+  - 점진 배포 중인 Flutter 파서는 공식 `isX` 키를 우선 사용하고 기존 `x` 키를 fallback으로 허용하며, 모델 테스트로 두 형식을 모두 검증합니다.
 * **JPA 제약 조건 명시**: 엔티티 필드 선언 시 `@Column(nullable = false, length = ...)` 등 데이터베이스 수준의 제약 조건을 명시적으로 기입하여 데이터 정합성을 보장합니다.
 
 ### C. 프론트엔드 코딩 규칙 (Dart/Flutter)
@@ -153,6 +158,7 @@
 * **`develop`**: 기능 개발을 병합(Merge)하고 통합 테스트(CI/CD)를 돌리는 메인 개발 브랜치입니다.
 * **`feature/[기능명]` (or `feat/[기능명]`)**: 개별 기능 단위로 개발을 진행하는 임시 브랜치입니다. 완료 시 `develop` 브랜치로 PR을 날리고 병합 후 삭제합니다.
 * **`hotfix/[버그명]`**: 상용 서버 장애 발생 시 즉각 대응하는 긴급 수정용 임시 브랜치입니다.
+* **배포 흐름**: 기능 브랜치 → `develop` PR에서 CI를 통과한 뒤 병합하고, 릴리스 시 `develop` → `main` PR을 병합합니다. `main` push가 운영 배포를 시작하며 GitHub `production` Environment 승인 뒤 Oracle VM과 Firebase Hosting에 반영됩니다.
 
 ### B. 커밋 메시지 규칙 (Commit Message Conventions)
 커밋 메시지는 **Conventional Commits** 사양을 따르며 한글로 작성합니다.
@@ -165,6 +171,6 @@
 * **`chore`**: 빌드 설정, 의존성 라이브러리 추가/수정
 
 ### C. 머지 및 협업 약속 (Merge & Rebase Rules)
-* **머지 전 자가 빌드 검증**: `develop` 브랜치로 PR을 올리기 전에 반드시 백엔드 `./gradlew compileJava` 및 프론트엔드 `flutter build web --release`가 로컬에서 성공적으로 통과되는지 강제 확인합니다.
+* **머지 전 자가 빌드 검증**: `develop` 브랜치로 PR을 올리기 전에 반드시 백엔드 `./gradlew test bootJar` 및 프론트엔드 `flutter analyze`, `flutter test`, `flutter build web --release`가 로컬에서 성공적으로 통과되는지 확인합니다.
 * **머지 전 싱크업 (Sync-up)**: 본인의 브랜치를 머지하기 전, `git pull origin develop`를 먼저 수행하여 원격 최신 변경사항을 미리 충돌 해결 및 병합한 후에 완료해야 히스토리가 깨지지 않습니다.
 * **커밋 쪼개기**: 백엔드, 프론트엔드, 문서를 한 번에 섞어서 거대 커밋으로 올리는 것을 금지합니다. 피처 단계별로 빌드 확인 후 개별적인 분리 커밋을 준수합니다.

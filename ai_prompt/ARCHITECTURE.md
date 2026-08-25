@@ -7,7 +7,7 @@
 ## 1. 기술 스택 요약 (Technology Stack)
 
 ### 백엔드 (Backend)
-* **Framework**: Spring Boot 3.x (Java 17)
+* **Framework**: Spring Boot 4.0.3 (Java 21)
 * **Security**: Spring Security (JWT Stateless Authentication)
 * **Database / ORM**: H2 Database (개발/테스트) / MySQL (프로덕션), Spring Data JPA
 * **Build Tool**: Gradle
@@ -17,6 +17,11 @@
 * **State Management**: Flutter Riverpod 3.x (Notifier, FutureProvider 기반)
 * **Network Client**: Dio (Interceptors를 이용한 JWT 헤더 및 로깅 공통화)
 * **Build Tool**: Flutter Web Builder
+
+### API 데이터 계약 경계
+* 백엔드는 JPA 엔티티를 외부 응답으로 직접 노출하지 않고 Request/Response DTO를 API 경계로 사용합니다.
+* `isRead`, `isPinned`, `isDeleted`, `isAuthorSuspended`와 같은 boolean 필드는 DTO에 `@JsonProperty`를 명시해 Lombok getter 이름과 무관하게 JSON 키를 고정합니다.
+* Flutter 모델은 단계적 배포 중 호환성을 위해 공식 `isX` 키를 우선 파싱하고 이전 `x` 키를 fallback으로 처리합니다. 양쪽 계약은 백엔드 Jackson 테스트와 Flutter 모델 테스트로 보호합니다.
 
 ---
 
@@ -157,9 +162,11 @@ VALUES
 
 ## 5. 서버 인프라 및 배포 아키텍처 (Production Infrastructure)
 
-Y-Sync 백엔드는 리눅스 VM(Oracle Cloud 1GB RAM 프리티어 환경 맞춤) 상에서 **Docker Compose**를 통해 4개의 컨테이너가 마이크로서비스 형태로 협력 동작합니다.
+Y-Sync 백엔드는 리눅스 VM(Oracle Cloud 1GB RAM 프리티어 환경 맞춤) 상에서 **Docker Compose**를 통해 애플리케이션과 운영 인프라를 포함한 4개의 컨테이너로 동작합니다.
 
 ```
+
+운영 배포는 `main` 브랜치 push를 트리거로 GitHub Actions의 `Production Deploy` 워크플로가 수행합니다. 변경 파일을 기준으로 백엔드와 프론트엔드를 분리 빌드하고, `production` Environment 승인 후 백엔드는 SSH로 Oracle VM에 배포하며 프론트엔드는 Firebase Hosting에 배포합니다. 기능 브랜치에서 `develop`으로 가는 PR은 `CI` 워크플로에서 백엔드 테스트/JAR 빌드, Flutter 분석/테스트/Web 빌드, Docker Compose 설정 검사를 통과해야 합니다.
                   [외부 인터넷 클라이언트]
                              │
                       80/443 (HTTP/S)
