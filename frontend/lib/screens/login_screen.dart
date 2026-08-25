@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'splash_screen.dart';
-import 'social_signup_screen.dart';
 import '../theme/app_design_tokens.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -42,67 +39,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _loginWithGoogle() async {
-    try {
-      setState(() => _isLoading = true);
-      final GoogleSignIn googleSignIn = kIsWeb
-          ? GoogleSignIn(
-              clientId:
-                  '286554208893-9glm4n7ul7qo21lin4k8eesfnpku81ah.apps.googleusercontent.com',
-            )
-          : GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) return; // User canceled
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final String token = googleAuth.idToken ?? googleAuth.accessToken ?? '';
-      if (token.isEmpty) throw Exception('No Token');
-
-      await _handleSocialLoginResult(token, 'GOOGLE');
-    } catch (e) {
-      String errorMsg = '구글 로그인에 실패했습니다.';
-      if (e is Exception) {
-        final msg = e.toString().replaceAll('Exception: ', '');
-        if (msg.isNotEmpty && msg != 'Exception') errorMsg = msg;
-      }
-      debugPrint('Google Login Error: $e');
-      _showErrorSnackBar(errorMsg);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _handleSocialLoginResult(
-    String accessToken,
-    String provider,
-  ) async {
-    try {
-      final result = await ref
-          .read(authProvider.notifier)
-          .socialLogin(accessToken, provider);
-      if (result != null) {
-        // 202 Accepted: 미가입자, 추가 정보 입력 필요
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => SocialSignupScreen(
-                socialId: result['socialId'],
-                provider: result['provider'],
-              ),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const SplashScreen()),
-          );
-        }
-      }
-    } catch (e) {
-      rethrow;
-    }
+  Future<void> _showSocialLoginComingSoon() async {
+    // 💡 비활성화된 소셜 인증 API를 호출하지 않고 향후 지원 예정임을 안내합니다.
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: const Text(
+          '소셜 로그인 준비 중',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: const Text(
+          'Google 로그인은 추후 업데이트에서 제공할 예정입니다.\n지금은 학번으로 로그인해 주세요.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   // 기존 계정 연결 예외 흐름을 위해 유지합니다.
@@ -478,7 +436,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: AppDesignTokens.surface,
                         textColor: AppDesignTokens.navy,
                         borderColor: AppDesignTokens.divider,
-                        onPressed: _loginWithGoogle,
+                        onPressed: _showSocialLoginComingSoon,
                         iconFallback: Icons.g_mobiledata_rounded,
                       ),
                       const SizedBox(height: 24),

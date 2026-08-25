@@ -11,15 +11,16 @@ import '../providers/notice_provider.dart';
 import '../widgets/notification_action_button.dart';
 import 'community_detail_screen.dart';
 import 'notice_detail_screen.dart';
-import 'notice_list_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({
     super.key,
+    required this.onOpenNotices,
     required this.onOpenCommunity,
     required this.onOpenSchedule,
   });
 
+  final VoidCallback onOpenNotices;
   final VoidCallback onOpenCommunity;
   final VoidCallback onOpenSchedule;
 
@@ -69,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
                   _SectionHeader(
                     title: '최근 공지',
                     actionLabel: '전체 보기',
-                    onAction: () => _openNoticeList(context, ref),
+                    onAction: () => _openNoticeList(ref),
                   ),
                   const SizedBox(height: 10),
                   _buildRecentNotices(context, ref, noticesAsync),
@@ -247,13 +248,10 @@ class HomeScreen extends ConsumerWidget {
     ref.invalidate(homeCommunityPostsProvider);
   }
 
-  void _openNoticeList(BuildContext context, WidgetRef ref) {
+  void _openNoticeList(WidgetRef ref) {
     ref.read(searchKeywordProvider.notifier).updateKeyword('');
     ref.read(noticeGradeProvider.notifier).updateGrade('ALL');
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const NoticeListScreen()),
-    );
+    onOpenNotices();
   }
 
   static Notice? _featuredNotice(List<Notice> notices) {
