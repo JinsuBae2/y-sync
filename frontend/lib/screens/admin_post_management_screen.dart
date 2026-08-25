@@ -5,16 +5,20 @@ import '../providers/community_provider.dart';
 import '../providers/admin_provider.dart';
 import '../providers/comment_provider.dart';
 import 'community_detail_screen.dart';
+import '../theme/app_design_tokens.dart';
 
 class AdminPostManagementScreen extends ConsumerStatefulWidget {
   final bool isTabMode;
   const AdminPostManagementScreen({super.key, this.isTabMode = false});
 
   @override
-  ConsumerState<AdminPostManagementScreen> createState() => _AdminPostManagementScreenState();
+  ConsumerState<AdminPostManagementScreen> createState() =>
+      _AdminPostManagementScreenState();
 }
 
-class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementScreen> with SingleTickerProviderStateMixin {
+class _AdminPostManagementScreenState
+    extends ConsumerState<AdminPostManagementScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -40,50 +44,65 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
   @override
   Widget build(BuildContext context) {
     final postsAsync = ref.watch(communityPostsProvider);
-    final themeColor = const Color(0xFF164687);
+    const themeColor = AppDesignTokens.blue;
 
     final content = Column(
       children: [
         if (widget.isTabMode) ...[
           Container(
-            color: Colors.white,
+            color: AppDesignTokens.surface,
             child: TabBar(
               controller: _tabController,
               indicatorColor: themeColor,
               labelColor: themeColor,
-              unselectedLabelColor: Colors.grey,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+              unselectedLabelColor: AppDesignTokens.muted,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.normal,
+                fontSize: 14,
+              ),
               tabs: const [
-                Tab(text: '전체 게시글'),
-                Tab(text: '삭제된 게시글 복구'),
-                Tab(text: '신고 누적 블랙리스트'),
+                Tab(text: '전체'),
+                Tab(text: '삭제됨'),
+                Tab(text: '신고'),
               ],
             ),
           ),
-          const Divider(height: 1, color: Colors.black12),
+          const Divider(height: 1, color: AppDesignTokens.divider),
         ],
         // 💡 검색 바 영역
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Colors.white,
+          color: AppDesignTokens.surface,
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
               hintText: '제목, 내용, 작성자 검색...',
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: AppDesignTokens.muted,
+              ),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: Colors.grey),
+                      icon: const Icon(
+                        Icons.clear_rounded,
+                        color: AppDesignTokens.muted,
+                      ),
                       onPressed: () => _searchController.clear(),
                     )
                   : null,
               filled: true,
-              fillColor: Colors.grey.shade100,
-              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              fillColor: AppDesignTokens.background,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 0,
+                horizontal: 16,
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppDesignTokens.divider),
               ),
             ),
           ),
@@ -107,20 +126,31 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                   // 탭 1: 전체 게시글 목록
                   _buildAllPostsTab(filtered),
                   // 탭 2: 삭제된 게시글 복구 목록
-                  _buildDeletedPostsTab(filtered.where((p) => p.isDeleted).toList()),
+                  _buildDeletedPostsTab(
+                    filtered.where((p) => p.isDeleted).toList(),
+                  ),
                   // 탭 3: 신고 누적 블랙리스트 목록
                   _buildReportBlacklistTab(),
                 ],
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF164687))),
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppDesignTokens.blue),
+            ),
             error: (err, stack) => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline_rounded, size: 48, color: Colors.red),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 48,
+                    color: Colors.red,
+                  ),
                   const SizedBox(height: 12),
-                  Text('데이터 로드 실패: $err', style: const TextStyle(color: Colors.black54)),
+                  Text(
+                    '데이터 로드 실패: $err',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
                 ],
               ),
             ),
@@ -130,33 +160,39 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     );
 
     if (widget.isTabMode) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: content,
-      );
+      return Scaffold(backgroundColor: Colors.transparent, body: content);
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
         title: const Text(
           '전체 게시글 관리',
-          style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: AppDesignTokens.navy,
+          ),
         ),
-        backgroundColor: themeColor,
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppDesignTokens.navy),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.amber,
+          indicatorColor: AppDesignTokens.blue,
           indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          labelColor: AppDesignTokens.navy,
+          unselectedLabelColor: AppDesignTokens.muted,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
           tabs: const [
-            Tab(text: '전체 게시글'),
-            Tab(text: '삭제된 게시글 복구'),
-            Tab(text: '신고 누적 블랙리스트'),
+            Tab(text: '전체'),
+            Tab(text: '삭제됨'),
+            Tab(text: '신고'),
           ],
         ),
       ),
@@ -185,16 +221,22 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               margin: const EdgeInsets.only(bottom: 12),
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: AppDesignTokens.divider),
               ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 title: Row(
                   children: [
                     if (post.isDeleted) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
                           color: Colors.red.shade50,
@@ -203,7 +245,11 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                         ),
                         child: Text(
                           '삭제됨',
-                          style: TextStyle(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -213,7 +259,9 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          decoration: post.isDeleted ? TextDecoration.lineThrough : null,
+                          decoration: post.isDeleted
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -228,18 +276,40 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                     children: [
                       Text(
                         post.content,
-                        style: const TextStyle(fontSize: 13, color: Colors.black54),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Text(post.category, style: const TextStyle(fontSize: 11, color: Color(0xFF164687), fontWeight: FontWeight.bold)),
+                          Text(
+                            post.category,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppDesignTokens.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Text('작성자: ${post.anonymous ? "익명" : post.authorName}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
+                          Text(
+                            '작성자: ${post.anonymous ? "익명" : post.authorName}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black38,
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Text(post.createdAt.split('T')[0], style: const TextStyle(fontSize: 11, color: Colors.black38)),
+                          Text(
+                            post.createdAt.split('T')[0],
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black38,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -247,12 +317,18 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                 ),
                 trailing: post.isDeleted
                     ? IconButton(
-                        icon: const Icon(Icons.settings_backup_restore_rounded, color: Color(0xFF164687)),
+                        icon: const Icon(
+                          Icons.settings_backup_restore_rounded,
+                          color: AppDesignTokens.blue,
+                        ),
                         tooltip: '복구하기',
                         onPressed: () => _confirmRestore(post),
                       )
                     : PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert_rounded, color: Colors.grey),
+                        icon: const Icon(
+                          Icons.more_vert_rounded,
+                          color: Colors.grey,
+                        ),
                         onSelected: (value) {
                           if (value == 'delete') {
                             _showDeleteDialog(post);
@@ -263,9 +339,16 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                             value: 'delete',
                             child: Row(
                               children: [
-                                Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                                Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
                                 SizedBox(width: 8),
-                                Text('삭제하기', style: TextStyle(color: Colors.red)),
+                                Text(
+                                  '삭제하기',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ],
                             ),
                           ),
@@ -310,10 +393,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
             margin: const EdgeInsets.only(bottom: 12),
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               side: BorderSide(color: Colors.red.shade100),
             ),
-            color: Colors.red.shade50.withOpacity(0.3),
+            color: Colors.red.shade50.withValues(alpha: 0.3),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -338,14 +421,30 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: () => _confirmRestore(post),
-                        icon: const Icon(Icons.settings_backup_restore_rounded, size: 16, color: Colors.white),
-                        label: const Text('복구', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                        icon: const Icon(
+                          Icons.settings_backup_restore_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          '복구',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF164687),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          backgroundColor: AppDesignTokens.blue,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           minimumSize: Size.zero,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
                       ),
                     ],
@@ -364,7 +463,7 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50.withOpacity(0.7),
+                      color: Colors.red.shade50.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red.shade100),
                     ),
@@ -373,12 +472,19 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                       children: [
                         const Text(
                           '🚨 삭제 사유:',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           post.deletionReason ?? '사유가 입력되지 않았습니다.',
-                          style: TextStyle(fontSize: 12, color: Colors.red.shade900),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red.shade900,
+                          ),
                         ),
                       ],
                     ),
@@ -387,9 +493,28 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('카테고리: ${post.category}', style: const TextStyle(fontSize: 11, color: Color(0xFF164687), fontWeight: FontWeight.bold)),
-                      Text('작성자: ${post.anonymous ? "익명" : post.authorName}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
-                      Text('작성일: ${post.createdAt.split('T')[0]}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
+                      Text(
+                        '카테고리: ${post.category}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppDesignTokens.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '작성자: ${post.anonymous ? "익명" : post.authorName}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black38,
+                        ),
+                      ),
+                      Text(
+                        '작성일: ${post.createdAt.split('T')[0]}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black38,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -406,8 +531,13 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('게시글 복구', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('"${post.title}" 게시글을 다시 복구하시겠습니까?\n복구 시 모든 사용자가 다시 조회할 수 있게 됩니다.'),
+        title: const Text(
+          '게시글 복구',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          '"${post.title}" 게시글을 다시 복구하시겠습니까?\n복구 시 모든 사용자가 다시 조회할 수 있게 됩니다.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -418,7 +548,9 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               Navigator.pop(context);
               _showLoading();
               try {
-                await ref.read(communityNotifierProvider).restorePostByAdmin(post.id);
+                await ref
+                    .read(communityNotifierProvider)
+                    .restorePostByAdmin(post.id);
                 _hideLoading();
                 _showSuccessToast('게시글이 복구되었습니다.');
               } catch (e) {
@@ -426,8 +558,16 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                 _showErrorDialog('복구 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF164687)),
-            child: const Text('복구하기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppDesignTokens.blue,
+            ),
+            child: const Text(
+              '복구하기',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -440,7 +580,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('게시글 삭제', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '게시글 삭제',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +595,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               decoration: const InputDecoration(
                 hintText: '삭제 사유를 입력하세요 (필수)',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               maxLines: 3,
             ),
@@ -473,7 +619,9 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               Navigator.pop(context);
               _showLoading();
               try {
-                await ref.read(communityNotifierProvider).deletePostByAdmin(post.id, reason);
+                await ref
+                    .read(communityNotifierProvider)
+                    .deletePostByAdmin(post.id, reason);
                 _hideLoading();
                 _showSuccessToast('게시글이 성공적으로 삭제되었습니다.');
               } catch (e) {
@@ -482,7 +630,13 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('삭제하기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              '삭제하기',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -503,10 +657,20 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: Colors.red.shade200),
               ),
-              child: Text('삭제됨', style: TextStyle(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.bold)),
+              child: Text(
+                '삭제됨',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(width: 8),
-            const Text('삭제된 게시글 정보', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              '삭제된 게시글 정보',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -514,9 +678,19 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(post.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, decoration: TextDecoration.lineThrough)),
+              Text(
+                post.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(post.content, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+              Text(
+                post.content,
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
+              ),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -529,9 +703,22 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('🚨 삭제 사유:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+                    const Text(
+                      '🚨 삭제 사유:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(post.deletionReason ?? '사유 없음', style: TextStyle(fontSize: 12, color: Colors.red.shade900)),
+                    Text(
+                      post.deletionReason ?? '사유 없음',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red.shade900,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -548,8 +735,16 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               Navigator.pop(context);
               _confirmRestore(post);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF164687)),
-            child: const Text('복구하기', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppDesignTokens.blue,
+            ),
+            child: const Text(
+              '복구하기',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -593,7 +788,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('에러 발생', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '에러 발생',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Text(error),
         actions: [
           TextButton(
@@ -613,7 +811,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
       data: (reports) {
         if (reports.isEmpty) {
           return const Center(
-            child: Text('신고된 게시글 및 댓글이 없습니다.', style: TextStyle(color: Colors.black45)),
+            child: Text(
+              '신고된 게시글 및 댓글이 없습니다.',
+              style: TextStyle(color: Colors.black45),
+            ),
           );
         }
 
@@ -630,10 +831,12 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                 margin: const EdgeInsets.only(bottom: 12),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                   side: BorderSide(color: Colors.orange.shade200),
                 ),
-                color: report.isDeleted ? Colors.grey.shade100 : Colors.orange.shade50.withOpacity(0.1),
+                color: report.isDeleted
+                    ? Colors.grey.shade100
+                    : Colors.orange.shade50.withValues(alpha: 0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -643,16 +846,27 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: isPost ? Colors.blue.shade50 : Colors.green.shade50,
+                              color: isPost
+                                  ? Colors.blue.shade50
+                                  : Colors.green.shade50,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: isPost ? Colors.blue.shade200 : Colors.green.shade200),
+                              border: Border.all(
+                                color: isPost
+                                    ? Colors.blue.shade200
+                                    : Colors.green.shade200,
+                              ),
                             ),
                             child: Text(
                               isPost ? '게시글' : '댓글',
                               style: TextStyle(
-                                color: isPost ? Colors.blue.shade700 : Colors.green.shade700,
+                                color: isPost
+                                    ? Colors.blue.shade700
+                                    : Colors.green.shade700,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -660,7 +874,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.red.shade50,
                               borderRadius: BorderRadius.circular(6),
@@ -668,7 +885,11 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                                const Icon(
+                                  Icons.warning_amber_rounded,
+                                  size: 14,
+                                  color: Colors.red,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '신고 ${report.reportCount}회',
@@ -684,14 +905,21 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                           const Spacer(),
                           if (report.isDeleted)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade200,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
                                 '숨김 처리됨',
-                                style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             )
                           else
@@ -699,14 +927,23 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                               onPressed: () => _confirmReportDelete(report),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.redAccent,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
                                 minimumSize: Size.zero,
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                               ),
                               child: const Text(
                                 '블라인드',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                         ],
@@ -718,8 +955,12 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            decoration: report.isDeleted ? TextDecoration.lineThrough : null,
-                            color: report.isDeleted ? Colors.black38 : Colors.black87,
+                            decoration: report.isDeleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: report.isDeleted
+                                ? Colors.black38
+                                : Colors.black87,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -730,8 +971,12 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                         report.content,
                         style: TextStyle(
                           fontSize: 13,
-                          color: report.isDeleted ? Colors.black38 : Colors.black54,
-                          decoration: report.isDeleted ? TextDecoration.lineThrough : null,
+                          color: report.isDeleted
+                              ? Colors.black38
+                              : Colors.black54,
+                          decoration: report.isDeleted
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
@@ -742,44 +987,74 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                       // 신고 사유 리스트
                       const Text(
                         '신고 사유 목록:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 4),
-                      ...report.reasons.map((r) => Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 2),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.subdirectory_arrow_right_rounded, size: 12, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    r,
-                                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                      ...report.reasons.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 2),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.subdirectory_arrow_right_rounded,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  r,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
                                   ),
                                 ),
-                              ],
-                            ),
-                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Row(
                             children: [
-                              Text('작성자: ${report.authorName}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
+                              Text(
+                                '작성자: ${report.authorName}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black38,
+                                ),
+                              ),
                               if (report.authorId != null) ...[
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: report.isAuthorSuspended ? Colors.red.shade50 : Colors.green.shade50,
+                                    color: report.isAuthorSuspended
+                                        ? Colors.red.shade50
+                                        : Colors.green.shade50,
                                     borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: report.isAuthorSuspended ? Colors.red.shade200 : Colors.green.shade200),
+                                    border: Border.all(
+                                      color: report.isAuthorSuspended
+                                          ? Colors.red.shade200
+                                          : Colors.green.shade200,
+                                    ),
                                   ),
                                   child: Text(
                                     report.isAuthorSuspended ? '차단됨' : '정상',
                                     style: TextStyle(
-                                      color: report.isAuthorSuspended ? Colors.red.shade700 : Colors.green.shade700,
+                                      color: report.isAuthorSuspended
+                                          ? Colors.red.shade700
+                                          : Colors.green.shade700,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -795,11 +1070,18 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                                 TextButton(
                                   onPressed: () async {
                                     try {
-                                      final fullPost = await ref.read(communityNotifierProvider).getPost(report.targetId);
+                                      final fullPost = await ref
+                                          .read(communityNotifierProvider)
+                                          .getPost(report.targetId);
                                       if (context.mounted) {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => CommunityDetailScreen(post: fullPost)),
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                CommunityDetailScreen(
+                                                  post: fullPost,
+                                                ),
+                                          ),
                                         );
                                       }
                                     } catch (e) {
@@ -807,25 +1089,50 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                                     }
                                   },
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
-                                  child: const Text('원문 보기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  child: const Text(
+                                    '원문 보기',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               if (report.authorId != null)
                                 OutlinedButton(
                                   onPressed: () => _toggleSuspend(report),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: report.isAuthorSuspended ? const Color(0xFF164687) : Colors.red,
-                                    side: BorderSide(color: report.isAuthorSuspended ? const Color(0xFF164687) : Colors.red),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    foregroundColor: report.isAuthorSuspended
+                                        ? AppDesignTokens.blue
+                                        : AppDesignTokens.coral,
+                                    side: BorderSide(
+                                      color: report.isAuthorSuspended
+                                          ? AppDesignTokens.blue
+                                          : AppDesignTokens.coral,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   child: Text(
-                                    report.isAuthorSuspended ? '차단 해제' : '작성자 차단',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                    report.isAuthorSuspended
+                                        ? '차단 해제'
+                                        : '작성자 차단',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               OutlinedButton(
@@ -833,13 +1140,20 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.teal,
                                   side: const BorderSide(color: Colors.teal),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: const Text(
                                   '기각/복구',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -854,7 +1168,9 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF164687))),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppDesignTokens.blue),
+      ),
       error: (err, stack) => Center(child: Text('블랙리스트 로드 실패: $err')),
     );
   }
@@ -864,7 +1180,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${report.targetType == 'POST' ? '게시글' : '댓글'} 블라인드 처리', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          '${report.targetType == 'POST' ? '게시글' : '댓글'} 블라인드 처리',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,7 +1195,10 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               decoration: const InputDecoration(
                 hintText: '블라인드 사유를 입력하세요 (필수)',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               maxLines: 3,
             ),
@@ -898,9 +1220,18 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               _showLoading();
               try {
                 if (report.targetType == 'POST') {
-                  await ref.read(communityNotifierProvider).deletePostByAdmin(report.targetId, reason);
+                  await ref
+                      .read(communityNotifierProvider)
+                      .deletePostByAdmin(report.targetId, reason);
                 } else {
-                  await ref.read(commentNotifierProvider).deleteCommentByAdmin(CommentSource.community, 0, report.targetId, reason);
+                  await ref
+                      .read(commentNotifierProvider)
+                      .deleteCommentByAdmin(
+                        CommentSource.community,
+                        0,
+                        report.targetId,
+                        reason,
+                      );
                 }
                 ref.invalidate(adminReportsProvider);
                 _hideLoading();
@@ -911,7 +1242,13 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('블라인드 처리', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              '블라인드 처리',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -925,10 +1262,15 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isSuspending ? '작성자 차단' : '작성자 차단 해제', style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(isSuspending
-            ? '"${report.authorName}" 유저를 차단(정지) 상태로 변경하시겠습니까?\n차단 시 해당 유저의 모든 API 요청이 거부됩니다.'
-            : '"${report.authorName}" 유저의 차단(정지) 상태를 해제하시겠습니까?'),
+        title: Text(
+          isSuspending ? '작성자 차단' : '작성자 차단 해제',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          isSuspending
+              ? '"${report.authorName}" 유저를 차단(정지) 상태로 변경하시겠습니까?\n차단 시 해당 유저의 모든 API 요청이 거부됩니다.'
+              : '"${report.authorName}" 유저의 차단(정지) 상태를 해제하시겠습니까?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -940,10 +1282,14 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               _showLoading();
               try {
                 if (isSuspending) {
-                  await ref.read(adminProvider.notifier).suspendMember(report.authorId!);
+                  await ref
+                      .read(adminProvider.notifier)
+                      .suspendMember(report.authorId!);
                   _showSuccessToast('작성자가 차단되었습니다.');
                 } else {
-                  await ref.read(adminProvider.notifier).unsuspendMember(report.authorId!);
+                  await ref
+                      .read(adminProvider.notifier)
+                      .unsuspendMember(report.authorId!);
                   _showSuccessToast('작성자 차단이 해제되었습니다.');
                 }
                 ref.invalidate(adminReportsProvider);
@@ -953,8 +1299,18 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
                 _showErrorDialog('처리 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: isSuspending ? Colors.red : const Color(0xFF164687)),
-            child: Text(isSuspending ? '차단하기' : '해제하기', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSuspending
+                  ? AppDesignTokens.coral
+                  : AppDesignTokens.blue,
+            ),
+            child: Text(
+              isSuspending ? '차단하기' : '해제하기',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -965,8 +1321,13 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('신고 기각 / 복구', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('해당 ${report.targetType == 'POST' ? '게시글' : '댓글'}에 대한 모든 신고 내역을 삭제하고, 만약 블라인드(삭제) 상태인 경우 다시 정상 복구합니다.\n\n진행하시겠습니까?'),
+        title: const Text(
+          '신고 기각 / 복구',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          '해당 ${report.targetType == 'POST' ? '게시글' : '댓글'}에 대한 모든 신고 내역을 삭제하고, 만약 블라인드(삭제) 상태인 경우 다시 정상 복구합니다.\n\n진행하시겠습니까?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -977,7 +1338,9 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               Navigator.pop(context);
               _showLoading();
               try {
-                await ref.read(adminProvider.notifier).dismissReport(report.targetType, report.targetId);
+                await ref
+                    .read(adminProvider.notifier)
+                    .dismissReport(report.targetType, report.targetId);
                 ref.invalidate(adminReportsProvider);
                 ref.invalidate(communityPostsProvider); // 게시글 목록도 갱신
                 _hideLoading();
@@ -988,7 +1351,13 @@ class _AdminPostManagementScreenState extends ConsumerState<AdminPostManagementS
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-            child: const Text('기각 및 복구', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              '기각 및 복구',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),

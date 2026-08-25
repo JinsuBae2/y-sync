@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/notification.dart';
 import '../providers/notification_provider.dart';
-import '../screens/deep_link_loading_screen.dart';
+import '../theme/app_design_tokens.dart';
+import 'deep_link_loading_screen.dart';
 
 class NotificationCenterScreen extends ConsumerWidget {
   const NotificationCenterScreen({super.key});
@@ -9,311 +12,227 @@ class NotificationCenterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(notificationsProvider);
-    final themeColor = const Color(0xFF164687); // Y-Sync 브랜드 로열 블루
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 0,
         title: const Text(
-          '알림 센터',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.5),
+          '알림',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
         actions: [
           notificationsAsync.maybeWhen(
-            data: (list) => list.isNotEmpty
+            data: (notifications) =>
+                notifications.any((notification) => !notification.isRead)
                 ? IconButton(
+                    tooltip: '모두 읽음',
+                    onPressed: () => _markAllAsRead(context, ref),
                     icon: const Icon(Icons.done_all_rounded),
-                    tooltip: '모두 읽음 표시',
-                    onPressed: () async {
-                      final hasUnread = list.any((n) => !n.isRead);
-                      if (!hasUnread) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('읽지 않은 알림이 없습니다.'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        return;
-                      }
-
-                      await ref.read(notificationsProvider.notifier).markAllAsRead();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('모든 알림을 읽음 처리했습니다.'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    },
                   )
                 : const SizedBox.shrink(),
             orElse: () => const SizedBox.shrink(),
           ),
+          const SizedBox(width: 4),
         ],
       ),
-      body: notificationsAsync.when(
-        data: (notifications) {
-          if (notifications.isEmpty) {
-            return _buildEmptyState(context);
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(notificationsProvider);
-            },
-            color: themeColor,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              itemCount: notifications.length,
-              itemBuilder: (context, index) {
-                final notification = notifications[index];
-                return _buildDismissibleItem(context, ref, notification, themeColor);
-              },
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppDesignTokens.contentMaxWidth,
+          ),
+          child: notificationsAsync.when(
+            data: (notifications) => notifications.isEmpty
+                ? const _EmptyNotifications()
+                : _NotificationList(notifications: notifications),
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppDesignTokens.blue),
             ),
-          );
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF164687)),
-        ),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline_rounded, size: 48, color: Colors.red.shade300),
-              const SizedBox(height: 16),
-              Text(
-                '알림을 불러오는 중 오류가 발생했습니다.\n$error',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(notificationsProvider),
-                child: const Text('다시 시도'),
-              ),
-            ],
+            error: (_, _) => _NotificationError(
+              onRetry: () => ref.invalidate(notificationsProvider),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Future<void> _markAllAsRead(BuildContext context, WidgetRef ref) async {
+    await ref.read(notificationsProvider.notifier).markAllAsRead();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('모든 알림을 읽음 처리했습니다.')));
+  }
+}
+
+class _NotificationList extends ConsumerWidget {
+  const _NotificationList({required this.notifications});
+
+  final List<AppNotification> notifications;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = notifications
+        .where((notification) => !notification.isRead)
+        .length;
+
+    return RefreshIndicator(
+      color: AppDesignTokens.blue,
+      onRefresh: () async => ref.invalidate(notificationsProvider),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.notifications_off_outlined,
-              size: 72,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            '수신된 알림이 없습니다.',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
           Text(
-            '새로운 학사 공지나 댓글 소식이 있으면\n이곳에 보관됩니다.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-              height: 1.5,
+            unreadCount == 0 ? '새로운 알림이 없습니다' : '읽지 않은 알림 $unreadCount개',
+            style: const TextStyle(
+              color: AppDesignTokens.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 12),
+          for (var index = 0; index < notifications.length; index++) ...[
+            _NotificationRow(notification: notifications[index]),
+            if (index < notifications.length - 1)
+              const Divider(height: 1, color: AppDesignTokens.divider),
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _buildDismissibleItem(
-    BuildContext context,
-    WidgetRef ref,
-    dynamic notification,
-    Color themeColor,
-  ) {
+class _NotificationRow extends ConsumerWidget {
+  const _NotificationRow({required this.notification});
+
+  final AppNotification notification;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isNotice = notification.targetType == 'NOTICE';
+
     return Dismissible(
-      key: Key('notification_${notification.id}'),
+      key: ValueKey('notification_${notification.id}'),
       direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        ref.read(notificationsProvider.notifier).deleteNotification(notification.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('알림이 삭제되었습니다.'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
+      onDismissed: (_) {
+        ref
+            .read(notificationsProvider.notifier)
+            .deleteNotification(notification.id);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('알림이 삭제되었습니다.')));
       },
       background: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Colors.redAccent, Colors.red],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Icon(
-          Icons.delete_sweep_rounded,
-          color: Colors.white,
-          size: 28,
-        ),
+        color: AppDesignTokens.coral,
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(notification.isRead ? 0.02 : 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: notification.isRead 
-                ? Colors.transparent 
-                : themeColor.withOpacity(0.12),
-            width: 1.5,
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () async {
-              // 1. 미읽음 상태인 경우 읽음 처리 API 호출
-              if (!notification.isRead) {
-                await ref
-                    .read(notificationsProvider.notifier)
-                    .markAsRead(notification.id);
-              }
-
-              // 2. 딥링크를 활용해 해당 리소스로 안전하게 텔레포트 라우팅
-              if (context.mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DeepLinkLoadingScreen(
-                      targetType: notification.targetType,
-                      targetId: notification.targetId.toString(),
-                    ),
+      child: Material(
+        color: notification.isRead
+            ? Colors.transparent
+            : AppDesignTokens.paleBlue.withValues(alpha: 0.38),
+        child: InkWell(
+          onTap: () => _openNotification(context, ref),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppDesignTokens.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppDesignTokens.divider),
                   ),
-                );
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 알림 상태에 따른 원형 아이콘
-                  Container(
-                    margin: const EdgeInsets.only(top: 2),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: notification.isRead
-                          ? Colors.grey.shade100
-                          : themeColor.withOpacity(0.08),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      notification.targetType == 'NOTICE'
-                          ? Icons.campaign_rounded
-                          : Icons.chat_bubble_outline_rounded,
-                      color: notification.isRead ? Colors.grey : themeColor,
-                      size: 20,
-                    ),
+                  child: Icon(
+                    isNotice
+                        ? Icons.campaign_outlined
+                        : Icons.chat_bubble_outline_rounded,
+                    color: notification.isRead
+                        ? AppDesignTokens.muted
+                        : AppDesignTokens.blue,
+                    size: 20,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              notification.targetType == 'NOTICE' ? '학사공지' : '댓글 알림',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: notification.isRead
-                                    ? Colors.grey
-                                    : themeColor.withOpacity(0.8),
-                                letterSpacing: 0.5,
-                              ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            isNotice ? '공지' : '댓글',
+                            style: TextStyle(
+                              color: notification.isRead
+                                  ? AppDesignTokens.muted
+                                  : AppDesignTokens.blue,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
                             ),
-                            Text(
-                              _formatTime(notification.createdAt),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
+                          ),
+                          if (!notification.isRead) ...[
+                            const SizedBox(width: 7),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppDesignTokens.coral,
+                                shape: BoxShape.circle,
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          notification.title,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: notification.isRead 
-                                ? FontWeight.normal 
-                                : FontWeight.bold,
-                            color: notification.isRead ? Colors.grey.shade600 : Colors.black87,
-                            letterSpacing: -0.3,
+                          const Spacer(),
+                          Text(
+                            _formatTime(notification.createdAt),
+                            style: const TextStyle(
+                              color: AppDesignTokens.subtle,
+                              fontSize: 11,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          notification.body,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: notification.isRead ? Colors.grey.shade500 : Colors.black54,
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!notification.isRead) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      margin: const EdgeInsets.only(top: 20),
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF3B30),
-                        shape: BoxShape.circle,
+                        ],
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                      const SizedBox(height: 7),
+                      Text(
+                        notification.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: notification.isRead
+                              ? AppDesignTokens.muted
+                              : AppDesignTokens.navy,
+                          fontSize: 15,
+                          fontWeight: notification.isRead
+                              ? FontWeight.w600
+                              : FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        notification.body,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppDesignTokens.muted,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -321,25 +240,100 @@ class NotificationCenterScreen extends ConsumerWidget {
     );
   }
 
-  String _formatTime(String isoString) {
-    try {
-      final date = DateTime.parse(isoString);
-      final now = DateTime.now();
-      final difference = now.difference(date);
-
-      if (difference.inMinutes < 1) {
-        return '방금 전';
-      } else if (difference.inMinutes < 60) {
-        return '${difference.inMinutes}분 전';
-      } else if (difference.inHours < 24) {
-        return '${difference.inHours}시간 전';
-      } else if (difference.inDays < 7) {
-        return '${difference.inDays}일 전';
-      } else {
-        return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      }
-    } catch (_) {
-      return isoString;
+  Future<void> _openNotification(BuildContext context, WidgetRef ref) async {
+    if (!notification.isRead) {
+      await ref
+          .read(notificationsProvider.notifier)
+          .markAsRead(notification.id);
     }
+    if (!context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DeepLinkLoadingScreen(
+          targetType: notification.targetType,
+          targetId: '${notification.targetId}',
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyNotifications extends StatelessWidget {
+  const _EmptyNotifications();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Padding(
+      padding: EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.notifications_none_rounded,
+            size: 42,
+            color: AppDesignTokens.subtle,
+          ),
+          SizedBox(height: 16),
+          Text(
+            '도착한 알림이 없습니다',
+            style: TextStyle(
+              color: AppDesignTokens.navy,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            '새 공지와 내 글의 댓글 소식을 이곳에서 확인할 수 있습니다.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppDesignTokens.muted,
+              fontSize: 13,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _NotificationError extends StatelessWidget {
+  const _NotificationError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          '알림을 불러오지 못했습니다.',
+          style: TextStyle(color: AppDesignTokens.muted),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('다시 시도'),
+        ),
+      ],
+    ),
+  );
+}
+
+String _formatTime(String value) {
+  try {
+    final date = DateTime.parse(value);
+    final difference = DateTime.now().difference(date);
+    if (difference.inMinutes < 1) return '방금 전';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}분 전';
+    if (difference.inHours < 24) return '${difference.inHours}시간 전';
+    if (difference.inDays < 7) return '${difference.inDays}일 전';
+    return '${date.month}.${date.day.toString().padLeft(2, '0')}';
+  } catch (_) {
+    return value;
   }
 }

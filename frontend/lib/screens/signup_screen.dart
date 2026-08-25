@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_design_tokens.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -20,8 +21,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   bool _isLoading = false;
   bool _isStudentInfoVerified = false; // 1차 정보 대조 확인 완료 여부
-  bool _isEmailSent = false;          // 2차 이메일 인증코드 발송 여부
-  bool _isVerified = false;           // 이메일 인증 최종 통과 여부
+  bool _isEmailSent = false; // 2차 이메일 인증코드 발송 여부
+  bool _isVerified = false; // 이메일 인증 최종 통과 여부
 
   Timer? _timer;
   int _timerSeconds = 300; // 5분
@@ -72,7 +73,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           children: [
             const Icon(Icons.warning_amber_rounded, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.orange.shade800,
@@ -91,7 +97,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           children: [
             const Icon(Icons.error_outline, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.redAccent.shade400,
@@ -110,7 +121,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           children: [
             const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.green.shade600,
@@ -164,7 +180,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await ref.read(authProvider.notifier).sendVerificationCode(loginId, name, fullEmail);
+      await ref
+          .read(authProvider.notifier)
+          .sendVerificationCode(loginId, name, fullEmail);
       setState(() {
         _isEmailSent = true;
       });
@@ -189,7 +207,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final isSuccess = await ref.read(authProvider.notifier).verifyCode(loginId, code);
+      final isSuccess = await ref
+          .read(authProvider.notifier)
+          .verifyCode(loginId, code);
       if (isSuccess) {
         _timer?.cancel();
         setState(() {
@@ -213,7 +233,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final password = _passwordController.text.trim();
     final passwordConfirm = _passwordConfirmController.text.trim();
 
-    if (loginId.isEmpty || name.isEmpty || password.isEmpty || passwordConfirm.isEmpty) {
+    if (loginId.isEmpty ||
+        name.isEmpty ||
+        password.isEmpty ||
+        passwordConfirm.isEmpty) {
       _showWarningSnackBar('모든 항목을 입력해주세요.');
       return;
     }
@@ -252,55 +275,55 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    const primaryColor = AppDesignTokens.blue;
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
-        title: const Text('회원가입', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        title: const Text(
+          '회원가입',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 0,
         elevation: 0,
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.white, Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)],
-          ),
-        ),
+        color: AppDesignTokens.background,
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, 8)),
-                    ],
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         '학생 인증 회원가입',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: -1.0),
+                        style: TextStyle(
+                          color: AppDesignTokens.navy,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         '학적 대조 후 학교 이메일을 이용해 가입을 진행합니다.',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppDesignTokens.muted,
+                        ),
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // 1단계: 학번 및 이름 입력 영역
                       _buildInputField(
                         controller: _loginIdController,
@@ -328,12 +351,27 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               backgroundColor: primaryColor,
                               foregroundColor: Colors.white,
                               elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                             onPressed: _isLoading ? null : _verifyStudentInfo,
                             child: _isLoading
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : const Text('학생 정보 확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    '학생 정보 확인',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
@@ -342,20 +380,30 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       if (_isStudentInfoVerified) ...[
                         // 학생 인증 완료 배지
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 16,
+                          ),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade200),
+                            color: AppDesignTokens.paleBlue,
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.check_circle, color: Colors.blue.shade700, size: 20),
+                              const Icon(
+                                Icons.check_circle,
+                                color: AppDesignTokens.blue,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
+                                child: const Text(
                                   '학생 정보가 확인되었습니다.',
-                                  style: TextStyle(color: Colors.blue.shade800, fontWeight: FontWeight.bold, fontSize: 13),
+                                  style: TextStyle(
+                                    color: AppDesignTokens.navy,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ],
@@ -369,18 +417,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             alignment: Alignment.centerLeft,
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Text(
+                              child: const Text(
                                 '이메일 본인 인증',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700, fontSize: 13),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppDesignTokens.navy,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: Colors.grey.shade200),
+                              color: AppDesignTokens.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppDesignTokens.divider,
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -396,26 +450,47 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           style: const TextStyle(fontSize: 14),
                                           decoration: InputDecoration(
                                             hintText: '이메일 아이디 입력',
-                                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                                            prefixIcon: const Icon(Icons.email_outlined, size: 18, color: Colors.grey),
+                                            hintStyle: const TextStyle(
+                                              color: AppDesignTokens.subtle,
+                                              fontSize: 13,
+                                            ),
+                                            prefixIcon: const Icon(
+                                              Icons.email_outlined,
+                                              size: 18,
+                                              color: AppDesignTokens.muted,
+                                            ),
                                             filled: true,
                                             fillColor: Colors.white,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                ),
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                               borderSide: BorderSide.none,
                                             ),
                                             enabledBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                              borderSide: BorderSide(color: Colors.grey.shade200),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: const BorderSide(
+                                                color: AppDesignTokens.divider,
+                                              ),
                                             ),
                                             disabledBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                              borderSide: BorderSide(color: Colors.grey.shade300),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: const BorderSide(
+                                                color: AppDesignTokens.divider,
+                                              ),
                                             ),
                                             focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                              borderSide: BorderSide(color: primaryColor, width: 1.5),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: primaryColor,
+                                                width: 1.5,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -425,7 +500,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       padding: EdgeInsets.only(left: 8.0),
                                       child: Text(
                                         '@ync.ac.kr',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: AppDesignTokens.navy,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -435,15 +514,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   height: 44,
                                   child: ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor.withOpacity(0.1),
+                                      backgroundColor: AppDesignTokens.paleBlue,
                                       foregroundColor: primaryColor,
                                       elevation: 0,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                     ),
-                                    onPressed: _isLoading ? null : _sendVerificationCode,
+                                    onPressed: _isLoading
+                                        ? null
+                                        : _sendVerificationCode,
                                     child: Text(
                                       _isEmailSent ? '인증 코드 재전송' : '인증 코드 전송',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -474,11 +560,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                     backgroundColor: primaryColor,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
                                   ),
                                   onPressed: _isLoading ? null : _verifyCode,
-                                  child: const Text('인증확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  child: const Text(
+                                    '인증확인',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -501,20 +597,30 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         // 2단계 완료 (이메일 인증 성공 시)
                         if (_isVerified) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.green.shade200),
+                              color: AppDesignTokens.paleBlue,
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: AppDesignTokens.blue,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: Text(
+                                  child: const Text(
                                     '이메일 본인인증이 완료되었습니다.',
-                                    style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold, fontSize: 13),
+                                    style: TextStyle(
+                                      color: AppDesignTokens.navy,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -546,15 +652,30 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             height: 54,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                backgroundColor: AppDesignTokens.blue,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                               onPressed: _isLoading ? null : _signup,
-                              child: _isLoading 
-                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                                  : const Text('가입 완료하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      '가입 완료하기',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
@@ -583,7 +704,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppDesignTokens.navy,
+          ),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -592,26 +717,40 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             controller: controller,
             obscureText: isPassword,
             enabled: enabled,
-            style: TextStyle(fontSize: 15, color: enabled ? Colors.black87 : Colors.grey.shade600),
+            style: const TextStyle(fontSize: 15, color: AppDesignTokens.navy),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
+              hintStyle: const TextStyle(
+                color: AppDesignTokens.subtle,
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(icon, color: AppDesignTokens.muted, size: 20),
               filled: true,
-              fillColor: enabled ? Colors.grey.shade50 : Colors.grey.shade100,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+              fillColor: enabled
+                  ? AppDesignTokens.surface
+                  : AppDesignTokens.background,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 0,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppDesignTokens.divider),
               ),
               disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppDesignTokens.divider),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: AppDesignTokens.blue,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
