@@ -61,6 +61,20 @@ final _post = CommunityPost(
   commentCount: 3,
 );
 
+final _imagePost = CommunityPost(
+  id: 2,
+  category: 'FREE',
+  title: '이미지 미리보기 게시글',
+  content: '썸네일이 있어도 하단 액션이 같은 위치에 표시됩니다.',
+  anonymous: false,
+  authorName: '배진수',
+  memberId: 1,
+  createdAt: DateTime.now().toIso8601String(),
+  viewCount: 5,
+  commentCount: 1,
+  imageUrls: const ['https://example.com/community-preview.png'],
+);
+
 final _comment = MyComment(
   id: 1,
   content: '참여하고 싶습니다.',
@@ -75,13 +89,15 @@ void main() {
     await initializeDateFormatting('ko_KR');
   });
 
-  testWidgets('커뮤니티는 검색과 필터 뒤에 게시글 우선순위를 표시한다', (tester) async {
+  testWidgets('커뮤니티는 구분된 카드와 정렬된 즐겨찾기를 표시한다', (tester) async {
     _setMobileViewport(tester);
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          communityPostsProvider.overrideWith((ref) async => [_post]),
+          communityPostsProvider.overrideWith(
+            (ref) async => [_imagePost, _post],
+          ),
           scrapsProvider.overrideWith((ref) async => []),
           unreadNotificationCountProvider.overrideWithValue(0),
         ],
@@ -93,7 +109,28 @@ void main() {
     expect(find.text('커뮤니티'), findsOneWidget);
     expect(find.text('제목이나 내용 검색'), findsOneWidget);
     expect(find.text('전체 학년'), findsOneWidget);
+    expect(find.text(_imagePost.title), findsOneWidget);
     expect(find.text(_post.title), findsOneWidget);
+
+    final imageBookmark = tester.getRect(
+      find.byKey(const ValueKey('community-post-bookmark-2')),
+    );
+    final plainBookmark = tester.getRect(
+      find.byKey(const ValueKey('community-post-bookmark-1')),
+    );
+    final thumbnail = tester.getRect(
+      find.byKey(const ValueKey('community-post-thumbnail-2')),
+    );
+    final imageCard = tester.getRect(
+      find.byKey(const ValueKey('community-post-2')),
+    );
+    final plainCard = tester.getRect(
+      find.byKey(const ValueKey('community-post-1')),
+    );
+
+    expect(imageBookmark.right, closeTo(plainBookmark.right, 0.1));
+    expect(imageBookmark.center.dx, greaterThan(thumbnail.center.dx));
+    expect(imageCard.bottom, lessThan(plainCard.top));
     expect(tester.takeException(), isNull);
   });
 

@@ -31,6 +31,36 @@
 
 ---
 
+## 2026-08-25 - 커뮤니티 게시글 카드 구분 및 즐겨찾기 정렬 개선
+
+- **누가(Who)**: 배진수(화면 문제 제보·검토), Codex(UI 수정·회귀 테스트·문서화)
+- **언제(When)**: 2026-08-25, Asia/Seoul
+- **어디서(Where)**: `fix/community-card-layout` 브랜치, Flutter 커뮤니티 목록 화면과 메인 섹션 위젯 테스트
+- **무엇을(What)**: 게시글을 독립된 흰색 카드와 테두리·간격으로 구분하고, 이미지 미리보기가 있는 게시글에서도 즐겨찾기 버튼이 일반 게시글과 같은 우측 위치에 표시되도록 재배치했습니다.
+- **왜(Why)**: 기존 목록은 구분선 대비가 약해 게시글 경계가 모호했고, 즐겨찾기가 본문 열 안에 있어 썸네일이 추가되면 아이콘이 왼쪽으로 밀렸기 때문입니다.
+- **어떻게(How)**: 카드 상단은 본문과 썸네일, 하단은 조회·댓글 정보와 우측 고정 즐겨찾기로 분리했습니다. 카드에 8px 모서리, 테두리와 10px 항목 간격을 적용하고 이미지·일반 카드의 즐겨찾기 좌표와 카드 간 간격을 위젯 테스트로 검증했습니다.
+- **검증(Verification)**: 수정 파일 대상 Flutter 분석에서 이슈가 없었고, 메인 섹션 위젯 테스트 3개와 Flutter 전체 테스트 25개가 통과했습니다. Flutter Web 릴리스 빌드도 성공했습니다.
+- **추적(Tracking)**: 기능 커밋 `633ff06`, 문서 커밋 `7ab06b5`, 브랜치 `fix/community-card-layout`, PR #13
+- **상태(Status)**: 원격 브랜치 push 및 PR #13 CI 통과, `develop` 병합 전, 운영 미배포
+- **위험 및 후속 작업(Risks/Follow-up)**: 실제 운영 이미지의 종횡비와 긴 제목 조합은 배포 후 모바일 실기기에서 한 차례 시각 점검합니다.
+
+---
+
+## 2026-08-25 - 알림 계약 및 개인 시간표 운영 배포
+
+- **누가(Who)**: 배진수(운영 배포 승인), Codex(사전 점검·배포 수행·검증·기록)
+- **언제(When)**: 2026-08-25, Asia/Seoul
+- **어디서(Where)**: GitHub `develop`·`main`, GitHub Actions `production` 환경, Oracle Cloud 운영 VM·MySQL, Firebase Hosting
+- **무엇을(What)**: boolean JSON 계약 수정과 모바일 달력·개인 시간표 기능을 백엔드와 프론트엔드 운영 환경에 함께 배포했습니다.
+- **왜(Why)**: 기능 PR #9와 #10에서 검증된 알림 상태 계약 및 일정 사용성 개선을 실제 사용자 환경에 반영하기 위해서입니다.
+- **어떻게(How)**: 운영 MySQL 사전 백업과 압축 무결성을 확인하고 `develop`에서 `main`으로 릴리스 PR을 생성했습니다. 릴리스 CI 통과 후 `main`에 병합하고 GitHub `production` Environment를 승인해 Oracle VM과 Firebase Hosting 자동 배포를 실행했습니다.
+- **검증(Verification)**: 릴리스 PR의 Backend·Frontend·Configuration·Gate와 Production Deploy 전체 단계가 통과했습니다. 운영 Spring Boot가 89.5초에 기동되고 Firebase 초기화 성공, HTTPS API와 Hosting `200`, 새 개인 시간표 테이블 생성을 확인했습니다. 테스트 사용자로 개인 수업 생성·수정·조회·삭제를 검증했으며 종료 후 임시 데이터는 0건입니다.
+- **추적(Tracking)**: PR #10 병합 커밋 `7914c12`, 릴리스 PR #11, `main` 병합 커밋 `809cdf6`, Actions 실행 `32808434514`
+- **상태(Status)**: 백엔드·프론트엔드 운영 배포 및 스모크 테스트 완료
+- **위험 및 후속 작업(Risks/Follow-up)**: 사전 백업은 운영 서버에 보관 중입니다. 동일 사용자가 완전히 동시에 중복 수업을 생성하는 경쟁 조건은 DB 제약 또는 잠금으로 보강할 수 있습니다.
+
+---
+
 ## 2026-08-25 - 모바일 학사 달력 및 개인 시간표 기능 개선
 
 - **누가(Who)**: 배진수(요구사항 확인·검토), Codex(설계·구현·검증·문서화)
@@ -39,10 +69,10 @@
 - **무엇을(What)**: 모바일 학사 달력의 마지막 주 날짜 잘림을 수정하고, 기존 `과 시간표` 화면을 `학과 시간표`와 `개인 시간표`로 분리했습니다. 학생이 자신의 수업을 추가·수정·삭제할 수 있는 회원별 개인 시간표 API와 UI를 추가했습니다.
 - **왜(Why)**: 고정 높이 비율 때문에 월간 달력 하단이 가려졌고, 학과 공용 시간표만으로는 학생 개별 수강 구성을 반영할 수 없었기 때문입니다.
 - **어떻게(How)**: 모바일 달력을 6주 고정 높이의 비스크롤 카드로 배치하고 일정 목록만 남은 공간을 사용하게 했습니다. 백엔드에는 `PersonalTimetableEntry` 엔티티와 회원 소유권·교시 중복 검증 CRUD를 만들고, Flutter에는 학과/개인 모드 전환과 개인 수업 편집 다이얼로그를 연결했습니다.
-- **검증(Verification)**: 최종 변경 후 `PersonalTimetableServiceIntegrationTest`와 `main_sections_design_test.dart` 3개 테스트가 통과했습니다. 구현 완료 시점의 백엔드 전체 테스트·`bootJar`, Flutter 전체 25개 테스트·Web 릴리스 빌드가 통과했고, Flutter 분석은 기존 경고/정보 32건만 남았습니다.
-- **추적(Tracking)**: 기능 커밋 `3d024ab`, 문서 커밋 `126ca96`, 브랜치 `feat/schedule-personal-timetable`, PR #10
-- **상태(Status)**: 원격 브랜치 push 및 PR #10 생성 완료, CI 확인 중, 운영 미배포
-- **위험 및 후속 작업(Risks/Follow-up)**: 운영 배포 시 JPA `ddl-auto=update`가 새 개인 시간표 테이블을 생성하므로 배포 전 DB 백업과 생성 결과를 확인해야 합니다. 동시 요청에 대한 완전한 중복 방지는 DB 제약 또는 잠금 보강을 후속 검토합니다.
+- **검증(Verification)**: 최종 변경 후 `PersonalTimetableServiceIntegrationTest`와 `main_sections_design_test.dart` 3개 테스트가 통과했습니다. 구현 완료 시점의 백엔드 전체 테스트·`bootJar`, Flutter 전체 25개 테스트·Web 릴리스 빌드가 통과했고, Flutter 분석은 기존 경고/정보 32건만 남았습니다. 운영에서 새 테이블과 개인 시간표 CRUD를 확인하고 임시 데이터를 삭제했습니다.
+- **추적(Tracking)**: 기능 커밋 `3d024ab`, 문서 커밋 `126ca96`, PR #10, `develop` 병합 커밋 `7914c12`, 릴리스 PR #11, `main` 병합 커밋 `809cdf6`
+- **상태(Status)**: PR #10 및 릴리스 PR #11 병합, 백엔드·프론트엔드 운영 배포 완료
+- **위험 및 후속 작업(Risks/Follow-up)**: 동일 사용자가 완전히 동시에 중복 수업을 생성하는 경쟁 조건은 DB 제약 또는 잠금 보강을 후속 검토합니다.
 
 ---
 
@@ -71,8 +101,8 @@
 - **어떻게(How)**: 최신순 작업 원장을 만들고 개발 표준에 기록 시점, 필수 항목, 후속 상태 갱신, 비밀값 제외 원칙을 연결했습니다.
 - **검증(Verification)**: Markdown 구조, 저장소 상대 링크, `git diff --check`를 확인합니다.
 - **추적(Tracking)**: 브랜치 `fix/boolean-json-contracts`, PR #9, `develop` 병합 커밋 `15f6187`
-- **상태(Status)**: PR #9 CI 통과 및 `develop` 병합 완료, 운영 미배포
-- **위험 및 후속 작업(Risks/Follow-up)**: PR 병합 및 운영 배포가 완료되면 이 항목의 상태와 추적 정보를 갱신해야 합니다.
+- **상태(Status)**: PR #9 및 릴리스 PR #11 병합, 운영 배포 완료
+- **위험 및 후속 작업(Risks/Follow-up)**: 이후 작업도 동일한 육하원칙과 검증·추적 규칙으로 기록합니다.
 
 ---
 
@@ -85,6 +115,6 @@
 - **왜(Why)**: Lombok/Jackson이 `isX` 필드를 `x`로 직렬화해 DB 상태가 정상이어도 Flutter 화면에서 고정·삭제·정지 상태가 `false`로 보일 수 있었기 때문입니다.
 - **어떻게(How)**: 백엔드에 `@JsonProperty`와 요청용 `@JsonAlias`를 적용하고, Flutter는 공식 `isX` 키를 우선 파싱하도록 수정했습니다. 양쪽에 계약 회귀 테스트를 추가했습니다.
 - **검증(Verification)**: 백엔드 `./gradlew test bootJar` 통과, Flutter 전체 테스트 25개 및 Web 릴리스 빌드 통과, GitHub CI Backend·Frontend·Configuration·Gate 통과
-- **추적(Tracking)**: 코드 커밋 `4c2263f`, 문서 커밋 `71aa825`, PR #9, `develop` 병합 커밋 `15f6187`
-- **상태(Status)**: PR #9 CI 통과 및 `develop` 병합 완료, 운영 미배포
+- **추적(Tracking)**: 코드 커밋 `4c2263f`, 문서 커밋 `71aa825`, PR #9, `develop` 병합 커밋 `15f6187`, 릴리스 PR #11, `main` 병합 커밋 `809cdf6`
+- **상태(Status)**: PR #9 및 릴리스 PR #11 병합, 운영 배포 완료
 - **위험 및 후속 작업(Risks/Follow-up)**: 단계적 배포 호환을 위한 구형 키 fallback은 모든 지원 클라이언트가 신형 계약으로 전환된 후 제거 여부를 검토합니다.
