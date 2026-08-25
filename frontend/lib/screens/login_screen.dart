@@ -440,7 +440,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               );
                             },
                             child: Text(
-                              '회원가입',
+                              '회원가입하기',
                               style: const TextStyle(
                                 color: AppDesignTokens.blue,
                                 fontWeight: FontWeight.w700,
