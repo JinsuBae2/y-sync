@@ -42,17 +42,20 @@ y-sync/backend/src/main/java/com/ync/ysync/
 ├── service/            # 비즈니스 로직 처리 레이어
 │   ├── MemberService.java
 │   ├── CommentService.java
+│   ├── PersonalTimetableService.java
 │   └── EmailService.java
 ├── domain/             # JPA 엔티티 레이어
 │   ├── Member.java
 │   ├── CommunityPost.java
 │   ├── Comment.java
 │   ├── Report.java
+│   ├── PersonalTimetableEntry.java
 │   └── Notice.java
 └── repository/         # DB Access 인터페이스 레이어 (Spring Data JPA)
     ├── MemberRepository.java
     ├── CommentRepository.java
     ├── CommunityPostRepository.java
+    ├── PersonalTimetableEntryRepository.java
     └── ReportRepository.java
 ```
 
@@ -92,6 +95,7 @@ erDiagram
     Member ||--o{ CommunityPost : writes
     Member ||--o{ Comment : writes
     Member ||--o{ Report : files
+    Member ||--o{ PersonalTimetableEntry : owns
     CommunityPost ||--o{ Comment : contains
     CommunityPost ||--o{ PostImage : contains
     Notice ||--o{ Comment : contains
@@ -101,6 +105,7 @@ erDiagram
 
 * **대댓글 (자기 참조)**: `Comment` 엔티티 내에 `@ManyToOne Comment parent` 및 `@OneToMany List<Comment> children` 양방향 관계가 성립되어 계층적 관계를 메모리 맵핑으로 조립합니다.
 * **신고 (Report)**: `Report` 엔티티는 `@Enumerated(EnumType.STRING) TargetType targetType` (POST / COMMENT) 및 `Long targetId`를 결합하여 하나의 테이블에서 게시글과 댓글 신고를 다형성 형태로 유연하게 커버합니다.
+* **개인 시간표 (PersonalTimetableEntry)**: 회원별 요일·시작/종료 교시와 과목 정보를 저장합니다. 모든 조회와 변경은 JWT에서 확인한 `member_id`로 제한하고, 서비스에서 같은 회원의 교시 중복을 차단합니다.
 * **소프트 딜리트 (Soft Delete)**: `CommunityPost` 및 `Comment` 엔티티는 `isDeleted` 플래그 및 `deletionReason` 문자열 필드를 통해 관리자에 의한 물리 삭제 대신 안전한 논리 삭제(블라인드)를 지원합니다.
 
 ---
@@ -121,6 +126,11 @@ erDiagram
 * **REPORT (신고)**
   - `target_type`: `"POST"` 혹은 `"COMMENT"` 문자열.
   - `target_id`: 신고 대상의 PK 식별자.
+* **PERSONAL_TIMETABLE_ENTRY (개인 시간표)**
+  - `member_id`: 시간표 소유 회원 FK 및 조회 인덱스.
+  - `day_of_week`: 월요일부터 금요일까지의 요일 문자열.
+  - `start_period`, `end_period`: 1~9교시 범위이며 서비스 계층에서 동일 회원의 시간 중복을 검증합니다.
+  - `subject_name`은 필수이며 `professor_name`, `classroom`은 빈 문자열로 저장할 수 있습니다.
 
 ### B. 테스트용 사전등록 학번 시드 데이터 (SQL INSERT)
 로컬 H2 또는 QA 테스트 서버 구동 시 아래 SQL을 활용하여 테스트용 시드 데이터를 주입할 수 있습니다.

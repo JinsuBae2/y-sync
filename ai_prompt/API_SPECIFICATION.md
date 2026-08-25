@@ -266,6 +266,36 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 
 ---
 
+### 📅 Timetable (학과·개인 시간표)
+
+#### 1. 학과 시간표 조회 (`GET /timetable/{grade}`)
+- **Path Variable**: `grade`는 `GRADE_1`, `GRADE_2`, `GRADE_3` 중 하나입니다.
+- **Response (200 OK)**: 해당 학년의 학과 공용 수업 목록을 반환합니다.
+- 학과 시간표의 등록·수정·삭제는 기존 `/timetable` 관리자 API를 사용하며 `ADMIN` 또는 `SUPER_ADMIN`만 실행할 수 있습니다.
+
+#### 2. 개인 시간표 조회·추가 (`GET`, `POST /timetable/personal`)
+- **인증**: Bearer JWT 필수. 서버는 토큰의 회원 ID를 사용하며 클라이언트가 소유자 ID를 전달하지 않습니다.
+- **Request Body (POST)**
+  ```json
+  {
+    "dayOfWeek": "MONDAY",
+    "subjectName": "모바일 프로그래밍",
+    "professorName": "홍길동",
+    "classroom": "공학관 301호",
+    "startPeriod": 1,
+    "endPeriod": 2
+  }
+  ```
+- `dayOfWeek`는 월요일부터 금요일까지, 교시는 1~9교시 범위입니다. 과목명은 필수이고 교수명과 강의실은 선택입니다.
+- 같은 회원의 동일 요일·교시가 겹치면 등록을 거부하며, 다른 회원의 시간표와는 독립적으로 저장합니다.
+- **Response (200 OK)**: 개인 수업 또는 개인 수업 목록을 반환합니다. 응답은 회원 정보나 비밀번호를 포함하지 않습니다.
+
+#### 3. 개인 시간표 수정·삭제 (`PUT`, `DELETE /timetable/personal/{id}`)
+- 로그인한 회원이 소유한 항목만 수정하거나 삭제할 수 있습니다.
+- 수정 요청 본문은 개인 시간표 추가와 동일하며, 삭제 성공 시 `{ "message": "개인 시간표 수업이 삭제되었습니다." }`를 반환합니다.
+
+---
+
 ### 🔔 Notification Center (알림 센터)
 
 #### 1. 수신한 알림 내역 최신순 조회 (`GET /notifications`)
