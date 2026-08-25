@@ -6,6 +6,7 @@ import '../providers/community_provider.dart';
 import '../providers/scrap_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../utils/image_url_helper.dart';
+import '../widgets/content_filter_bar.dart';
 import '../widgets/notification_action_button.dart';
 import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
@@ -291,117 +292,26 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedGradeLabel = _grades
-        .firstWhere((item) => item.$1 == selectedGrade)
-        .$2;
-
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: AppDesignTokens.contentPadding,
+    return Padding(
+      padding: AppDesignTokens.contentPadding,
+      child: Column(
         children: [
-          for (final category in _categories)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: _CategoryButton(
-                label: category.$2,
-                isSelected: selectedCategory == category.$1,
-                onTap: () => onCategoryChanged(category.$1),
-              ),
-            ),
-          const SizedBox(width: 4),
-          const VerticalDivider(
-            width: 17,
-            indent: 6,
-            endIndent: 6,
-            color: AppDesignTokens.divider,
+          ContentFilterBar(
+            label: '분류',
+            icon: Icons.grid_view_rounded,
+            options: _categories,
+            selectedValue: selectedCategory,
+            onChanged: onCategoryChanged,
           ),
-          PopupMenuButton<String>(
-            tooltip: '학년 선택',
-            initialValue: selectedGrade,
-            onSelected: onGradeChanged,
-            itemBuilder: (_) => [
-              for (final grade in _grades)
-                PopupMenuItem(value: grade.$1, child: Text(grade.$2)),
-            ],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppDesignTokens.divider),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    selectedGradeLabel,
-                    style: const TextStyle(
-                      color: AppDesignTokens.navy,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 18,
-                    color: AppDesignTokens.muted,
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(height: 8),
+          ContentFilterBar(
+            label: '학년',
+            icon: Icons.school_outlined,
+            options: _grades,
+            selectedValue: selectedGrade,
+            onChanged: onGradeChanged,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CategoryButton extends StatelessWidget {
-  const _CategoryButton({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isSelected ? AppDesignTokens.navy : AppDesignTokens.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected
-                  ? AppDesignTokens.navy
-                  : AppDesignTokens.divider,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppDesignTokens.muted,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
       ),
     );
   }
