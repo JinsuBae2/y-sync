@@ -31,6 +31,21 @@
 
 ---
 
+## 2026-08-25 - 모바일 학사 달력 및 개인 시간표 기능 개선
+
+- **누가(Who)**: 배진수(요구사항 확인·검토), Codex(설계·구현·검증·문서화)
+- **언제(When)**: 2026-08-25, Asia/Seoul
+- **어디서(Where)**: `feat/schedule-personal-timetable` 브랜치, Flutter 일정 화면, Spring Boot 시간표 API, MySQL/H2 시간표 도메인
+- **무엇을(What)**: 모바일 학사 달력의 마지막 주 날짜 잘림을 수정하고, 기존 `과 시간표` 화면을 `학과 시간표`와 `개인 시간표`로 분리했습니다. 학생이 자신의 수업을 추가·수정·삭제할 수 있는 회원별 개인 시간표 API와 UI를 추가했습니다.
+- **왜(Why)**: 고정 높이 비율 때문에 월간 달력 하단이 가려졌고, 학과 공용 시간표만으로는 학생 개별 수강 구성을 반영할 수 없었기 때문입니다.
+- **어떻게(How)**: 모바일 달력을 6주 고정 높이의 비스크롤 카드로 배치하고 일정 목록만 남은 공간을 사용하게 했습니다. 백엔드에는 `PersonalTimetableEntry` 엔티티와 회원 소유권·교시 중복 검증 CRUD를 만들고, Flutter에는 학과/개인 모드 전환과 개인 수업 편집 다이얼로그를 연결했습니다.
+- **검증(Verification)**: 최종 변경 후 `PersonalTimetableServiceIntegrationTest`와 `main_sections_design_test.dart` 3개 테스트가 통과했습니다. 구현 완료 시점의 백엔드 전체 테스트·`bootJar`, Flutter 전체 25개 테스트·Web 릴리스 빌드가 통과했고, Flutter 분석은 기존 경고/정보 32건만 남았습니다.
+- **추적(Tracking)**: 기능 커밋 `3d024ab`, 문서 커밋 `126ca96`, 브랜치 `feat/schedule-personal-timetable`, PR #10
+- **상태(Status)**: 원격 브랜치 push 및 PR #10 생성 완료, CI 확인 중, 운영 미배포
+- **위험 및 후속 작업(Risks/Follow-up)**: 운영 배포 시 JPA `ddl-auto=update`가 새 개인 시간표 테이블을 생성하므로 배포 전 DB 백업과 생성 결과를 확인해야 합니다. 동시 요청에 대한 완전한 중복 방지는 DB 제약 또는 잠금 보강을 후속 검토합니다.
+
+---
+
 ## 2026-08-25 - 운영 일반 테스트 계정 생성
 
 - **누가(Who)**: 배진수(계정 규격 지정), Codex(운영 반영 및 검증)
@@ -55,8 +70,8 @@
 - **왜(Why)**: 작업 배경, 구현 방식, 검증 결과와 실제 배포 여부가 대화에만 남아 이후 유지보수 시 누락되는 문제를 방지하기 위해서입니다.
 - **어떻게(How)**: 최신순 작업 원장을 만들고 개발 표준에 기록 시점, 필수 항목, 후속 상태 갱신, 비밀값 제외 원칙을 연결했습니다.
 - **검증(Verification)**: Markdown 구조, 저장소 상대 링크, `git diff --check`를 확인합니다.
-- **추적(Tracking)**: 브랜치 `fix/boolean-json-contracts`, PR #9
-- **상태(Status)**: PR 반영 중, 운영 미배포
+- **추적(Tracking)**: 브랜치 `fix/boolean-json-contracts`, PR #9, `develop` 병합 커밋 `15f6187`
+- **상태(Status)**: PR #9 CI 통과 및 `develop` 병합 완료, 운영 미배포
 - **위험 및 후속 작업(Risks/Follow-up)**: PR 병합 및 운영 배포가 완료되면 이 항목의 상태와 추적 정보를 갱신해야 합니다.
 
 ---
@@ -70,6 +85,6 @@
 - **왜(Why)**: Lombok/Jackson이 `isX` 필드를 `x`로 직렬화해 DB 상태가 정상이어도 Flutter 화면에서 고정·삭제·정지 상태가 `false`로 보일 수 있었기 때문입니다.
 - **어떻게(How)**: 백엔드에 `@JsonProperty`와 요청용 `@JsonAlias`를 적용하고, Flutter는 공식 `isX` 키를 우선 파싱하도록 수정했습니다. 양쪽에 계약 회귀 테스트를 추가했습니다.
 - **검증(Verification)**: 백엔드 `./gradlew test bootJar` 통과, Flutter 전체 테스트 25개 및 Web 릴리스 빌드 통과, GitHub CI Backend·Frontend·Configuration·Gate 통과
-- **추적(Tracking)**: 코드 커밋 `4c2263f`, 문서 커밋 `71aa825`, PR #9
-- **상태(Status)**: 원격 브랜치 push 및 PR CI 완료, `develop` 미병합, 운영 미배포
+- **추적(Tracking)**: 코드 커밋 `4c2263f`, 문서 커밋 `71aa825`, PR #9, `develop` 병합 커밋 `15f6187`
+- **상태(Status)**: PR #9 CI 통과 및 `develop` 병합 완료, 운영 미배포
 - **위험 및 후속 작업(Risks/Follow-up)**: 단계적 배포 호환을 위한 구형 키 fallback은 모든 지원 클라이언트가 신형 계약으로 전환된 후 제거 여부를 검토합니다.
