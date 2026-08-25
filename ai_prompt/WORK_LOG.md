@@ -40,8 +40,8 @@
 - **왜(Why)**: 고정 높이 비율 때문에 월간 달력 하단이 가려졌고, 학과 공용 시간표만으로는 학생 개별 수강 구성을 반영할 수 없었기 때문입니다.
 - **어떻게(How)**: 모바일 달력을 6주 고정 높이의 비스크롤 카드로 배치하고 일정 목록만 남은 공간을 사용하게 했습니다. 백엔드에는 `PersonalTimetableEntry` 엔티티와 회원 소유권·교시 중복 검증 CRUD를 만들고, Flutter에는 학과/개인 모드 전환과 개인 수업 편집 다이얼로그를 연결했습니다.
 - **검증(Verification)**: 최종 변경 후 `PersonalTimetableServiceIntegrationTest`와 `main_sections_design_test.dart` 3개 테스트가 통과했습니다. 구현 완료 시점의 백엔드 전체 테스트·`bootJar`, Flutter 전체 25개 테스트·Web 릴리스 빌드가 통과했고, Flutter 분석은 기존 경고/정보 32건만 남았습니다.
-- **추적(Tracking)**: 기능 커밋 `3d024ab`, 브랜치 `feat/schedule-personal-timetable`, PR 생성 전
-- **상태(Status)**: 로컬 구현·검증 완료, 원격 push 및 PR 진행 전, 운영 미배포
+- **추적(Tracking)**: 기능 커밋 `3d024ab`, 문서 커밋 `126ca96`, 브랜치 `feat/schedule-personal-timetable`, PR #10
+- **상태(Status)**: 원격 브랜치 push 및 PR #10 생성 완료, CI 확인 중, 운영 미배포
 - **위험 및 후속 작업(Risks/Follow-up)**: 운영 배포 시 JPA `ddl-auto=update`가 새 개인 시간표 테이블을 생성하므로 배포 전 DB 백업과 생성 결과를 확인해야 합니다. 동시 요청에 대한 완전한 중복 방지는 DB 제약 또는 잠금 보강을 후속 검토합니다.
 
 ---
@@ -70,8 +70,8 @@
 - **왜(Why)**: 작업 배경, 구현 방식, 검증 결과와 실제 배포 여부가 대화에만 남아 이후 유지보수 시 누락되는 문제를 방지하기 위해서입니다.
 - **어떻게(How)**: 최신순 작업 원장을 만들고 개발 표준에 기록 시점, 필수 항목, 후속 상태 갱신, 비밀값 제외 원칙을 연결했습니다.
 - **검증(Verification)**: Markdown 구조, 저장소 상대 링크, `git diff --check`를 확인합니다.
-- **추적(Tracking)**: 브랜치 `fix/boolean-json-contracts`, PR #9
-- **상태(Status)**: PR 반영 중, 운영 미배포
+- **추적(Tracking)**: 브랜치 `fix/boolean-json-contracts`, PR #9, `develop` 병합 커밋 `15f6187`
+- **상태(Status)**: PR #9 CI 통과 및 `develop` 병합 완료, 운영 미배포
 - **위험 및 후속 작업(Risks/Follow-up)**: PR 병합 및 운영 배포가 완료되면 이 항목의 상태와 추적 정보를 갱신해야 합니다.
 
 ---
