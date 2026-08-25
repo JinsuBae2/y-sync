@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/notice.dart';
+import '../providers/mypage_provider.dart';
 import '../providers/notice_provider.dart';
-import '../providers/mypage_provider.dart'; // 💡 추가
 import '../providers/scrap_provider.dart';
+import '../theme/app_design_tokens.dart';
+import '../widgets/notification_action_button.dart';
 import 'notice_detail_screen.dart';
 import 'notice_form_screen.dart';
-import '../widgets/notification_action_button.dart'; // 💡 추가
 
 class NoticeListScreen extends ConsumerStatefulWidget {
   const NoticeListScreen({super.key});
@@ -18,195 +20,503 @@ class NoticeListScreen extends ConsumerStatefulWidget {
 class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
   final _searchController = TextEditingController();
 
+  static const _grades = <(String, String)>[
+    ('ALL', '전체'),
+    ('GRADE_1', '1학년'),
+    ('GRADE_2', '2학년'),
+    ('GRADE_3', '3학년'),
+  ];
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  // 💡 검색 실행 함수: 엔터키를 누르거나 돋보기 아이콘을 눌렀을 때 호출됩니다.
   void _performSearch() {
-    ref.read(searchKeywordProvider.notifier).updateKeyword(_searchController.text);
+    ref
+        .read(searchKeywordProvider.notifier)
+        .updateKeyword(_searchController.text);
   }
 
   @override
   Widget build(BuildContext context) {
-    // noticesAsync는 searchKeywordProvider의 상태 변경을 감지하여 자동으로 다시 fetch 합니다.
     final noticesAsync = ref.watch(noticesProvider);
-    final selectedGrade = ref.watch(noticeGradeProvider); // 💡 추가된 학년 상태
-
-    // 💡 관리자 권한 확인 (ADMIN 또는 SUPER_ADMIN만 글쓰기 가능)
+    final selectedGrade = ref.watch(noticeGradeProvider);
     final myPageAsync = ref.watch(myPageProvider);
-    final bool isAdmin = myPageAsync.when(
-      data: (data) => data.member.role == 'ADMIN' || data.member.role == 'SUPER_ADMIN',
-      loading: () => false,
-      error: (_, __) => false,
+    final isAdmin = myPageAsync.maybeWhen(
+      data: (data) =>
+          data.member.role == 'ADMIN' || data.member.role == 'SUPER_ADMIN',
+      orElse: () => false,
     );
 
     return Scaffold(
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
-        title: const Text('공지사항', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 0,
+        title: const Text(
+          '공지사항',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
         actions: const [
-          NotificationActionButton(), // 💡 추가
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: NotificationActionButton(),
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          // 💡 공지사항 검색 바 (Search Bar) UI
-          Container(
-            color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.1),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              onSubmitted: (_) => _performSearch(), // 엔터키 입력 시 검색
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: '공지 제목이나 내용 검색...',
-                hintStyle: TextStyle(color: Colors.grey.shade500),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary),
-                  onPressed: _performSearch, // 아이콘 클릭 시 검색
-                ),
-                prefixIcon: const Icon(Icons.article_outlined, color: Colors.grey),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            ),
-          ),
-          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 탭 필터 (Muted Text Tab)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildTextTab(context, ref, '전체', 'ALL', selectedGrade),
-                _buildTextTab(context, ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildTextTab(context, ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildTextTab(context, ref, '3학년', 'GRADE_3', selectedGrade),
-              ],
-            ),
-          ),
-          // 💡 공지사항 리스트 영역
-          Expanded(
-            child: noticesAsync.when(
-              data: (notices) {
-                // 💡 학년 필터링 추가
-                final filteredNotices = selectedGrade == 'ALL' 
-                    ? notices 
-                    : notices.where((n) => n.targetGrade == 'ALL' || n.targetGrade == selectedGrade).toList();
-
-                if (filteredNotices.isEmpty) {
-                  // 검색 결과 없음 (Empty State) UI
-                  final keyword = ref.read(searchKeywordProvider);
-                  final isSearch = keyword.isNotEmpty;
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Container(
-                      padding: const EdgeInsets.only(top: 80),
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(isSearch ? Icons.search_off_rounded : Icons.inbox_rounded, 
-                               size: 80, color: Colors.grey.shade300),
-                          const SizedBox(height: 24),
-                          Text(
-                            isSearch ? "'$keyword' 검색 결과가 없습니다." : '등록된 공지사항이 없습니다.',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            isSearch ? '다른 키워드로 다시 검색해보세요.' : '새로운 공지사항을 작성해보세요.',
-                            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(noticesProvider);
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: filteredNotices.length,
-                    itemBuilder: (context, index) {
-                      final notice = filteredNotices[index];
-                      return NoticeCard(notice: notice);
-                    },
-                  ),
+              tooltip: '공지 작성',
+              onPressed: () async {
+                final created = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
                 );
+                if (created == true) ref.invalidate(noticesProvider);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('에러가 발생했습니다:\n$error', textAlign: TextAlign.center),
-              ),
-            ),
+              child: const Icon(Icons.edit_outlined),
+            )
+          : null,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppDesignTokens.contentMaxWidth,
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 18),
+                child: Text(
+                  '학과의 중요한 소식과 안내를 확인하세요',
+                  style: TextStyle(
+                    color: AppDesignTokens.muted,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              _SearchField(
+                controller: _searchController,
+                onSearch: _performSearch,
+              ),
+              const SizedBox(height: 14),
+              _GradeFilter(
+                selectedGrade: selectedGrade,
+                onChanged: (grade) =>
+                    ref.read(noticeGradeProvider.notifier).updateGrade(grade),
+              ),
+              const SizedBox(height: 10),
+              Expanded(child: _buildNoticeList(noticesAsync, selectedGrade)),
+            ],
+          ),
+        ),
       ),
-      floatingActionButton: isAdmin ? FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const NoticeFormScreen(),
-            ),
-          );
-        },
-        icon: const Icon(Icons.edit),
-        label: const Text('글쓰기'),
-      ) : null,
     );
   }
 
-  Widget _buildTextTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
-    final isSelected = value == selectedValue;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    return GestureDetector(
-      onTap: () {
-        ref.read(noticeGradeProvider.notifier).updateGrade(value);
+  Widget _buildNoticeList(
+    AsyncValue<List<Notice>> noticesAsync,
+    String selectedGrade,
+  ) {
+    return noticesAsync.when(
+      data: (notices) {
+        final filteredNotices = selectedGrade == 'ALL'
+            ? notices
+            : notices
+                  .where(
+                    (notice) =>
+                        notice.targetGrade == 'ALL' ||
+                        notice.targetGrade == selectedGrade,
+                  )
+                  .toList();
+
+        if (filteredNotices.isEmpty) {
+          return _EmptyNoticeList(
+            hasKeyword: ref.read(searchKeywordProvider).trim().isNotEmpty,
+            onRefresh: () async => ref.invalidate(noticesProvider),
+          );
+        }
+
+        return RefreshIndicator(
+          color: AppDesignTokens.blue,
+          onRefresh: () async => ref.invalidate(noticesProvider),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+            itemCount: filteredNotices.length,
+            separatorBuilder: (_, _) =>
+                const Divider(height: 1, color: AppDesignTokens.divider),
+            itemBuilder: (context, index) => NoticeCard(
+              notice: filteredNotices[index],
+              onOpen: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        NoticeDetailScreen(notice: filteredNotices[index]),
+                  ),
+                );
+                ref.invalidate(noticesProvider);
+              },
+            ),
+          ),
+        );
       },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? primaryColor : Colors.black38,
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppDesignTokens.blue),
+      ),
+      error: (_, _) =>
+          _NoticeListError(onRetry: () => ref.invalidate(noticesProvider)),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onSearch});
+
+  final TextEditingController controller;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppDesignTokens.contentPadding,
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) => TextField(
+          controller: controller,
+          onSubmitted: (_) => onSearch(),
+          textInputAction: TextInputAction.search,
+          style: const TextStyle(
+            color: AppDesignTokens.navy,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: '공지 제목이나 내용 검색',
+            hintStyle: const TextStyle(color: AppDesignTokens.subtle),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppDesignTokens.muted,
+            ),
+            suffixIcon: value.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: '검색어 지우기',
+                    onPressed: () {
+                      controller.clear();
+                      onSearch();
+                    },
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                  ),
+            filled: true,
+            fillColor: AppDesignTokens.surface,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppDesignTokens.divider),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: AppDesignTokens.blue,
+                width: 1.5,
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 3,
-            width: 24,
-            decoration: BoxDecoration(
-              color: isSelected ? primaryColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
+class _GradeFilter extends StatelessWidget {
+  const _GradeFilter({required this.selectedGrade, required this.onChanged});
+
+  final String selectedGrade;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: AppDesignTokens.contentPadding,
+        itemCount: _NoticeListScreenState._grades.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final grade = _NoticeListScreenState._grades[index];
+          final selected = grade.$1 == selectedGrade;
+          return Material(
+            color: selected ? AppDesignTokens.navy : AppDesignTokens.surface,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              onTap: () => onChanged(grade.$1),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: selected
+                        ? AppDesignTokens.navy
+                        : AppDesignTokens.divider,
+                  ),
+                ),
+                child: Text(
+                  grade.$2,
+                  style: TextStyle(
+                    color: selected ? Colors.white : AppDesignTokens.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class NoticeCard extends ConsumerWidget {
+  const NoticeCard({super.key, required this.notice, required this.onOpen});
+
+  final Notice notice;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scrapsAsync = ref.watch(scrapsProvider);
+    final isScrapped = scrapsAsync.maybeWhen(
+      data: (scraps) => scraps.any(
+        (scrap) => scrap.targetType == 'NOTICE' && scrap.targetId == notice.id,
+      ),
+      orElse: () => false,
+    );
+    final isImportant = notice.noticeType == 'NOTICE';
+
+    return Material(
+      color: notice.isPinned
+          ? AppDesignTokens.paleBlue.withValues(alpha: 0.42)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _NoticeLabel(
+                    label: notice.isPinned ? '고정' : (isImportant ? '중요' : '일반'),
+                    isImportant: isImportant || notice.isPinned,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _gradeLabel(notice.targetGrade),
+                    style: const TextStyle(
+                      color: AppDesignTokens.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: isScrapped ? '스크랩 해제' : '스크랩',
+                    onPressed: () => ref
+                        .read(scrapNotifierProvider)
+                        .toggleScrap('NOTICE', notice.id),
+                    icon: Icon(
+                      isScrapped
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      size: 21,
+                      color: isScrapped
+                          ? AppDesignTokens.blue
+                          : AppDesignTokens.muted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                notice.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                notice.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppDesignTokens.muted,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 13),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      notice.authorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppDesignTokens.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.visibility_outlined,
+                    size: 15,
+                    color: AppDesignTokens.subtle,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${notice.viewCount}',
+                    style: const TextStyle(
+                      color: AppDesignTokens.subtle,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 15,
+                    color: AppDesignTokens.subtle,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${notice.commentCount}',
+                    style: const TextStyle(
+                      color: AppDesignTokens.subtle,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _shortDate(notice.createdAt),
+                    style: const TextStyle(
+                      color: AppDesignTokens.subtle,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _shortDate(String value) {
+    final date = DateTime.tryParse(value);
+    if (date == null) return value.split('T').first;
+    return '${date.month}.${date.day.toString().padLeft(2, '0')}';
+  }
+
+  static String _gradeLabel(String grade) {
+    return switch (grade) {
+      'GRADE_1' => '1학년',
+      'GRADE_2' => '2학년',
+      'GRADE_3' => '3학년',
+      _ => '전체 학년',
+    };
+  }
+}
+
+class _NoticeLabel extends StatelessWidget {
+  const _NoticeLabel({required this.label, required this.isImportant});
+
+  final String label;
+  final bool isImportant;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: isImportant
+            ? AppDesignTokens.coral.withValues(alpha: 0.1)
+            : AppDesignTokens.paleBlue,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isImportant ? AppDesignTokens.coral : AppDesignTokens.blue,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyNoticeList extends StatelessWidget {
+  const _EmptyNoticeList({required this.hasKeyword, required this.onRefresh});
+
+  final bool hasKeyword;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      color: AppDesignTokens.blue,
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 76),
+        children: [
+          const Icon(
+            Icons.campaign_outlined,
+            size: 42,
+            color: AppDesignTokens.subtle,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            hasKeyword ? '검색 결과가 없습니다.' : '등록된 공지가 없습니다.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppDesignTokens.navy,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hasKeyword ? '다른 검색어를 입력해보세요.' : '새 공지가 등록되면 알려드릴게요.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppDesignTokens.muted, fontSize: 13),
           ),
         ],
       ),
@@ -214,179 +524,32 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
   }
 }
 
-class NoticeCard extends ConsumerWidget {
-  final Notice notice;
+class _NoticeListError extends StatelessWidget {
+  const _NoticeListError({required this.onRetry});
 
-  const NoticeCard({super.key, required this.notice});
+  final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scrapsAsync = ref.watch(scrapsProvider);
-    final isScrapped = scrapsAsync.maybeWhen(
-      data: (scraps) => scraps.any((s) => s.targetType == 'NOTICE' && s.targetId == notice.id),
-      orElse: () => false,
-    );
-
-    final isNotice = notice.noticeType == 'NOTICE';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: notice.isPinned ? const Color(0xFF164687).withOpacity(0.05) : Colors.white, // 💡 상단 고정 글은 브랜드 컬러 연하게
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '공지사항을 불러오지 못했습니다.',
+            style: TextStyle(
+              color: AppDesignTokens.navy,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('다시 시도'),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => NoticeDetailScreen(notice: notice),
-              ),
-            );
-            // 💡 상세 화면에서 돌아올 때 조회수 증가를 반영하기 위해 리스트 새로고침
-            ref.invalidate(noticesProvider);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isNotice 
-                            ? const Color(0xFFE53935).withOpacity(0.08) // 💡 연한 다홍색 파스텔 톤
-                            : Theme.of(context).colorScheme.primary.withOpacity(0.08), // 💡 연한 블루 파스텔 톤
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isNotice 
-                                ? Icons.campaign_rounded // 💡 중요 공지는 확성기 아이콘
-                                : Icons.info_outline_rounded, // 💡 일반 공지는 정보 아이콘
-                            size: 14,
-                            color: isNotice ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isNotice ? '공지' : '일반',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isNotice ? const Color(0xFFE53935) : Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    // 💡 북마크 아이콘 (토글)
-                    InkWell(
-                      onTap: () {
-                        ref.read(scrapNotifierProvider).toggleScrap('NOTICE', notice.id);
-                      },
-                      child: Icon(
-                        isScrapped ? Icons.bookmark : Icons.bookmark_border,
-                        size: 24,
-                        color: const Color(0xFF164687),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right_rounded, color: Colors.black26, size: 24),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    if (notice.isPinned) // 💡 핀 고정 벡터 아이콘
-                      const Padding(
-                        padding: EdgeInsets.only(right: 6),
-                        child: Icon(
-                          Icons.push_pin_rounded,
-                          size: 18,
-                          color: Color(0xFF164687),
-                        ),
-                      ),
-                    Expanded(
-                      child: Text(
-                        notice.title,
-                        style: const TextStyle(
-                          fontSize: 20, 
-                          fontWeight: FontWeight.w800,
-                          height: 1.4,
-                          letterSpacing: -0.5,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  notice.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 15, 
-                    color: Colors.black54,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
-                      child: Icon(Icons.person_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      notice.authorName,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
-                    ),
-                    const Spacer(),
-                    // 💡 댓글수 및 날짜 표시 (조회수 제거)
-                    Icon(Icons.chat_bubble_outline, size: 16, color: Colors.grey.shade400),
-                    const SizedBox(width: 4),
-                    Text('${notice.commentCount}', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-                    const SizedBox(width: 12),
-                    Text(
-                      _formatDate(notice.createdAt),
-                      style: const TextStyle(fontSize: 13, color: Colors.black45, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
-  }
-
-  String _formatDate(String isoString) {
-    try {
-      final date = DateTime.parse(isoString);
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
-    }
   }
 }

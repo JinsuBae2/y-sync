@@ -1,24 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/community_post.dart';
 import '../providers/community_provider.dart';
 import '../providers/scrap_provider.dart';
+import '../theme/app_design_tokens.dart';
+import '../utils/image_url_helper.dart';
+import '../widgets/notification_action_button.dart';
 import 'community_detail_screen.dart';
 import 'community_form_screen.dart';
-import '../utils/image_url_helper.dart';
-import '../widgets/notification_action_button.dart'; // 💡 추가
 
 class CommunityListScreen extends ConsumerStatefulWidget {
-  final bool isAdminMode; // 💡 관리자 모드 플래그 추가
-
   const CommunityListScreen({super.key, this.isAdminMode = false});
 
+  final bool isAdminMode;
+
   @override
-  ConsumerState<CommunityListScreen> createState() => _CommunityListScreenState();
+  ConsumerState<CommunityListScreen> createState() =>
+      _CommunityListScreenState();
 }
 
 class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
   final _searchController = TextEditingController();
+
+  static const categories = <(String, String)>[
+    ('ALL', '전체'),
+    ('QA', 'Q&A'),
+    ('TEAM', '팀원 모집'),
+    ('FREE', '자유'),
+  ];
+  static const grades = <(String, String)>[
+    ('ALL', '전체 학년'),
+    ('GRADE_1', '1학년'),
+    ('GRADE_2', '2학년'),
+    ('GRADE_3', '3학년'),
+  ];
 
   @override
   void dispose() {
@@ -26,246 +42,319 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
     super.dispose();
   }
 
-  // 💡 검색 실행 함수: 엔터키를 누르거나 돋보기 아이콘을 눌렀을 때 호출됩니다.
   void _performSearch() {
-    ref.read(communitySearchKeywordProvider.notifier).updateKeyword(_searchController.text);
+    ref
+        .read(communitySearchKeywordProvider.notifier)
+        .updateKeyword(_searchController.text);
   }
 
   @override
   Widget build(BuildContext context) {
     final postsAsync = ref.watch(communityPostsProvider);
     final selectedCategory = ref.watch(communityCategoryProvider);
-    final selectedGrade = ref.watch(communityGradeProvider); // 💡 추가된 학년 상태
+    final selectedGrade = ref.watch(communityGradeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('커뮤니티', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: const [
-          NotificationActionButton(), // 💡 추가
-        ],
+      backgroundColor: AppDesignTokens.background,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppDesignTokens.blue,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        tooltip: '글쓰기',
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CommunityFormScreen()),
+        ),
+        child: const Icon(Icons.edit_outlined),
       ),
-      body: Column(
-        children: [
-          // 💡 커뮤니티 검색 바 (Search Bar) UI
-          Container(
-            color: Theme.of(context).colorScheme.inversePrimary.withOpacity(0.1),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              onSubmitted: (_) => _performSearch(), // 엔터키 입력 시 검색
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: '커뮤니티 제목이나 내용 검색...',
-                hintStyle: TextStyle(color: Colors.grey.shade500),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: const BorderSide(color: Color(0xFF164687), width: 2),
-                ),
-                suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _searchController,
-                  builder: (context, value, child) {
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (value.text.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.clear_rounded, color: Colors.grey, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              _performSearch();
-                            },
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.search_rounded, color: Color(0xFF164687)),
-                          onPressed: _performSearch,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                prefixIcon: const Icon(Icons.article_outlined, color: Colors.grey),
-              ),
+      body: SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppDesignTokens.contentMaxWidth,
             ),
-          ),
-          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 학년 탭 필터 (Muted Text Tab)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildGradeTextTab(ref, '전체', 'ALL', selectedGrade),
-                _buildGradeTextTab(ref, '1학년', 'GRADE_1', selectedGrade),
-                _buildGradeTextTab(ref, '2학년', 'GRADE_2', selectedGrade),
-                _buildGradeTextTab(ref, '3학년', 'GRADE_3', selectedGrade),
+                const _CommunityHeader(),
+                _SearchField(
+                  controller: _searchController,
+                  onSearch: _performSearch,
+                ),
+                const SizedBox(height: 16),
+                _FilterBar(
+                  selectedCategory: selectedCategory,
+                  selectedGrade: selectedGrade,
+                  onCategoryChanged: (value) => ref
+                      .read(communityCategoryProvider.notifier)
+                      .updateCategory(value),
+                  onGradeChanged: (value) => ref
+                      .read(communityGradeProvider.notifier)
+                      .updateGrade(value),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _buildPosts(postsAsync, selectedGrade: selectedGrade),
+                ),
               ],
             ),
           ),
-          // 💡 [개선 1안] 배경 상자가 없는 미니멀 텍스트 카테고리 탭 필터 (Muted Text Tab)
-          Container(
-            padding: const EdgeInsets.only(bottom: 8),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildCategoryTextTab(context, ref, '전체', 'ALL', selectedCategory),
-                _buildCategoryTextTab(context, ref, 'Q&A', 'QA', selectedCategory),
-                _buildCategoryTextTab(context, ref, '팀원모집', 'TEAM', selectedCategory),
-                _buildCategoryTextTab(context, ref, '자유', 'FREE', selectedCategory),
-              ],
-            ),
-          ),
-          // 💡 커뮤니티 게시글 리스트
-          Expanded(
-            child: postsAsync.when(
-              data: (allPosts) {
-                // 💡 관리자 모드가 아닐 때만 삭제된 게시글 숨김 처리
-                final posts = widget.isAdminMode ? allPosts : allPosts.where((p) => !p.isDeleted).toList();
+        ),
+      ),
+    );
+  }
 
-                // 💡 학년 필터링 추가 (전체이거나, 타겟 학년이 ALL이거나 일치하는 경우)
-                final filteredPosts = selectedGrade == 'ALL' 
-                    ? posts 
-                    : posts.where((p) => p.targetGrade == 'ALL' || p.targetGrade == selectedGrade).toList();
+  Widget _buildPosts(
+    AsyncValue<List<CommunityPost>> postsAsync, {
+    required String selectedGrade,
+  }) {
+    return postsAsync.when(
+      data: (allPosts) {
+        final visiblePosts = widget.isAdminMode
+            ? allPosts
+            : allPosts.where((post) => !post.isDeleted).toList();
+        final posts = selectedGrade == 'ALL'
+            ? visiblePosts
+            : visiblePosts
+                  .where(
+                    (post) =>
+                        post.targetGrade == 'ALL' ||
+                        post.targetGrade == selectedGrade,
+                  )
+                  .toList();
 
-                if (filteredPosts.isEmpty) {
-                  // 검색 결과 없음 (Empty State) UI
-                  final keyword = ref.read(communitySearchKeywordProvider);
-                  final isSearch = keyword.isNotEmpty;
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Container(
-                      padding: const EdgeInsets.only(top: 80),
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(isSearch ? Icons.search_off_rounded : Icons.inbox_rounded, 
-                               size: 80, color: Colors.grey.shade300),
-                          const SizedBox(height: 24),
-                          Text(
-                            isSearch ? "'$keyword' 검색 결과가 없습니다." : '게시글이 없습니다. 첫 글을 작성해보세요!',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            isSearch ? '다른 키워드로 다시 검색해보세요.' : '새로운 게시글을 작성해보세요.',
-                            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(communityPostsProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: filteredPosts.length,
-                    itemBuilder: (context, index) {
-                      return CommunityPostCard(post: filteredPosts[index]);
-                    },
+        if (posts.isEmpty) {
+          final keyword = ref.read(communitySearchKeywordProvider);
+          return _EmptyCommunity(
+            keyword: keyword,
+            onRefresh: () async => ref.invalidate(communityPostsProvider),
+          );
+        }
+
+        return RefreshIndicator(
+          color: AppDesignTokens.blue,
+          onRefresh: () async => ref.invalidate(communityPostsProvider),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+            itemCount: posts.length,
+            separatorBuilder: (_, _) =>
+                const Divider(height: 1, color: AppDesignTokens.divider),
+            itemBuilder: (context, index) => CommunityPostCard(
+              post: posts[index],
+              onOpen: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CommunityDetailScreen(post: posts[index]),
                   ),
                 );
+                ref.invalidate(communityPostsProvider);
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('에러: $err')),
             ),
           ),
-        ],
+        );
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppDesignTokens.blue),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CommunityFormScreen()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('글쓰기'),
+      error: (error, _) => _CommunityError(
+        onRetry: () => ref.invalidate(communityPostsProvider),
       ),
     );
   }
+}
 
-  Widget _buildGradeTextTab(WidgetRef ref, String label, String value, String selectedValue) {
-    final isSelected = value == selectedValue;
-    const primaryColor = Color(0xFF164687);
-    return GestureDetector(
-      onTap: () {
-        ref.read(communityGradeProvider.notifier).updateGrade(value);
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+class _CommunityHeader extends StatelessWidget {
+  const _CommunityHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 12, 20),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? primaryColor : Colors.black38,
-              ),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '커뮤니티',
+                  style: TextStyle(
+                    color: AppDesignTokens.navy,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  '학우들과 필요한 이야기를 나눠보세요',
+                  style: TextStyle(
+                    color: AppDesignTokens.muted,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 3,
-            width: 24,
+          Container(
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: isSelected ? primaryColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(2),
+              color: AppDesignTokens.paleBlue,
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: const NotificationActionButton(),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCategoryTextTab(BuildContext context, WidgetRef ref, String label, String value, String selectedValue) {
-    final isSelected = value == selectedValue;
-    const primaryColor = Color(0xFF164687);
-    return GestureDetector(
-      onTap: () {
-        ref.read(communityCategoryProvider.notifier).updateCategory(value);
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? primaryColor : Colors.black38,
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onSearch});
+
+  final TextEditingController controller;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppDesignTokens.contentPadding,
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) => TextField(
+          controller: controller,
+          onSubmitted: (_) => onSearch(),
+          textInputAction: TextInputAction.search,
+          style: const TextStyle(
+            color: AppDesignTokens.navy,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: '제목이나 내용 검색',
+            hintStyle: const TextStyle(color: AppDesignTokens.subtle),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppDesignTokens.muted,
+            ),
+            suffixIcon: value.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: '검색어 지우기',
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () {
+                      controller.clear();
+                      onSearch();
+                    },
+                  ),
+            filled: true,
+            fillColor: AppDesignTokens.surface,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppDesignTokens.divider),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: AppDesignTokens.blue,
+                width: 1.5,
               ),
             ),
           ),
-          const SizedBox(height: 6),
-          // 💡 선택 시 텍스트 아래 얇은 밑선 인디케이터 노출
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 3,
-            width: 24,
-            decoration: BoxDecoration(
-              color: isSelected ? primaryColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({
+    required this.selectedCategory,
+    required this.selectedGrade,
+    required this.onCategoryChanged,
+    required this.onGradeChanged,
+  });
+
+  final String selectedCategory;
+  final String selectedGrade;
+  final ValueChanged<String> onCategoryChanged;
+  final ValueChanged<String> onGradeChanged;
+
+  static const _categories = _CommunityListScreenState.categories;
+  static const _grades = _CommunityListScreenState.grades;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedGradeLabel = _grades
+        .firstWhere((item) => item.$1 == selectedGrade)
+        .$2;
+
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: AppDesignTokens.contentPadding,
+        children: [
+          for (final category in _categories)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _CategoryButton(
+                label: category.$2,
+                isSelected: selectedCategory == category.$1,
+                onTap: () => onCategoryChanged(category.$1),
+              ),
+            ),
+          const SizedBox(width: 4),
+          const VerticalDivider(
+            width: 17,
+            indent: 6,
+            endIndent: 6,
+            color: AppDesignTokens.divider,
+          ),
+          PopupMenuButton<String>(
+            tooltip: '학년 선택',
+            initialValue: selectedGrade,
+            onSelected: onGradeChanged,
+            itemBuilder: (_) => [
+              for (final grade in _grades)
+                PopupMenuItem(value: grade.$1, child: Text(grade.$2)),
+            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppDesignTokens.divider),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    selectedGradeLabel,
+                    style: const TextStyle(
+                      color: AppDesignTokens.navy,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: AppDesignTokens.muted,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -274,227 +363,313 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
   }
 }
 
-class CommunityPostCard extends ConsumerWidget {
-  final CommunityPost post;
+class _CategoryButton extends StatelessWidget {
+  const _CategoryButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
 
-  const CommunityPostCard({super.key, required this.post});
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isSelected ? AppDesignTokens.navy : AppDesignTokens.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected
+                  ? AppDesignTokens.navy
+                  : AppDesignTokens.divider,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppDesignTokens.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CommunityPostCard extends ConsumerWidget {
+  const CommunityPostCard({
+    super.key,
+    required this.post,
+    required this.onOpen,
+  });
+
+  final CommunityPost post;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scrapsAsync = ref.watch(scrapsProvider);
     final isScrapped = scrapsAsync.maybeWhen(
-      data: (scraps) => scraps.any((s) => s.targetType == 'COMMUNITY' && s.targetId == post.id),
+      data: (scraps) => scraps.any(
+        (scrap) => scrap.targetType == 'COMMUNITY' && scrap.targetId == post.id,
+      ),
       orElse: () => false,
     );
+    final imageUrls = post.imageUrls;
+    final hasImage = imageUrls != null && imageUrls.isNotEmpty;
 
-    final isPinned = post.isPinned;
+    return Material(
+      color: post.isPinned
+          ? AppDesignTokens.paleBlue.withValues(alpha: 0.42)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _PostLabel(post: post),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${post.authorName} · ${_shortDate(post.createdAt)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppDesignTokens.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      post.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppDesignTokens.navy,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      post.content,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppDesignTokens.muted,
+                        fontSize: 14,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.visibility_outlined,
+                          size: 15,
+                          color: AppDesignTokens.subtle,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${post.viewCount}',
+                          style: const TextStyle(
+                            color: AppDesignTokens.subtle,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 15,
+                          color: AppDesignTokens.subtle,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${post.commentCount}',
+                          style: const TextStyle(
+                            color: AppDesignTokens.subtle,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: isScrapped ? '스크랩 해제' : '스크랩',
+                          onPressed: () => ref
+                              .read(scrapNotifierProvider)
+                              .toggleScrap('COMMUNITY', post.id),
+                          icon: Icon(
+                            isScrapped
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                            size: 21,
+                            color: isScrapped
+                                ? AppDesignTokens.blue
+                                : AppDesignTokens.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (hasImage) ...[
+                const SizedBox(width: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    getCleanImageUrl(imageUrls.first),
+                    width: 76,
+                    height: 76,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 76,
+                      height: 76,
+                      color: AppDesignTokens.paleBlue,
+                      child: const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: AppDesignTokens.muted,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _shortDate(String value) {
+    final date = DateTime.tryParse(value);
+    if (date == null) return value.split('T').first;
+    return '${date.month}.${date.day.toString().padLeft(2, '0')}';
+  }
+}
+
+class _PostLabel extends StatelessWidget {
+  const _PostLabel({required this.post});
+
+  final CommunityPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (post.category) {
+      'QA' => 'Q&A',
+      'TEAM' => '팀원 모집',
+      _ => '자유',
+    };
+    final text = post.isPinned ? '고정' : label;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: isPinned ? const Color(0xFF164687).withOpacity(0.04) : Colors.white, // 💡 상단 고정 글은 브랜드 컬러 연하게
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isPinned 
-              ? const Color(0xFF164687).withOpacity(0.12) 
-              : Colors.grey.shade200,
-          width: 1,
+        color: post.isPinned ? AppDesignTokens.navy : AppDesignTokens.paleBlue,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: post.isPinned ? Colors.white : AppDesignTokens.blue,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+      ),
+    );
+  }
+}
+
+class _EmptyCommunity extends StatelessWidget {
+  const _EmptyCommunity({required this.keyword, required this.onRefresh});
+
+  final String keyword;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 76),
+        children: [
+          const Icon(
+            Icons.forum_outlined,
+            size: 42,
+            color: AppDesignTokens.subtle,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            keyword.isEmpty ? '아직 게시글이 없습니다.' : '검색 결과가 없습니다.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppDesignTokens.navy,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            keyword.isEmpty ? '첫 이야기를 남겨보세요.' : '다른 검색어를 입력해보세요.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppDesignTokens.muted, fontSize: 13),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CommunityDetailScreen(post: post),
-              ),
-            );
-            // 💡 상세 화면에서 돌아올 때 조회수 증가를 반영하기 위해 리스트 새로고침
-            ref.invalidate(communityPostsProvider);
-          },
-          borderRadius: BorderRadius.circular(18),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 💡 상단 영역: 작성자 아바타 및 정보 + 북마크
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 15,
-                      backgroundColor: post.anonymous ? Colors.grey.shade200 : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
-                      child: Icon(
-                        post.anonymous ? Icons.person_off_rounded : Icons.person_rounded,
-                        size: 16,
-                        color: post.anonymous ? Colors.grey : Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post.authorName,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          post.createdAt.split('T')[0],
-                          style: const TextStyle(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    // 💡 북마크 아이콘 (토글)
-                    InkWell(
-                      onTap: () {
-                        ref.read(scrapNotifierProvider).toggleScrap('COMMUNITY', post.id);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Icon(
-                          isScrapped ? Icons.bookmark : Icons.bookmark_border,
-                          size: 22,
-                          color: const Color(0xFF164687),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // 💡 중간 영역: 제목 및 본문 내용 + 우측 이미지 썸네일
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              if (isPinned) // 💡 핀 고정 벡터 아이콘
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 6),
-                                  child: Icon(
-                                    Icons.push_pin_rounded,
-                                    size: 16,
-                                    color: Color(0xFF164687),
-                                  ),
-                                ),
-                              Expanded(
-                                child: Text(
-                                  post.title,
-                                  style: const TextStyle(
-                                    fontSize: 17, 
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                    letterSpacing: -0.3,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            post.content,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14, 
-                              color: Colors.grey.shade700, 
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
-                      const SizedBox(width: 16),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12), // 💡 둥근 모서리 곡률 조정
-                        child: Image.network(
-                          getCleanImageUrl(post.imageUrls!.first),
-                          width: 80, // 💡 크기 80x80으로 조절
-                          height: 80,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              width: 80,
-                              height: 80,
-                              color: Colors.grey.shade100,
-                              child: const Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF164687)),
-                                ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 80,
-                            height: 80,
-                            color: Colors.grey.shade100,
-                            child: const Icon(Icons.broken_image_rounded, size: 24, color: Colors.grey),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // 💡 하단 영역: 카테고리 태그 뱃지 + 댓글 수
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        post.category == 'QA' ? 'Q&A' : (post.category == 'TEAM' ? '팀원모집' : '자유'),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Colors.grey.shade400),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${post.commentCount}', 
-                          style: TextStyle(
-                            fontSize: 12, 
-                            color: Colors.grey.shade600, 
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+    );
+  }
+}
+
+class _CommunityError extends StatelessWidget {
+  const _CommunityError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '게시글을 불러오지 못했습니다.',
+            style: TextStyle(
+              color: AppDesignTokens.navy,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('다시 시도'),
+          ),
+        ],
       ),
     );
   }

@@ -1,678 +1,607 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
+
 import '../models/community_post.dart';
-import '../models/comment.dart';
-import '../models/member.dart';
-import '../providers/community_provider.dart';
-import '../providers/notice_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comment_provider.dart';
-import '../widgets/deletion_reason_dialog.dart';
+import '../providers/community_provider.dart';
+import '../theme/app_design_tokens.dart';
 import '../utils/image_url_helper.dart';
+import '../widgets/comment_thread.dart';
+import '../widgets/deletion_reason_dialog.dart';
 import '../widgets/image_viewer_screen.dart';
 import '../widgets/linkify_text.dart';
 
 class CommunityDetailScreen extends ConsumerWidget {
-  final CommunityPost post;
-
   const CommunityDetailScreen({super.key, required this.post});
+
+  final CommunityPost post;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final currentMember = authState.asData?.value;
-    
-    // 본인이거나 ADMIN, SUPER_ADMIN인 경우 삭제 가능
-    final isAdmin = currentMember != null && (currentMember.role == 'ADMIN' || currentMember.role == 'SUPER_ADMIN');
-    final canDelete = currentMember != null && (isAdmin || currentMember.id == post.memberId);
+    final member = ref.watch(authProvider).asData?.value;
+    final isAdmin = member?.role == 'ADMIN' || member?.role == 'SUPER_ADMIN';
+    final canDelete = member != null && (isAdmin || member.id == post.memberId);
+    final canReport = member != null && !isAdmin && member.id != post.memberId;
 
-    // 💡 삭제된 게시글 접근 예외 처리 (관리자가 아니면 빈 화면 표시)
     if (post.isDeleted && !isAdmin) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('${post.category} 게시글'),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline_rounded, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                '관리자에 의해 삭제된 게시글입니다.',
-                style: TextStyle(fontSize: 18, color: Colors.black54, fontWeight: FontWeight.bold),
-              ),
-              if (post.deletionReason != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    '사유: ${post.deletionReason}',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
-                },
-                icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('뒤로 가기'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade200,
-                  foregroundColor: Colors.black87,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _DeletedPostScreen(reason: post.deletionReason);
     }
 
     return Scaffold(
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
-        title: Text('${post.category} 게시글'),
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 0,
+        title: const Text(
+          '커뮤니티',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
         actions: [
-          if (canDelete)
+          if (canReport)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: '삭제',
-              onPressed: () => _confirmDelete(context, ref),
-            ),
-          if (currentMember != null && currentMember.id != post.memberId)
-            IconButton(
-              icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
-              tooltip: '신고',
-              onPressed: () => _showReportBottomSheet(context, ref, 'POST', post.id),
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                       Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            post.category,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                      Text(
-                        _formatDate(post.createdAt),
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    post.title,
-                    style: const TextStyle(
-                      fontSize: 24, 
-                      fontWeight: FontWeight.w800,
-                      height: 1.4,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: post.anonymous ? Colors.grey.shade200 : Colors.amber.shade100,
-                        child: Icon(
-                          post.anonymous ? Icons.person_off_rounded : Icons.person_rounded,
-                          size: 16,
-                          color: post.anonymous ? Colors.grey : Colors.amber.shade900,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        post.authorName, 
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  const Divider(),
-                  const SizedBox(height: 24),
-                  LinkifyText(
-                    text: post.content,
-                    style: const TextStyle(fontSize: 16, height: 1.6, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 24),
-                  if (post.imageUrls != null && post.imageUrls!.isNotEmpty) ...[
-                    ...post.imageUrls!.map((url) {
-                      final imageUrl = getCleanImageUrl(url);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ImageViewerScreen(
-                                  imageUrls: post.imageUrls!.map((u) => getCleanImageUrl(u)).toList(),
-                                  initialIndex: post.imageUrls!.indexOf(url),
-                                ),
-                              ),
-                            );
-                          },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              imageUrl,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  width: double.infinity,
-                                  height: 200,
-                                  color: Colors.grey.shade100,
-                                  child: const Center(child: CircularProgressIndicator()),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                width: double.infinity,
-                                height: 150,
-                                color: Colors.grey.shade100,
-                                child: const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
-                                    SizedBox(height: 8),
-                                    Text('이미지를 불러올 수 없습니다.', style: TextStyle(color: Colors.grey)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    const SizedBox(height: 24),
-                  ],
-                  const SizedBox(height: 24),
-                  const Row(
-                    children: [
-                      Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.black54),
-                      const SizedBox(width: 8),
-                      const Text('댓글', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _CommentList(source: CommentSource.community, id: post.id),
-                ],
+              tooltip: '게시글 신고',
+              onPressed: () => _showReportBottomSheet(
+                context,
+                ref,
+                targetType: 'POST',
+                targetId: post.id,
+              ),
+              icon: const Icon(
+                Icons.flag_outlined,
+                color: AppDesignTokens.coral,
               ),
             ),
-          ),
-          _CommentInputArea(source: CommentSource.community, id: post.id),
+          if (canDelete)
+            IconButton(
+              tooltip: '게시글 삭제',
+              onPressed: () => _confirmDelete(context, ref, isAdmin: isAdmin),
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
+          const SizedBox(width: 4),
         ],
       ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final authState = ref.read(authProvider).asData?.value;
-    final isAdmin = authState != null && (authState.role == 'ADMIN' || authState.role == 'SUPER_ADMIN');
-
-    if (isAdmin) {
-      final reason = await showDialog<String>(
-        context: context,
-        builder: (context) => const DeletionReasonDialog(),
-      );
-      if (reason == null) return; // 취소
-
-      try {
-        await ref.read(communityNotifierProvider).deletePostByAdmin(post.id, reason);
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('관리자 권한으로 삭제되었습니다.')));
-        }
-      } catch (e) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
-      }
-    } else {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('게시글 삭제'),
-          content: const Text('정말로 이 게시글을 삭제하시겠습니까?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                try {
-                  await ref.read(communityNotifierProvider).deletePost(post.id);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('삭제되었습니다.')));
-                  }
-                } catch (e) {
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
-                }
-              },
-              child: const Text('삭제', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  String _formatDate(String isoString) {
-    try {
-      final date = DateTime.parse(isoString);
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
-    }
-  }
-}
-
-// 💡 댓글 목록 UI (NoticeDetailScreen과 로직 동일)
-class _CommentList extends ConsumerWidget {
-  final CommentSource source;
-  final int id;
-
-  const _CommentList({required this.source, required this.id});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final commentsAsync = ref.watch(commentsProvider((source: source, id: id)));
-    final authState = ref.watch(authProvider);
-    final currentMember = authState.asData?.value;
-
-    return commentsAsync.when(
-      data: (comments) {
-        if (comments.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: Text('첫 댓글을 남겨보세요!', style: TextStyle(color: Colors.grey))),
-          );
-        }
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: comments.length,
-          itemBuilder: (context, index) {
-            final comment = comments[index];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 💡 최상위 부모 댓글 타일
-                _buildCommentTile(context, ref, comment, currentMember, isSubComment: false),
-                
-                // 💡 자식 대댓글 목록 들여쓰기 렌더링
-                if (comment.children != null && comment.children!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 28.0, top: 4.0, bottom: 8.0),
-                    child: Column(
-                      children: comment.children!.map((child) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: _buildCommentTile(context, ref, child, currentMember, isSubComment: true),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                const Divider(height: 1, color: Colors.black12),
-              ],
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, st) => Text('에러: $err'),
-    );
-  }
-
-  Widget _buildCommentTile(
-    BuildContext context,
-    WidgetRef ref,
-    Comment comment,
-    Member? currentMember, {
-    required bool isSubComment,
-  }) {
-    final isAdmin = currentMember?.role == 'ADMIN' || currentMember?.role == 'SUPER_ADMIN';
-    final isMyComment = currentMember != null && comment.authorName == currentMember.name;
-    final canDelete = (isMyComment || isAdmin) && !comment.isDeleted;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: isSubComment ? const Color(0xFF164687).withOpacity(0.03) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isSubComment) ...[
-            const Icon(Icons.subdirectory_arrow_right_rounded, size: 16, color: Colors.grey),
-            const SizedBox(width: 8),
-          ],
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: comment.isDeleted ? Colors.grey.shade200 : (isSubComment ? Colors.blue.shade50 : Colors.amber.shade100),
-            child: Text(
-              comment.isDeleted ? '-' : comment.authorName.substring(0, 1),
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-            ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppDesignTokens.contentMaxWidth,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      comment.isDeleted ? '익명' : comment.authorName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: isSubComment ? Colors.blueGrey.shade800 : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(_formatDate(comment.createdAt), style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: comment.isDeleted ? Colors.red.shade300 : Colors.black87,
-                    fontStyle: comment.isDeleted ? FontStyle.italic : FontStyle.normal,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Column(
             children: [
-              // 💡 부모 댓글일 때만 [답글] 버튼을 노출합니다.
-              if (!isSubComment && !comment.isDeleted && currentMember != null)
-                TextButton(
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _PostMeta(post: post),
+                      const SizedBox(height: 16),
+                      Text(
+                        post.title,
+                        style: const TextStyle(
+                          color: AppDesignTokens.navy,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _AuthorRow(post: post),
+                      if (post.isDeleted) ...[
+                        const SizedBox(height: 18),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppDesignTokens.coral.withValues(
+                              alpha: 0.08,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '삭제된 게시글${post.deletionReason == null ? '' : ' · ${post.deletionReason}'}',
+                            style: const TextStyle(
+                              color: AppDesignTokens.coral,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, color: AppDesignTokens.divider),
+                      const SizedBox(height: 24),
+                      LinkifyText(
+                        text: post.content,
+                        style: const TextStyle(
+                          color: AppDesignTokens.navy,
+                          fontSize: 15,
+                          height: 1.7,
+                        ),
+                      ),
+                      if (post.imageUrls case final images?
+                          when images.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        for (final image in images)
+                          _PostImage(
+                            url: image,
+                            images: images,
+                            onOpen: (index) => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ImageViewerScreen(
+                                  imageUrls: images
+                                      .map(getCleanImageUrl)
+                                      .toList(),
+                                  initialIndex: index,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                      const SizedBox(height: 32),
+                      Row(
+                        children: [
+                          const Text(
+                            '댓글',
+                            style: TextStyle(
+                              color: AppDesignTokens.navy,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 7),
+                          Text(
+                            '${post.commentCount}',
+                            style: const TextStyle(
+                              color: AppDesignTokens.blue,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(height: 1, color: AppDesignTokens.divider),
+                      CommentListSection(
+                        source: CommentSource.community,
+                        postId: post.id,
+                        onReport: (reportContext, commentId) =>
+                            _showReportBottomSheet(
+                              reportContext,
+                              ref,
+                              targetType: 'COMMENT',
+                              targetId: commentId,
+                            ),
+                      ),
+                    ],
                   ),
-                  onPressed: () {
-                    // 답글 대상 지정
-                    ref.read(activeParentCommentProvider.notifier).updateState(id, comment);
-                  },
-                  child: const Text('답글', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF164687))),
                 ),
-              if (canDelete)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 16, color: Colors.grey),
-                  onPressed: () => _confirmDeleteComment(context, ref, comment, isAdmin),
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
-                )
-              else if (currentMember != null && !comment.isDeleted)
-                IconButton(
-                  icon: const Icon(Icons.report_gmailerrorred_rounded, size: 16, color: Colors.redAccent),
-                  tooltip: '신고',
-                  onPressed: () => _showReportBottomSheet(context, ref, 'COMMENT', comment.id),
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
-                ),
+              ),
+              CommentComposer(source: CommentSource.community, postId: post.id),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  void _confirmDeleteComment(BuildContext context, WidgetRef ref, Comment comment, bool isAdmin) async {
-    if (isAdmin) {
-      final reason = await showDialog<String>(
-        context: context,
-        builder: (context) => const DeletionReasonDialog(),
-      );
-      if (reason == null) return;
-
-      try {
-        await ref.read(commentNotifierProvider).deleteCommentByAdmin(source, id, comment.id, reason);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('관리자 권한으로 삭제되었습니다.')));
-        }
-      } catch (e) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool isAdmin,
+  }) async {
+    try {
+      if (isAdmin) {
+        final reason = await showDialog<String>(
+          context: context,
+          builder: (_) => const DeletionReasonDialog(),
+        );
+        if (reason == null) return;
+        await ref
+            .read(communityNotifierProvider)
+            .deletePostByAdmin(post.id, reason);
+      } else {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('게시글 삭제'),
+            content: const Text('이 게시글을 삭제하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text(
+                  '삭제',
+                  style: TextStyle(color: AppDesignTokens.coral),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+        await ref.read(communityNotifierProvider).deletePost(post.id);
       }
-    } else {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('댓글 삭제'),
-          content: const Text('정말로 삭제하시겠습니까?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소', style: TextStyle(color: Colors.grey))),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                try {
-                  await ref.read(commentNotifierProvider).deleteComment(source, id, comment.id);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('삭제되었습니다.')));
-                  }
-                } catch (e) {
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
-                }
-              },
-              child: const Text('삭제', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('게시글이 삭제되었습니다.')));
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('삭제 실패: $error')));
+    }
+  }
+
+  Future<void> _showReportBottomSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required String targetType,
+    required int targetId,
+  }) async {
+    const reasons = [
+      '스팸·홍보·도배',
+      '음란하거나 선정적인 내용',
+      '욕설·혐오·비하 표현',
+      '개인정보 노출 또는 권리 침해',
+      '기타 부적절한 내용',
+    ];
+
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppDesignTokens.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '신고 사유',
+                style: TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '가장 가까운 사유를 선택해주세요.',
+                style: TextStyle(color: AppDesignTokens.muted, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              for (var index = 0; index < reasons.length; index++) ...[
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.flag_outlined,
+                    color: AppDesignTokens.coral,
+                    size: 20,
+                  ),
+                  title: Text(
+                    reasons[index],
+                    style: const TextStyle(
+                      color: AppDesignTokens.navy,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppDesignTokens.subtle,
+                  ),
+                  onTap: () => Navigator.pop(sheetContext, reasons[index]),
+                ),
+                if (index != reasons.length - 1)
+                  const Divider(height: 1, color: AppDesignTokens.divider),
+              ],
+            ],
+          ),
         ),
-      );
-    }
-  }
+      ),
+    );
+    if (reason == null || !context.mounted) return;
 
-  String _formatDate(String isoString) {
     try {
-      final date = DateTime.parse(isoString);
-      return '${date.month}/${date.day} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return isoString;
-    }
-  }
-}
-
-// 💡 댓글 입력창 UI (NoticeDetailScreen과 로직 동일)
-class _CommentInputArea extends ConsumerStatefulWidget {
-  final CommentSource source;
-  final int id;
-
-  const _CommentInputArea({required this.source, required this.id});
-
-  @override
-  ConsumerState<_CommentInputArea> createState() => _CommentInputAreaState();
-}
-
-class _CommentInputAreaState extends ConsumerState<_CommentInputArea> {
-  final _controller = TextEditingController();
-  bool _isSubmitting = false;
-
-  void _submit(Comment? activeParent) async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() => _isSubmitting = true);
-    try {
-      await ref.read(commentNotifierProvider).createComment(
-            widget.source,
-            widget.id,
-            text,
-            parentId: activeParent?.id, // 💡 대댓글 parentId 주입
+      await ref
+          .read(communityNotifierProvider)
+          .reportTarget(
+            targetType: targetType,
+            targetId: targetId,
+            reason: reason,
           );
-      _controller.clear();
-      // 답글 모드 리셋
-      ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
-      FocusScope.of(context).unfocus();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('댓글 작성 실패: $e')));
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('신고가 접수되었습니다.')));
+    } catch (error) {
+      if (!context.mounted) return;
+      var message = error.toString();
+      if (error is DioException && error.response?.data != null) {
+        message = error.response!.data.toString();
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('신고 실패: $message')));
     }
   }
+}
+
+class _DeletedPostScreen extends StatelessWidget {
+  const _DeletedPostScreen({required this.reason});
+
+  final String? reason;
 
   @override
   Widget build(BuildContext context) {
-    final activeParent = ref.watch(activeParentCommentProvider)[widget.id];
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 💡 답글 작성 대상 표시 인디케이터 바
-        if (activeParent != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: const Color(0xFF164687).withOpacity(0.08),
-            child: Row(
-              children: [
-                const Icon(Icons.reply_rounded, size: 16, color: Color(0xFF164687)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${activeParent.authorName}님에게 답글 작성 중...',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF164687)),
+    return Scaffold(
+      backgroundColor: AppDesignTokens.background,
+      appBar: AppBar(
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          '커뮤니티',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.block_outlined,
+                size: 42,
+                color: AppDesignTokens.subtle,
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                '삭제된 게시글입니다.',
+                style: TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (reason != null) ...[
+                const SizedBox(height: 7),
+                Text(
+                  '사유: $reason',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppDesignTokens.muted,
+                    fontSize: 13,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    // 답글 취소
-                    ref.read(activeParentCommentProvider.notifier).updateState(widget.id, null);
-                  },
-                  child: const Icon(Icons.cancel_rounded, size: 16, color: Colors.grey),
-                ),
               ],
-            ),
-          ),
-        Container(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + MediaQuery.of(context).padding.bottom),
-          decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade200))),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: activeParent != null ? '답글을 입력하세요...' : '댓글을 입력하세요...',
-                    border: InputBorder.none,
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.maybePop(context),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text('목록으로'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppDesignTokens.navy,
+                  side: const BorderSide(color: AppDesignTokens.divider),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
-              _isSubmitting
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                  : IconButton(
-                      icon: Icon(Icons.send_rounded, color: Theme.of(context).colorScheme.secondary),
-                      onPressed: () => _submit(activeParent),
-                    ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PostMeta extends StatelessWidget {
+  const _PostMeta({required this.post});
+
+  final CommunityPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: AppDesignTokens.paleBlue,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            _categoryLabel(post.category),
+            style: const TextStyle(
+              color: AppDesignTokens.blue,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          _gradeLabel(post.targetGrade),
+          style: const TextStyle(
+            color: AppDesignTokens.muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          _formatDate(post.createdAt),
+          style: const TextStyle(color: AppDesignTokens.subtle, fontSize: 12),
         ),
       ],
     );
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  static String _categoryLabel(String value) {
+    return switch (value) {
+      'QA' => 'Q&A',
+      'TEAM' => '팀원 모집',
+      _ => '자유',
+    };
+  }
+
+  static String _gradeLabel(String value) {
+    return switch (value) {
+      'GRADE_1' => '1학년',
+      'GRADE_2' => '2학년',
+      'GRADE_3' => '3학년',
+      _ => '전체 학년',
+    };
+  }
+
+  static String _formatDate(String value) {
+    final date = DateTime.tryParse(value);
+    if (date == null) return value.split('T').first;
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}.$month.$day';
   }
 }
 
-void _showReportBottomSheet(BuildContext context, WidgetRef ref, String targetType, int targetId) {
-  final reasons = [
-    '스팸홍보/도배글입니다.',
-    '음란물/선정적인 내용입니다.',
-    '욕설/생명경시/혐오/비하성 내용입니다.',
-    '개인정보 노출/권리침해 신고입니다.',
-    '기타 부적절한 내용입니다.',
-  ];
+class _AuthorRow extends StatelessWidget {
+  const _AuthorRow({required this.post});
 
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Text(
-                  '신고 사유 선택',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-              ),
-              const Divider(),
-              ...reasons.map((reason) {
-                return ListTile(
-                  title: Text(reason, style: const TextStyle(fontSize: 14)),
-                  leading: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    try {
-                      await ref.read(communityNotifierProvider).reportTarget(
-                        targetType: targetType,
-                        targetId: targetId,
-                        reason: reason,
-                      );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('신고가 성공적으로 접수되었습니다. 신고 기준 누적 시 자동 숨김 처리됩니다.')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        String errorMessage = e.toString();
-                        if (e is DioException && e.response?.data != null) {
-                          errorMessage = e.response?.data.toString() ?? e.toString();
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('신고 실패: $errorMessage')),
-                        );
-                      }
-                    }
-                  },
-                );
-              }).toList(),
-            ],
+  final CommunityPost post;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: post.anonymous
+                ? AppDesignTokens.background
+                : AppDesignTokens.paleBlue,
+            borderRadius: BorderRadius.circular(7),
+            border: post.anonymous
+                ? Border.all(color: AppDesignTokens.divider)
+                : null,
+          ),
+          child: Icon(
+            post.anonymous
+                ? Icons.person_off_outlined
+                : Icons.person_outline_rounded,
+            size: 19,
+            color: post.anonymous
+                ? AppDesignTokens.muted
+                : AppDesignTokens.blue,
           ),
         ),
-      );
-    },
-  );
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            post.authorName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppDesignTokens.navy,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const Icon(
+          Icons.visibility_outlined,
+          size: 16,
+          color: AppDesignTokens.subtle,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '${post.viewCount}',
+          style: const TextStyle(color: AppDesignTokens.subtle, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _PostImage extends StatelessWidget {
+  const _PostImage({
+    required this.url,
+    required this.images,
+    required this.onOpen,
+  });
+
+  final String url;
+  final List<String> images;
+  final ValueChanged<int> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: AppDesignTokens.surface,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => onOpen(images.indexOf(url)),
+          child: Image.network(
+            getCleanImageUrl(url),
+            width: double.infinity,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const SizedBox(
+                height: 180,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppDesignTokens.blue,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (_, _, _) => const SizedBox(
+              height: 140,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      color: AppDesignTokens.subtle,
+                    ),
+                    SizedBox(height: 7),
+                    Text(
+                      '이미지를 불러올 수 없습니다.',
+                      style: TextStyle(
+                        color: AppDesignTokens.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

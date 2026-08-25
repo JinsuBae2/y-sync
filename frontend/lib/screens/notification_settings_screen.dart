@@ -1,37 +1,155 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+
 import '../providers/mypage_provider.dart';
 import '../providers/notice_provider.dart';
+import '../theme/app_design_tokens.dart';
 
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
   const NotificationSettingsScreen({super.key});
 
   @override
-  ConsumerState<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+  ConsumerState<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends ConsumerState<NotificationSettingsScreen> {
+class _NotificationSettingsScreenState
+    extends ConsumerState<NotificationSettingsScreen> {
   bool _isLoading = false;
+  bool _initialized = false;
   bool _noticeEnabled = true;
   bool _commentEnabled = true;
 
   @override
   void initState() {
     super.initState();
-    _initSettings();
+    final data = ref.read(myPageProvider).asData?.value;
+    if (data != null) {
+      _noticeEnabled = data.member.noticeEnabled;
+      _commentEnabled = data.member.commentEnabled;
+      _initialized = true;
+    }
   }
 
-  void _initSettings() {
-    // 💡 마이페이지 프로바이더의 현재 회원 정보에서 기존 설정을 로드합니다.
-    final myPageState = ref.read(myPageProvider);
-    myPageState.whenData((data) {
-      setState(() {
-        _noticeEnabled = data.member.noticeEnabled;
-        _commentEnabled = data.member.commentEnabled;
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(myPageProvider, (_, next) {
+      if (_initialized || !mounted) return;
+      next.whenData((data) {
+        if (!mounted) return;
+        setState(() {
+          _noticeEnabled = data.member.noticeEnabled;
+          _commentEnabled = data.member.commentEnabled;
+          _initialized = true;
+        });
       });
     });
+
+    return Scaffold(
+      backgroundColor: AppDesignTokens.background,
+      appBar: AppBar(
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 0,
+        title: const Text(
+          '알림 설정',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        bottom: _isLoading
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(2),
+                child: LinearProgressIndicator(
+                  minHeight: 2,
+                  color: AppDesignTokens.blue,
+                  backgroundColor: AppDesignTokens.paleBlue,
+                ),
+              )
+            : null,
+      ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppDesignTokens.contentMaxWidth,
+          ),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            children: [
+              const Text(
+                '수신할 알림',
+                style: TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                '필요한 소식만 선택해서 받을 수 있습니다.',
+                style: TextStyle(color: AppDesignTokens.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 18),
+              _SettingGroup(
+                children: [
+                  _NotificationToggle(
+                    icon: Icons.campaign_outlined,
+                    title: '공지사항',
+                    subtitle: '학과 공지와 긴급 안내를 받습니다.',
+                    value: _noticeEnabled,
+                    enabled: !_isLoading,
+                    onChanged: (value) =>
+                        _updateSettings(value, _commentEnabled),
+                  ),
+                  _NotificationToggle(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: '댓글',
+                    subtitle: '내 게시글에 새 댓글이 달리면 알려줍니다.',
+                    value: _commentEnabled,
+                    enabled: !_isLoading,
+                    onChanged: (value) =>
+                        _updateSettings(_noticeEnabled, value),
+                  ),
+                ],
+              ),
+              if (kIsWeb) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppDesignTokens.paleBlue.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: AppDesignTokens.blue,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '웹에서는 브라우저 알림 권한도 허용되어 있어야 푸시 알림을 받을 수 있습니다.',
+                          style: TextStyle(
+                            color: AppDesignTokens.muted,
+                            fontSize: 12,
+                            height: 1.45,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _updateSettings(bool noticeEnabled, bool commentEnabled) async {
@@ -39,192 +157,101 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
 
     try {
       final dio = ref.read(dioProvider);
-      
-      // 1. 백엔드 설정 저장
-      await dio.put('/members/settings', data: {
-        'noticeEnabled': noticeEnabled,
-        'commentEnabled': commentEnabled,
-      });
-
-      // 💡 [웹앱 환경 개선] 브라우저 제약 상 FCM 토픽 구독 제어가 불가능하므로, 토픽 방식은 주석 처리합니다.
-      // 💡 공지사항 알림 수신 여부는 백엔드 DB의 noticeEnabled 필드를 반영하여 발송 쿼리 시 자동으로 걸러집니다.
-      /*
-      if (!kIsWeb) {
-        if (noticeEnabled) {
-          await FirebaseMessaging.instance.subscribeToTopic('all');
-        } else {
-          await FirebaseMessaging.instance.unsubscribeFromTopic('all');
-        }
-      }
-      */
-
+      await dio.put(
+        '/members/settings',
+        data: {
+          'noticeEnabled': noticeEnabled,
+          'commentEnabled': commentEnabled,
+        },
+      );
+      if (!mounted) return;
       setState(() {
         _noticeEnabled = noticeEnabled;
         _commentEnabled = commentEnabled;
       });
-
-      // 3. 마이페이지 로컬 캐시 갱신
       await ref.read(myPageProvider.notifier).refresh();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('알림 설정이 변경되었습니다.'),
-            duration: Duration(seconds: 1),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('설정 저장 중 오류가 발생했습니다: $e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('알림 설정을 저장했습니다.')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('알림 설정을 저장하지 못했습니다.')));
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+}
+
+class _SettingGroup extends StatelessWidget {
+  const _SettingGroup({required this.children});
+
+  final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text(
-          '알림 설정',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                child: Text(
-                  '알림 수신 동의 설정',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.blueGrey,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                elevation: 0,
-                color: Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    children: [
-                      SwitchListTile(
-                        title: const Text(
-                          '공지사항 알림',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          '학부 공식 공지사항 및 긴급 안내 푸시 알림을 수신합니다.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        secondary: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.campaign_rounded,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                        value: _noticeEnabled,
-                        onChanged: _isLoading
-                            ? null
-                            : (val) => _updateSettings(val, _commentEnabled),
-                        activeColor: const Color(0xFF164687),
-                      ),
-                      const Divider(height: 1, indent: 70),
-                      SwitchListTile(
-                        title: const Text(
-                          '댓글 알림',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          '내가 작성한 게시글에 새 댓글이 달리면 알림을 수신합니다.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        secondary: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.comment_rounded,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                        value: _commentEnabled,
-                        onChanged: _isLoading
-                            ? null
-                            : (val) => _updateSettings(_noticeEnabled, val),
-                        activeColor: const Color(0xFF164687),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              if (kIsWeb)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 16, color: Colors.grey.shade600),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '웹 환경에서는 브라우저 자체의 푸시 알림 권한 상태가 켜져 있어야 알림 수신이 정상 작동합니다.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.15),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: AppDesignTokens.surface,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: AppDesignTokens.divider),
+    ),
+    child: Column(
+      children: [
+        for (var index = 0; index < children.length; index++) ...[
+          children[index],
+          if (index < children.length - 1)
+            const Divider(
+              height: 1,
+              indent: 62,
+              color: AppDesignTokens.divider,
             ),
         ],
+      ],
+    ),
+  );
+}
+
+class _NotificationToggle extends StatelessWidget {
+  const _NotificationToggle({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SwitchListTile(
+    value: value,
+    onChanged: enabled ? onChanged : null,
+    activeTrackColor: AppDesignTokens.blue,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+    secondary: Icon(icon, color: AppDesignTokens.navy, size: 22),
+    title: Text(
+      title,
+      style: const TextStyle(
+        color: AppDesignTokens.navy,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
       ),
-    );
-  }
+    ),
+    subtitle: Text(
+      subtitle,
+      style: const TextStyle(
+        color: AppDesignTokens.muted,
+        fontSize: 12,
+        height: 1.4,
+      ),
+    ),
+  );
 }

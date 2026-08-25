@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+
+import '../theme/app_design_tokens.dart';
 
 class AuthSettingsScreen extends ConsumerStatefulWidget {
   const AuthSettingsScreen({super.key});
@@ -13,7 +16,8 @@ class AuthSettingsScreen extends ConsumerStatefulWidget {
 class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
   final _storage = const FlutterSecureStorage();
   final _localAuth = LocalAuthentication();
-  
+
+  bool _isLoading = true;
   bool _useBiometric = false;
   bool _usePin = false;
 
@@ -24,149 +28,279 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final useBiometricStr = await _storage.read(key: 'use_biometric');
-    final pinStr = await _storage.read(key: 'user_pin');
-    
-    setState(() {
-      _useBiometric = useBiometricStr == 'true';
-      _usePin = pinStr != null;
-    });
+    try {
+      final values = await Future.wait([
+        _storage.read(key: 'use_biometric'),
+        _storage.read(key: 'user_pin'),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _useBiometric = values[0] == 'true';
+        _usePin = values[1] != null;
+      });
+    } catch (_) {
+      if (mounted) _showSnackBar('보안 설정을 불러오지 못했습니다.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _toggleBiometric(bool value) async {
-    if (value) {
-      bool canCheckBiometrics = await _localAuth.canCheckBiometrics;
-      bool isDeviceSupported = await _localAuth.isDeviceSupported();
-      
-      if (!canCheckBiometrics || !isDeviceSupported) {
-        _showSnackBar('기기에서 생체 인식을 지원하지 않거나 설정되어 있지 않습니다.');
-        return;
-      }
-      
-      bool authenticated = await _localAuth.authenticate(
-        localizedReason: '생체 인식을 활성화하려면 인증이 필요합니다.',
-      );
-      
-      if (authenticated) {
+    setState(() => _isLoading = true);
+    try {
+      if (value) {
+        final supported = await _localAuth.isDeviceSupported();
+        final canCheck = await _localAuth.canCheckBiometrics;
+        if (!supported || !canCheck) {
+          _showSnackBar('이 기기에서 생체 인식을 사용할 수 없습니다.');
+          return;
+        }
+        final authenticated = await _localAuth.authenticate(
+          localizedReason: '생체 인식 로그인을 활성화합니다.',
+        );
+        if (!authenticated) return;
         await _storage.write(key: 'use_biometric', value: 'true');
+        if (!mounted) return;
         setState(() => _useBiometric = true);
-        _showSnackBar('생체 인식이 활성화되었습니다.');
+        _showSnackBar('생체 인식 로그인을 켰습니다.');
+      } else {
+        await _storage.delete(key: 'use_biometric');
+        if (!mounted) return;
+        setState(() => _useBiometric = false);
+        _showSnackBar('생체 인식 로그인을 껐습니다.');
       }
-    } else {
-      await _storage.delete(key: 'use_biometric');
-      setState(() => _useBiometric = false);
-      _showSnackBar('생체 인식이 해제되었습니다.');
+    } on PlatformException {
+      _showSnackBar('생체 인식을 완료하지 못했습니다.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _setupPin() async {
     if (_usePin) {
-      // PIN 해제
       await _storage.delete(key: 'user_pin');
+      if (!mounted) return;
       setState(() => _usePin = false);
-      _showSnackBar('PIN 로그인이 해제되었습니다.');
+      _showSnackBar('PIN 로그인을 해제했습니다.');
       return;
     }
-    
-    // PIN 설정
-    final pinController = TextEditingController();
-    final result = await showDialog<String>(
+
+    final controller = TextEditingController();
+    final pin = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('PIN 설정', style: TextStyle(fontWeight: FontWeight.bold)),
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: const Text(
+          'PIN 설정',
+          style: TextStyle(
+            color: AppDesignTokens.navy,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         content: TextField(
-          controller: pinController,
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
           keyboardType: TextInputType.number,
           maxLength: 6,
-          obscureText: true,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-            hintText: '6자리 숫자를 입력하세요',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            labelText: 'PIN',
+            hintText: '4~6자리 숫자',
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppDesignTokens.divider),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppDesignTokens.blue),
+            ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          ElevatedButton(
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('취소'),
+          ),
+          FilledButton(
             onPressed: () {
-              if (pinController.text.length >= 4) {
-                Navigator.pop(context, pinController.text);
+              if (controller.text.length >= 4) {
+                Navigator.pop(dialogContext, controller.text);
               }
             },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppDesignTokens.blue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: const Text('저장'),
           ),
         ],
       ),
     );
+    controller.dispose();
 
-    if (result != null && result.isNotEmpty) {
-      await _storage.write(key: 'user_pin', value: result);
-      setState(() => _usePin = true);
-      _showSnackBar('PIN 설정이 완료되었습니다.');
-    }
+    if (pin == null || pin.isEmpty) return;
+    await _storage.write(key: 'user_pin', value: pin);
+    if (!mounted) return;
+    setState(() => _usePin = true);
+    _showSnackBar('PIN 로그인을 설정했습니다.');
   }
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
-        title: const Text('보안 및 간편 로그인', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        titleSpacing: 0,
+        title: const Text(
+          '보안 및 간편 로그인',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        bottom: _isLoading
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(2),
+                child: LinearProgressIndicator(
+                  minHeight: 2,
+                  color: AppDesignTokens.blue,
+                  backgroundColor: AppDesignTokens.paleBlue,
+                ),
+              )
+            : null,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text('간편 인증 수단', style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold)),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppDesignTokens.contentMaxWidth,
           ),
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-            color: Colors.white,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('생체 인식 (지문/FaceID)', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('앱 실행 시 생체 인식으로 빠르게 로그인합니다.', style: TextStyle(fontSize: 13)),
-                  secondary: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-                    child: Icon(Icons.fingerprint, color: Colors.blue.shade700),
-                  ),
-                  value: _useBiometric,
-                  onChanged: _toggleBiometric,
-                  activeColor: Theme.of(context).colorScheme.primary,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            children: [
+              const Text(
+                '간편 인증',
+                style: TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
                 ),
-                const Divider(height: 1, indent: 64),
-                ListTile(
-                  title: const Text('PIN 잠금', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(_usePin ? '사용 중' : '사용 안 함', style: const TextStyle(fontSize: 13)),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.orange.shade50, shape: BoxShape.circle),
-                    child: Icon(Icons.pin, color: Colors.orange.shade700),
-                  ),
-                  trailing: ElevatedButton(
-                    onPressed: _setupPin,
-                    style: ElevatedButton.styleFrom(
-                      elevation: 0,
-                      backgroundColor: _usePin ? Colors.grey.shade200 : Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      foregroundColor: _usePin ? Colors.black87 : Theme.of(context).colorScheme.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                '로그인 정보를 기기에 안전하게 저장해 빠르게 인증합니다.',
+                style: TextStyle(color: AppDesignTokens.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppDesignTokens.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppDesignTokens.divider),
+                ),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      value: _useBiometric,
+                      onChanged: _isLoading ? null : _toggleBiometric,
+                      activeTrackColor: AppDesignTokens.blue,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 5,
+                      ),
+                      secondary: const Icon(
+                        Icons.fingerprint_rounded,
+                        color: AppDesignTokens.navy,
+                      ),
+                      title: const Text(
+                        '생체 인식',
+                        style: TextStyle(
+                          color: AppDesignTokens.navy,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '지문 또는 Face ID로 로그인합니다.',
+                        style: TextStyle(
+                          color: AppDesignTokens.muted,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
-                    child: Text(_usePin ? '해제' : '설정'),
-                  ),
+                    const Divider(
+                      height: 1,
+                      indent: 62,
+                      color: AppDesignTokens.divider,
+                    ),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 5,
+                      ),
+                      leading: const Icon(
+                        Icons.pin_outlined,
+                        color: AppDesignTokens.navy,
+                      ),
+                      title: const Text(
+                        'PIN 로그인',
+                        style: TextStyle(
+                          color: AppDesignTokens.navy,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _usePin ? '사용 중' : '사용 안 함',
+                        style: const TextStyle(
+                          color: AppDesignTokens.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                      trailing: TextButton(
+                        onPressed: _isLoading ? null : _setupPin,
+                        child: Text(_usePin ? '해제' : '설정'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 18),
+              const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    size: 17,
+                    color: AppDesignTokens.subtle,
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '생체 정보와 PIN은 서버로 전송되지 않고 이 기기의 보안 저장소에서만 사용됩니다.',
+                      style: TextStyle(
+                        color: AppDesignTokens.muted,
+                        fontSize: 12,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
