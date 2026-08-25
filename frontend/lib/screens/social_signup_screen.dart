@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'splash_screen.dart';
+import '../theme/app_design_tokens.dart';
 
 class SocialSignupScreen extends ConsumerStatefulWidget {
   final String socialId;
@@ -46,7 +47,12 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
           children: [
             const Icon(Icons.warning_amber_rounded, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.orange.shade800,
@@ -66,7 +72,12 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
           children: [
             const Icon(Icons.error_outline, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.redAccent.shade400,
@@ -86,7 +97,12 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
           children: [
             const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: const TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.green.shade600,
@@ -107,7 +123,9 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final isDuplicate = await ref.read(authProvider.notifier).checkDuplicate(studentId);
+      final isDuplicate = await ref
+          .read(authProvider.notifier)
+          .checkDuplicate(studentId);
       setState(() {
         _isIdChecked = true;
         _isIdDuplicate = isDuplicate;
@@ -150,13 +168,15 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authProvider.notifier).socialSignup(
-        studentId,
-        name,
-        widget.socialId,
-        widget.provider,
-        password: _requirePassword ? password : null,
-      );
+      await ref
+          .read(authProvider.notifier)
+          .socialSignup(
+            studentId,
+            name,
+            widget.socialId,
+            widget.provider,
+            password: _requirePassword ? password : null,
+          );
       if (mounted) {
         _showSuccessSnackBar('성공적으로 계정이 연결되었습니다!');
         Navigator.of(context).pushAndRemoveUntil(
@@ -182,73 +202,76 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final providerName = widget.provider == 'KAKAO' ? '카카오' : '구글';
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
-        title: Text('$providerName 계정 연동', style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        title: Text(
+          '$providerName 계정 연동',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: AppDesignTokens.background,
+        foregroundColor: AppDesignTokens.navy,
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 0,
         elevation: 0,
       ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.white, theme.colorScheme.primaryContainer.withOpacity(0.3)],
-          ),
-        ),
+        color: AppDesignTokens.background,
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, 8)),
-                    ],
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 💡 아이콘 영역
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                          color: AppDesignTokens.paleBlue,
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          widget.provider == 'KAKAO' ? Icons.chat_bubble_rounded : Icons.g_mobiledata_rounded,
-                          size: 40,
-                          color: theme.colorScheme.primary,
+                          widget.provider == 'KAKAO'
+                              ? Icons.chat_bubble_rounded
+                              : Icons.g_mobiledata_rounded,
+                          size: 28,
+                          color: AppDesignTokens.blue,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
+                      const SizedBox(height: 22),
+                      const Text(
                         '추가 정보 입력',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: theme.colorScheme.primary),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: AppDesignTokens.navy,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _requirePassword 
-                            ? '본인 확인을 위해 기존 계정의 비밀번호를 입력해주세요.' 
+                        _requirePassword
+                            ? '본인 확인을 위해 기존 계정의 비밀번호를 입력해주세요.'
                             : 'Y-Sync 서비스 이용을 위해 학번과 이름을 입력해주세요.',
                         style: TextStyle(
-                          fontSize: 14, 
-                          color: _requirePassword ? Colors.redAccent.shade700 : Colors.grey,
-                          fontWeight: _requirePassword ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 14,
+                          color: _requirePassword
+                              ? AppDesignTokens.coral
+                              : AppDesignTokens.muted,
+                          fontWeight: _requirePassword
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
 
@@ -270,18 +293,45 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
                             height: 52,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                                foregroundColor: theme.colorScheme.primary,
+                                backgroundColor: AppDesignTokens.paleBlue,
+                                foregroundColor: AppDesignTokens.blue,
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                               ),
-                              onPressed: _isLoading || _requirePassword ? null : _checkDuplicateId,
-                              child: const Text('중복확인', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              onPressed: _isLoading || _requirePassword
+                                  ? null
+                                  : _checkDuplicateId,
+                              child: const Text(
+                                '중복확인',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
+                      if (_isIdChecked) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          _isIdDuplicate
+                              ? '기존 계정 확인을 위해 비밀번호가 필요합니다.'
+                              : '사용할 수 있는 학번입니다.',
+                          style: TextStyle(
+                            color: _isIdDuplicate
+                                ? AppDesignTokens.coral
+                                : AppDesignTokens.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
 
                       // 💡 이름 입력 필드
@@ -292,7 +342,7 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
                         icon: Icons.person_outline,
                         enabled: !_requirePassword,
                       ),
-                      
+
                       // 💡 기존 가입 계정 비밀번호 확인 영역 (연동 요구 시 노출)
                       if (_requirePassword) ...[
                         const SizedBox(height: 20),
@@ -312,15 +362,30 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
                         height: 54,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
+                            backgroundColor: AppDesignTokens.blue,
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           onPressed: _isLoading ? null : _submit,
                           child: _isLoading
-                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Text('가입 완료 및 로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  '가입 완료 및 로그인',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -356,7 +421,11 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppDesignTokens.navy,
+          ),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -365,22 +434,40 @@ class _SocialSignupScreenState extends ConsumerState<SocialSignupScreen> {
             controller: controller,
             obscureText: isPassword,
             enabled: enabled,
-            style: const TextStyle(fontSize: 15),
+            style: const TextStyle(fontSize: 15, color: AppDesignTokens.navy),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
+              hintStyle: const TextStyle(
+                color: AppDesignTokens.subtle,
+                fontSize: 14,
+              ),
+              prefixIcon: Icon(icon, color: AppDesignTokens.muted, size: 20),
               filled: true,
-              fillColor: enabled ? Colors.grey.shade50 : Colors.grey.shade100,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+              fillColor: enabled
+                  ? AppDesignTokens.surface
+                  : AppDesignTokens.background,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 0,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppDesignTokens.divider),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppDesignTokens.divider),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: AppDesignTokens.blue,
+                  width: 1.5,
+                ),
               ),
             ),
           ),

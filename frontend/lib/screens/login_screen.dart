@@ -6,6 +6,7 @@ import 'signup_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'splash_screen.dart';
 import 'social_signup_screen.dart';
+import '../theme/app_design_tokens.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -45,15 +46,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       setState(() => _isLoading = true);
       final GoogleSignIn googleSignIn = kIsWeb
-          ? GoogleSignIn(clientId: '286554208893-9glm4n7ul7qo21lin4k8eesfnpku81ah.apps.googleusercontent.com')
+          ? GoogleSignIn(
+              clientId:
+                  '286554208893-9glm4n7ul7qo21lin4k8eesfnpku81ah.apps.googleusercontent.com',
+            )
           : GoogleSignIn();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) return; // User canceled
-      
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final String token = googleAuth.idToken ?? googleAuth.accessToken ?? '';
       if (token.isEmpty) throw Exception('No Token');
-      
+
       await _handleSocialLoginResult(token, 'GOOGLE');
     } catch (e) {
       String errorMsg = '구글 로그인에 실패했습니다.';
@@ -61,16 +66,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final msg = e.toString().replaceAll('Exception: ', '');
         if (msg.isNotEmpty && msg != 'Exception') errorMsg = msg;
       }
-      print('Google Login Error: $e');
+      debugPrint('Google Login Error: $e');
       _showErrorSnackBar(errorMsg);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _handleSocialLoginResult(String accessToken, String provider) async {
+  Future<void> _handleSocialLoginResult(
+    String accessToken,
+    String provider,
+  ) async {
     try {
-      final result = await ref.read(authProvider.notifier).socialLogin(accessToken, provider);
+      final result = await ref
+          .read(authProvider.notifier)
+          .socialLogin(accessToken, provider);
       if (result != null) {
         // 202 Accepted: 미가입자, 추가 정보 입력 필요
         if (mounted) {
@@ -85,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       } else {
         if (mounted) {
-          Navigator.of(this.context).pushReplacement(
+          Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const SplashScreen()),
           );
         }
@@ -95,6 +105,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  // 기존 계정 연결 예외 흐름을 위해 유지합니다.
+  // ignore: unused_element
   void _showSocialSignupBottomSheet(String socialId, String provider) {
     final studentIdController = TextEditingController();
     final nameController = TextEditingController();
@@ -105,14 +117,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24, right: 24, top: 24,
+                left: 24,
+                right: 24,
+                top: 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -120,12 +136,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Text(
                     '${provider == "KAKAO" ? "카카오" : "구글"} 계정 연결',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    requirePassword ? '본인 확인을 위해 기존 계정의 비밀번호를 입력해주세요.' : 'Y-Sync 서비스 이용을 위해 학번과 이름을 입력해주세요.', 
-                    style: TextStyle(color: requirePassword ? Colors.redAccent : Colors.grey)
+                    requirePassword
+                        ? '본인 확인을 위해 기존 계정의 비밀번호를 입력해주세요.'
+                        : 'Y-Sync 서비스 이용을 위해 학번과 이름을 입력해주세요.',
+                    style: TextStyle(
+                      color: requirePassword ? Colors.redAccent : Colors.grey,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   TextField(
@@ -133,7 +156,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     enabled: !requirePassword,
                     decoration: InputDecoration(
                       labelText: '학번',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -142,7 +167,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     enabled: !requirePassword,
                     decoration: InputDecoration(
                       labelText: '이름',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   if (requirePassword) ...[
@@ -152,65 +179,98 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: '비밀번호',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: isSubmitting ? null : () async {
-                      if (studentIdController.text.isEmpty || nameController.text.isEmpty) return;
-                      if (requirePassword && passwordController.text.isEmpty) return;
-                      
-                      final navigator = Navigator.of(context);
-                      final parentNavigator = Navigator.of(this.context);
-                      
-                      setSheetState(() => isSubmitting = true);
-                      try {
-                        await ref.read(authProvider.notifier).socialSignup(
-                          studentIdController.text.trim(),
-                          nameController.text.trim(),
-                          socialId,
-                          provider,
-                          password: requirePassword ? passwordController.text : null,
-                        );
-                        if (mounted) {
-                          navigator.pop(); // close bottom sheet
-                          parentNavigator.pushReplacement(
-                            MaterialPageRoute(builder: (_) => const SplashScreen()),
-                          );
-                        }
-                      } catch (e) {
-                        if (e.toString().contains('REQUIRE_PASSWORD')) {
-                          setSheetState(() => requirePassword = true);
-                        } else {
-                          String errorMsg = e.toString().replaceAll('Exception: ', '');
-                          if (errorMsg == 'Exception') errorMsg = '가입 처리 중 오류가 발생했습니다.';
-                          _showErrorSnackBar(errorMsg);
-                        }
-                      } finally {
-                        setSheetState(() => isSubmitting = false);
-                      }
-                    },
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            if (studentIdController.text.isEmpty ||
+                                nameController.text.isEmpty) {
+                              return;
+                            }
+                            if (requirePassword &&
+                                passwordController.text.isEmpty) {
+                              return;
+                            }
+
+                            final navigator = Navigator.of(context);
+                            final parentNavigator = Navigator.of(this.context);
+
+                            setSheetState(() => isSubmitting = true);
+                            try {
+                              await ref
+                                  .read(authProvider.notifier)
+                                  .socialSignup(
+                                    studentIdController.text.trim(),
+                                    nameController.text.trim(),
+                                    socialId,
+                                    provider,
+                                    password: requirePassword
+                                        ? passwordController.text
+                                        : null,
+                                  );
+                              if (mounted) {
+                                navigator.pop(); // close bottom sheet
+                                parentNavigator.pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SplashScreen(),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (e.toString().contains('REQUIRE_PASSWORD')) {
+                                setSheetState(() => requirePassword = true);
+                              } else {
+                                String errorMsg = e.toString().replaceAll(
+                                  'Exception: ',
+                                  '',
+                                );
+                                if (errorMsg == 'Exception') {
+                                  errorMsg = '가입 처리 중 오류가 발생했습니다.';
+                                }
+                                _showErrorSnackBar(errorMsg);
+                              }
+                            } finally {
+                              setSheetState(() => isSubmitting = false);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: isSubmitting 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('가입 완료 및 로그인', style: TextStyle(fontSize: 16)),
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            '가입 완료 및 로그인',
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                   const SizedBox(height: 24),
                 ],
               ),
             );
-          }
+          },
         );
-      }
+      },
     );
   }
 
@@ -236,164 +296,194 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppDesignTokens.background,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.white, Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, 8)),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 로고 및 타이틀 Area
-                    // 💡 로고 및 타이틀 Area - 소프트웨어융합과 정체성 반영
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(context).colorScheme.primary,
-                            Theme.of(context).colorScheme.primary.withBlue(180),
-                          ],
+        color: AppDesignTokens.background,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppDesignTokens.paleBlue,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
+                        child: const Icon(
+                          Icons.sync_rounded,
+                          size: 30,
+                          color: AppDesignTokens.blue,
+                        ),
+                      ),
+                      const SizedBox(height: 26),
+                      const Text(
+                        'Y-Sync',
+                        style: TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: AppDesignTokens.navy,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      const Text(
+                        '영남이공대 소프트웨어융합과',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppDesignTokens.muted,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 44),
+                      _buildInputField(
+                        controller: _loginIdController,
+                        label: '학번',
+                        hint: '학번을 입력하세요',
+                        icon: Icons.badge_outlined,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInputField(
+                        controller: _passwordController,
+                        label: '비밀번호',
+                        hint: '비밀번호를 입력하세요',
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppDesignTokens.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: _isLoading ? null : _login,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  '로그인',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  title: const Text(
+                                    '비밀번호 분실 안내',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  content: const Text(
+                                    '비밀번호 분실 시 학생회장 또는 학과 사무실에 문의하여 초기화를 요청하세요.',
+                                    style: TextStyle(height: 1.5),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('확인'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              '비밀번호를 잊으셨나요?',
+                              style: TextStyle(
+                                color: AppDesignTokens.muted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SignupScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              '회원가입',
+                              style: const TextStyle(
+                                color: AppDesignTokens.blue,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.sync_rounded, size: 52, color: Colors.white),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      '영남이공대 소프트웨어융합과',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Y-Sync',
-                      style: TextStyle(
-                        fontSize: 38, 
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1.5,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '학과 정보와 일상을 연결하는 우리들만의 동기화',
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-
-                    const SizedBox(height: 32),
-                    
-                    // 💡 [개편] 일반 로그인 폼을 메인 상단에 항시 고정 배치
-                    _buildInputField(
-                      controller: _loginIdController,
-                      label: '아이디',
-                      hint: '학번을 입력해주세요',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInputField(
-                      controller: _passwordController,
-                      label: '비밀번호',
-                      hint: '비밀번호를 입력해주세요',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        ),
-                        onPressed: _isLoading ? null : _login,
-                        child: _isLoading 
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                            : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // 💡 [개편] 비밀번호 분실 팝업 및 회원가입 메뉴 링크
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('비밀번호 분실 안내', style: TextStyle(fontWeight: FontWeight.bold)),
-                                content: const Text(
-                                  '비밀번호 분실 시 학생회장 또는 학과 사무실에 문의하여 초기화를 요청하세요.',
-                                  style: TextStyle(height: 1.5),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('확인'),
-                                  ),
-                                ],
+                      const SizedBox(height: 20),
+                      const Row(
+                        children: [
+                          Expanded(
+                            child: Divider(color: AppDesignTokens.divider),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '또는',
+                              style: TextStyle(
+                                color: AppDesignTokens.subtle,
+                                fontSize: 12,
                               ),
-                            );
-                          },
-                          child: const Text(
-                            '비밀번호를 잊으셨나요?',
-                            style: TextStyle(color: Colors.grey, fontSize: 13, decoration: TextDecoration.underline),
+                            ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const SignupScreen()),
-                            );
-                          },
-                          child: Text(
-                            '회원가입하기',
-                            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                          Expanded(
+                            child: Divider(color: AppDesignTokens.divider),
                           ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 24),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSocialButton(
+                        iconPath: '',
+                        label: 'Google로 계속',
+                        color: AppDesignTokens.surface,
+                        textColor: AppDesignTokens.navy,
+                        borderColor: AppDesignTokens.divider,
+                        onPressed: _loginWithGoogle,
+                        iconFallback: Icons.g_mobiledata_rounded,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -414,16 +504,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 54,
+      height: 50,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: textColor,
-          elevation: color == Colors.white ? 1 : 0,
-          shadowColor: Colors.black.withOpacity(0.15),
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: borderColor != null ? BorderSide(color: borderColor, width: 1.2) : BorderSide.none,
+            borderRadius: BorderRadius.circular(8),
+            side: borderColor != null
+                ? BorderSide(color: borderColor)
+                : BorderSide.none,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24),
         ),
@@ -436,9 +527,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
                 color: textColor,
               ),
             ),
@@ -460,28 +550,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppDesignTokens.navy,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPassword,
-          style: const TextStyle(fontSize: 15),
+          style: const TextStyle(fontSize: 15, color: AppDesignTokens.navy),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
+            hintStyle: const TextStyle(
+              color: AppDesignTokens.subtle,
+              fontSize: 14,
+            ),
+            prefixIcon: Icon(icon, color: AppDesignTokens.muted, size: 20),
             filled: true,
-            fillColor: Colors.grey.shade50,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+            fillColor: AppDesignTokens.surface,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppDesignTokens.divider),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: AppDesignTokens.blue,
+                width: 1.5,
+              ),
             ),
           ),
         ),
