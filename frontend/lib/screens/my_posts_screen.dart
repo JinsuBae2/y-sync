@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/community_post.dart';
 import '../models/notice.dart';
 import '../theme/app_design_tokens.dart';
-import 'community_detail_screen.dart';
-import 'notice_detail_screen.dart';
+import 'deep_link_loading_screen.dart';
 
 class MyPostsScreen extends StatelessWidget {
   const MyPostsScreen({
@@ -55,8 +54,10 @@ class MyPostsScreen extends StatelessWidget {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  NoticeDetailScreen(notice: notices![index]),
+                              builder: (_) => DeepLinkLoadingScreen(
+                                targetType: 'NOTICE',
+                                targetId: '${notices![index].id}',
+                              ),
                             ),
                           ),
                         )
@@ -65,8 +66,10 @@ class MyPostsScreen extends StatelessWidget {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  CommunityDetailScreen(post: posts[index]),
+                              builder: (_) => DeepLinkLoadingScreen(
+                                targetType: 'COMMUNITY',
+                                targetId: '${posts[index].id}',
+                              ),
                             ),
                           ),
                         ),

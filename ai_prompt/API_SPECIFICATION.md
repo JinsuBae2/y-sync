@@ -136,13 +136,14 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
     {
       "title": "안드로이드 스튜디오 실행 오류 질문",
       "content": "이 에러 어떻게 고치나요?",
-      "category": "QNA",
+      "category": "QA",
       "targetGrade": "GRADE_1",
       "anonymous": false,
       "isPinned": false
     }
     ```
   - `images` (List<MultipartFile>): 파일 배열 (Optional)
+  - 수정은 작성자 본인만 가능하며, 이미지를 보내지 않으면 기존 이미지가 유지되고 새 이미지를 보내면 교체됩니다.
 
 #### 3. 댓글 및 대댓글 조회 (`GET /community/{id}/comments` 및 `/notices/{id}/comments`)
 - **Response (200 OK)**: 계층적 트리 구조 DTO 리스트
