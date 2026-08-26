@@ -124,7 +124,9 @@ public class CommunityService {
     // 💡 게시글 삭제를 처리합니다. 작성자 본인이거나 ADMIN인 경우만 가능합니다.
     @Transactional
     public void deletePost(Long id, Long memberId, MemberRole role) {
-        CommunityPost post = getPost(id);
+        // 💡 삭제 권한 확인은 실제 열람이 아니므로 조회수를 올리지 않고 게시글만 조회합니다.
+        CommunityPost post = communityPostRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다."));
         
         if (role != MemberRole.ADMIN && role != MemberRole.SUPER_ADMIN && !post.getMember().getId().equals(memberId)) {
             throw new IllegalArgumentException("게시글 삭제 권한이 없습니다.");

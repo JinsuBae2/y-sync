@@ -8,7 +8,7 @@ import '../theme/app_design_tokens.dart';
 import '../utils/image_url_helper.dart';
 import '../widgets/content_filter_bar.dart';
 import '../widgets/notification_action_button.dart';
-import 'community_detail_screen.dart';
+import 'deep_link_loading_screen.dart';
 import 'community_form_screen.dart';
 
 class CommunityListScreen extends ConsumerStatefulWidget {
@@ -148,7 +148,10 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CommunityDetailScreen(post: posts[index]),
+                    builder: (_) => DeepLinkLoadingScreen(
+                      targetType: 'COMMUNITY',
+                      targetId: '${posts[index].id}',
+                    ),
                   ),
                 );
                 ref.invalidate(communityPostsProvider);

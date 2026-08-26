@@ -8,7 +8,7 @@ import '../providers/scrap_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../widgets/content_filter_bar.dart';
 import '../widgets/notification_action_button.dart';
-import 'notice_detail_screen.dart';
+import 'deep_link_loading_screen.dart';
 import 'notice_form_screen.dart';
 
 class NoticeListScreen extends ConsumerStatefulWidget {
@@ -165,8 +165,10 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        NoticeDetailScreen(notice: filteredNotices[index]),
+                    builder: (_) => DeepLinkLoadingScreen(
+                      targetType: 'NOTICE',
+                      targetId: '${filteredNotices[index].id}',
+                    ),
                   ),
                 );
                 ref.invalidate(noticesProvider);

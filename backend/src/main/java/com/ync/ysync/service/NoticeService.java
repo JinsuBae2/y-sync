@@ -106,7 +106,7 @@ public class NoticeService {
 
     @Transactional
     public Notice updateNotice(Long id, String title, String content, NoticeType noticeType, Grade targetGrade, boolean isPinned, java.time.LocalDate eventStartDate, java.time.LocalDate eventEndDate, Long memberId, MemberRole role, List<MultipartFile> images) {
-        Notice notice = getNotice(id);
+        Notice notice = findNotice(id);
         validateAuthorOrAdmin(notice, memberId, role);
         
         notice.update(title, content, noticeType, targetGrade, isPinned, eventStartDate, eventEndDate);
@@ -135,10 +135,16 @@ public class NoticeService {
 
     @Transactional
     public void deleteNotice(Long id, Long memberId, MemberRole role) {
-        Notice notice = getNotice(id);
+        Notice notice = findNotice(id);
         validateAuthorOrAdmin(notice, memberId, role);
         
         noticeRepository.delete(notice);
+    }
+
+    // 💡 수정·삭제 같은 내부 작업에서는 조회수를 증가시키지 않습니다.
+    private Notice findNotice(Long id) {
+        return noticeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 공지사항이 존재하지 않습니다."));
     }
 
     private void validateAuthorOrAdmin(Notice notice, Long memberId, MemberRole role) {
@@ -147,4 +153,3 @@ public class NoticeService {
         }
     }
 }
-
