@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../models/community_post.dart';
 import '../providers/community_provider.dart';
 import '../theme/app_design_tokens.dart';
 
 class CommunityFormScreen extends ConsumerStatefulWidget {
-  const CommunityFormScreen({super.key});
+  const CommunityFormScreen({super.key, this.post});
+
+  final CommunityPost? post;
 
   @override
   ConsumerState<CommunityFormScreen> createState() =>
@@ -17,8 +20,8 @@ class CommunityFormScreen extends ConsumerStatefulWidget {
 }
 
 class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
-  final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
+  late final TextEditingController _titleController;
+  late final TextEditingController _contentController;
 
   String _category = 'FREE';
   String _targetGrade = 'ALL';
@@ -37,6 +40,19 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
     ('GRADE_2', '2학년'),
     ('GRADE_3', '3학년'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final post = widget.post;
+    _titleController = TextEditingController(text: post?.title ?? '');
+    _contentController = TextEditingController(text: post?.content ?? '');
+    if (post != null) {
+      _category = post.category;
+      _targetGrade = post.targetGrade;
+      _anonymous = post.anonymous;
+    }
+  }
 
   @override
   void dispose() {
@@ -63,20 +79,35 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
 
     setState(() => _isLoading = true);
     try {
-      await ref
-          .read(communityNotifierProvider)
-          .createPost(
-            category: _category,
-            title: title,
-            content: content,
-            anonymous: _anonymous,
-            targetGrade: _targetGrade,
-            images: _images,
-          );
+      final notifier = ref.read(communityNotifierProvider);
+      if (widget.post == null) {
+        await notifier.createPost(
+          category: _category,
+          title: title,
+          content: content,
+          anonymous: _anonymous,
+          targetGrade: _targetGrade,
+          images: _images,
+        );
+      } else {
+        await notifier.updatePost(
+          id: widget.post!.id,
+          category: _category,
+          title: title,
+          content: content,
+          anonymous: _anonymous,
+          targetGrade: _targetGrade,
+          images: _images,
+        );
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('게시글이 등록되었습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.post == null ? '게시글이 등록되었습니다.' : '게시글이 수정되었습니다.',
+          ),
+        ),
+      );
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
@@ -90,6 +121,8 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.post != null;
+
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
@@ -98,9 +131,9 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 0,
-        title: const Text(
-          '게시글 작성',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        title: Text(
+          isEdit ? '게시글 수정' : '게시글 작성',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
       ),
       body: Align(
@@ -199,6 +232,13 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
               ),
               const SizedBox(height: 28),
               const _SectionTitle(title: '첨부 이미지'),
+              if (isEdit && (widget.post!.imageUrls?.isNotEmpty ?? false)) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  '새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.',
+                  style: TextStyle(color: AppDesignTokens.muted, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: _isLoading ? null : _pickImages,
@@ -262,9 +302,9 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                       strokeWidth: 2,
                     ),
                   )
-                : const Text(
-                    '게시글 등록',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                : Text(
+                    isEdit ? '수정 완료' : '게시글 등록',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
           ),
         ),

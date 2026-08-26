@@ -17,9 +17,10 @@ class CommunityCategoryNotifier extends Notifier<String> {
   }
 }
 
-final communityCategoryProvider = NotifierProvider<CommunityCategoryNotifier, String>(() {
-  return CommunityCategoryNotifier();
-});
+final communityCategoryProvider =
+    NotifierProvider<CommunityCategoryNotifier, String>(() {
+      return CommunityCategoryNotifier();
+    });
 
 // 💡 현재 검색어를 관리하는 Provider입니다.
 class CommunitySearchKeywordNotifier extends Notifier<String> {
@@ -31,9 +32,10 @@ class CommunitySearchKeywordNotifier extends Notifier<String> {
   }
 }
 
-final communitySearchKeywordProvider = NotifierProvider<CommunitySearchKeywordNotifier, String>(() {
-  return CommunitySearchKeywordNotifier();
-});
+final communitySearchKeywordProvider =
+    NotifierProvider<CommunitySearchKeywordNotifier, String>(() {
+      return CommunitySearchKeywordNotifier();
+    });
 
 // 💡 현재 선택된 학년 탭을 관리합니다.
 class CommunityGradeNotifier extends Notifier<String> {
@@ -45,18 +47,20 @@ class CommunityGradeNotifier extends Notifier<String> {
   }
 }
 
-final communityGradeProvider = NotifierProvider<CommunityGradeNotifier, String>(() {
-  return CommunityGradeNotifier();
-});
+final communityGradeProvider = NotifierProvider<CommunityGradeNotifier, String>(
+  () {
+    return CommunityGradeNotifier();
+  },
+);
 
 final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
   final dio = ref.watch(dioProvider);
   final category = ref.watch(communityCategoryProvider);
   final keyword = ref.watch(communitySearchKeywordProvider);
-  
+
   String path = '/community';
   Map<String, dynamic> queryParams = {};
-  
+
   if (category != 'ALL') {
     queryParams['category'] = category;
   }
@@ -64,16 +68,14 @@ final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
     path = '/community/search';
     queryParams['keyword'] = keyword.trim();
   }
-  
+
   final response = await dio.get(
-    path, 
-    queryParameters: queryParams.isEmpty ? null : queryParams
+    path,
+    queryParameters: queryParams.isEmpty ? null : queryParams,
   );
-  
+
   final List<dynamic> data = response.data;
-  return data
-      .map((json) => CommunityPost.fromJson(json))
-      .toList();
+  return data.map((json) => CommunityPost.fromJson(json)).toList();
 });
 
 class CommunityNotifier {
@@ -98,48 +100,113 @@ class CommunityNotifier {
     List<XFile>? images,
   }) async {
     final dio = ref.read(dioProvider);
-    
+
     final formData = FormData();
-    
+
     // JSON 데이터 파트 추가
-    formData.files.add(MapEntry(
-      'request',
-      MultipartFile.fromString(
-        jsonEncode({
-          'category': category,
-          'title': title,
-          'content': content,
-          'anonymous': anonymous,
-          'targetGrade': targetGrade,
-          'isPinned': false,
-        }),
-        contentType: MediaType('application', 'json'),
+    formData.files.add(
+      MapEntry(
+        'request',
+        MultipartFile.fromString(
+          jsonEncode({
+            'category': category,
+            'title': title,
+            'content': content,
+            'anonymous': anonymous,
+            'targetGrade': targetGrade,
+            'isPinned': false,
+          }),
+          contentType: MediaType('application', 'json'),
+        ),
       ),
-    ));
+    );
 
     // 이미지 파일 파트 추가
     if (images != null && images.isNotEmpty) {
       for (XFile file in images) {
         if (kIsWeb) {
           final bytes = await file.readAsBytes();
-          formData.files.add(MapEntry(
-            'images',
-            MultipartFile.fromBytes(
-              bytes,
-              filename: file.name,
-              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
+          formData.files.add(
+            MapEntry(
+              'images',
+              MultipartFile.fromBytes(
+                bytes,
+                filename: file.name,
+                contentType: MediaType(
+                  'image',
+                  file.name.endsWith('.png') ? 'png' : 'jpeg',
+                ),
+              ),
             ),
-          ));
+          );
         } else {
-          formData.files.add(MapEntry(
-            'images',
-            await MultipartFile.fromFile(file.path),
-          ));
+          formData.files.add(
+            MapEntry('images', await MultipartFile.fromFile(file.path)),
+          );
         }
       }
     }
 
     await dio.post('/community', data: formData);
+    ref.invalidate(communityPostsProvider);
+  }
+
+  // 💡 작성자 본인의 게시글을 수정하며 새 이미지가 선택된 경우에만 기존 이미지를 교체합니다.
+  Future<void> updatePost({
+    required int id,
+    required String category,
+    required String title,
+    required String content,
+    required bool anonymous,
+    required String targetGrade,
+    List<XFile>? images,
+  }) async {
+    final dio = ref.read(dioProvider);
+    final formData = FormData();
+
+    formData.files.add(
+      MapEntry(
+        'request',
+        MultipartFile.fromString(
+          jsonEncode({
+            'category': category,
+            'title': title,
+            'content': content,
+            'anonymous': anonymous,
+            'targetGrade': targetGrade,
+            'isPinned': false,
+          }),
+          contentType: MediaType('application', 'json'),
+        ),
+      ),
+    );
+
+    if (images != null && images.isNotEmpty) {
+      for (final file in images) {
+        if (kIsWeb) {
+          final bytes = await file.readAsBytes();
+          formData.files.add(
+            MapEntry(
+              'images',
+              MultipartFile.fromBytes(
+                bytes,
+                filename: file.name,
+                contentType: MediaType(
+                  'image',
+                  file.name.endsWith('.png') ? 'png' : 'jpeg',
+                ),
+              ),
+            ),
+          );
+        } else {
+          formData.files.add(
+            MapEntry('images', await MultipartFile.fromFile(file.path)),
+          );
+        }
+      }
+    }
+
+    await dio.put('/community/$id', data: formData);
     ref.invalidate(communityPostsProvider);
   }
 
@@ -171,11 +238,10 @@ class CommunityNotifier {
     required String reason,
   }) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/reports', data: {
-      'targetType': targetType,
-      'targetId': targetId,
-      'reason': reason,
-    });
+    await dio.post(
+      '/reports',
+      data: {'targetType': targetType, 'targetId': targetId, 'reason': reason},
+    );
     ref.invalidate(communityPostsProvider);
   }
 }

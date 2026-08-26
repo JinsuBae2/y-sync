@@ -81,6 +81,36 @@ public class CommunityController {
         return ResponseEntity.ok(CommunityResponse.from(post));
     }
 
+    // 💡 작성자 본인이 게시글 내용과 설정을 수정하며 새 이미지가 전달되면 기존 이미지를 교체합니다.
+    @Operation(summary = "커뮤니티 게시글 수정", description = "작성자 본인이 기존 게시글과 첨부 이미지를 수정합니다.")
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> updatePost(
+            @PathVariable Long id,
+            @RequestPart("request") CommunityRequest request,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+        Long memberId = authUtil.getLoginMemberId();
+        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+
+        try {
+            CommunityPost post = communityService.updatePost(
+                    id,
+                    request.getCategory(),
+                    request.getTitle(),
+                    request.getContent(),
+                    request.isAnonymous(),
+                    request.getTargetGrade(),
+                    memberId,
+                    images
+            );
+            return ResponseEntity.ok(CommunityResponse.from(post));
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().contains("권한이 없습니다")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+            }
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     // 💡 게시글 삭제
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePost(@PathVariable Long id) {

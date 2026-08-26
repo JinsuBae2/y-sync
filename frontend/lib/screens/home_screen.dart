@@ -9,8 +9,7 @@ import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/notice_provider.dart';
 import '../widgets/notification_action_button.dart';
-import 'community_detail_screen.dart';
-import 'notice_detail_screen.dart';
+import 'deep_link_loading_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({
@@ -231,7 +230,12 @@ class HomeScreen extends ConsumerWidget {
   ) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => NoticeDetailScreen(notice: notice)),
+      MaterialPageRoute(
+        builder: (_) => DeepLinkLoadingScreen(
+          targetType: 'NOTICE',
+          targetId: '${notice.id}',
+        ),
+      ),
     );
     ref.invalidate(homeNoticesProvider);
   }
@@ -243,7 +247,12 @@ class HomeScreen extends ConsumerWidget {
   ) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => CommunityDetailScreen(post: post)),
+      MaterialPageRoute(
+        builder: (_) => DeepLinkLoadingScreen(
+          targetType: 'COMMUNITY',
+          targetId: '${post.id}',
+        ),
+      ),
     );
     ref.invalidate(homeCommunityPostsProvider);
   }
