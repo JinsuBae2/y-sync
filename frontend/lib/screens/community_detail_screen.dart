@@ -12,6 +12,7 @@ import '../widgets/comment_thread.dart';
 import '../widgets/deletion_reason_dialog.dart';
 import '../widgets/image_viewer_screen.dart';
 import '../widgets/linkify_text.dart';
+import 'community_form_screen.dart';
 
 class CommunityDetailScreen extends ConsumerWidget {
   const CommunityDetailScreen({super.key, required this.post});
@@ -22,6 +23,8 @@ class CommunityDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final member = ref.watch(authProvider).asData?.value;
     final isAdmin = member?.role == 'ADMIN' || member?.role == 'SUPER_ADMIN';
+    final canEdit =
+        member != null && member.id == post.memberId && !post.isDeleted;
     final canDelete = member != null && (isAdmin || member.id == post.memberId);
     final canReport = member != null && !isAdmin && member.id != post.memberId;
 
@@ -42,6 +45,12 @@ class CommunityDetailScreen extends ConsumerWidget {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
         actions: [
+          if (canEdit)
+            IconButton(
+              tooltip: '게시글 수정',
+              onPressed: () => _editPost(context),
+              icon: const Icon(Icons.edit_outlined),
+            ),
           if (canReport)
             IconButton(
               tooltip: '게시글 신고',
@@ -189,6 +198,16 @@ class CommunityDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _editPost(BuildContext context) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => CommunityFormScreen(post: post)),
+    );
+    if (updated == true && context.mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   Future<void> _confirmDelete(

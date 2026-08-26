@@ -92,11 +92,12 @@ public class CommunityPost {
     }
 
     // 💡 작성된 글을 수정하는 메서드
-    public void update(String category, String title, String content, boolean anonymous) {
+    public void update(String category, String title, String content, boolean anonymous, Grade targetGrade) {
         this.category = category;
         this.title = title;
         this.content = content;
         this.anonymous = anonymous;
+        this.targetGrade = targetGrade != null ? targetGrade : Grade.ALL;
     }
 
     // 관리자 삭제 필드

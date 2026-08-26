@@ -84,6 +84,43 @@ public class CommunityService {
         return communityPostRepository.save(post);
     }
 
+    // 💡 작성자 본인의 게시글만 수정하고 새 이미지가 있을 때에만 기존 이미지를 교체합니다.
+    @Transactional
+    public CommunityPost updatePost(Long id, String category, String title, String content,
+                                    boolean anonymous, Grade targetGrade, Long memberId,
+                                    List<MultipartFile> images) {
+        CommunityPost post = communityPostRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다."));
+
+        if (!post.getMember().getId().equals(memberId)) {
+            throw new IllegalArgumentException("게시글 수정 권한이 없습니다.");
+        }
+        if (post.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 게시글은 수정할 수 없습니다.");
+        }
+
+        post.update(category, title, content, anonymous, targetGrade);
+
+        if (images != null && !images.isEmpty()) {
+            post.getImages().clear();
+            for (MultipartFile file : images) {
+                try {
+                    String fileUrl = fileService.uploadFile(file);
+                    if (fileUrl != null) {
+                        post.getImages().add(PostImage.builder()
+                                .imageUrl(fileUrl)
+                                .communityPost(post)
+                                .build());
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.", e);
+                }
+            }
+        }
+
+        return post;
+    }
+
     // 💡 게시글 삭제를 처리합니다. 작성자 본인이거나 ADMIN인 경우만 가능합니다.
     @Transactional
     public void deletePost(Long id, Long memberId, MemberRole role) {

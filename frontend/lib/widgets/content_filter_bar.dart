@@ -88,9 +88,9 @@ class _FilterOption extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(9),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
