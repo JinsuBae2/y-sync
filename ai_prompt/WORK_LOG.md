@@ -39,10 +39,10 @@
 - **무엇을(What)**: 작성자 본인에게만 커뮤니티 게시글 수정 버튼과 수정 API를 제공하고 제목·내용·카테고리·학년·익명 여부·이미지 교체를 지원했습니다. 댓글은 비방 내용의 사후 변경을 막기 위해 수정 기능을 추가하지 않기로 했습니다. 프로젝트의 Windows 전용 Android Java 경로 고정값을 제거했습니다.
 - **왜(Why)**: 커뮤니티 글은 삭제만 가능하고 수정할 수 없었으며, Windows 절대경로가 macOS Android 빌드 설정에 남아 있었기 때문입니다.
 - **어떻게(How)**: 기존 작성 화면을 수정 화면으로 재사용하고 백엔드에서 로그인 회원과 작성자 ID를 비교합니다. 새 이미지를 선택하지 않으면 기존 이미지를 유지합니다. Gradle은 저장소에 개인 경로를 기록하지 않고 셸 `JAVA_HOME`을 사용하게 했습니다.
-- **검증(Verification)**: 실제 JDK 21 경로를 지정한 `./gradlew compileJava`가 통과했고 변경 Flutter 파일 정적 분석에서 오류·경고 없이 기존 `http_parser` 직접 의존성 정보 1건만 확인했습니다. 전체 테스트는 실행하지 않았습니다.
+- **검증(Verification)**: 실제 JDK 21 경로를 지정한 `./gradlew compileJava`가 통과했고 변경 Flutter 파일 정적 분석에서 오류·경고 없이 기존 `http_parser` 직접 의존성 정보 1건만 확인했습니다. Android는 JDK 20과 Java/Kotlin 17 타깃으로 디버그 APK 빌드가 통과했습니다.
 - **추적(Tracking)**: 브랜치 `fix/content-filter-flicker`, 코드 커밋 `bd4a152`, PR·배포 전
 - **상태(Status)**: 로컬 구현·최소 컴파일 검증·코드 커밋 완료
-- **위험 및 후속 작업(Risks/Follow-up)**: `~/.zprofile`에 `JavaVirtualMachine` 단수 경로 오타가 남아 있어 `JavaVirtualMachines`로 수정해야 합니다. 본인 댓글은 현재 물리 삭제되므로 신고 증거 보존을 위해 추후 소프트 삭제 전환이 필요합니다.
+- **위험 및 후속 작업(Risks/Follow-up)**: `~/.zprofile`에 `JavaVirtualMachine` 단수 경로 오타가 남아 있어 `JavaVirtualMachines`로 수정해야 합니다. IntelliJ IDEA 2023.2.8의 Android Gradle JVM은 설치된 JDK 20으로 지정해야 합니다. 본인 댓글은 현재 물리 삭제되므로 신고 증거 보존을 위해 추후 소프트 삭제 전환이 필요합니다.
 
 ---
 
