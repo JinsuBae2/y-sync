@@ -43,7 +43,7 @@ Nginx ── Spring Boot API ── MySQL
               └── Firebase Cloud Messaging
 ```
 
-상세 구조는 [아키텍처 문서](ai_prompt/ARCHITECTURE.md)에서 확인할 수 있습니다.
+상세 구조는 [아키텍처 문서](docs/ARCHITECTURE.md)에서 확인할 수 있습니다.
 
 ## 저장소 구조
 
@@ -52,7 +52,7 @@ y-sync/
 ├── frontend/       # Flutter Web/PWA 애플리케이션
 ├── backend/        # Spring Boot API 서버
 ├── docker/         # MySQL, Backend, Nginx, Certbot 운영 구성
-├── ai_prompt/      # 기능·API·아키텍처·운영 문서와 작업 이력
+├── docs/           # 기능·API·아키텍처·운영 문서와 작업 이력
 └── .github/        # CI 및 운영 배포 워크플로
 ```
 
@@ -122,16 +122,16 @@ docker compose -f docker/docker-compose.yml config
 - 작업 브랜치는 CI 통과 후 `develop`에 병합합니다.
 - 운영 배포는 `develop`에서 `main`으로 PR을 생성하고 승인된 GitHub Actions 워크플로로 진행합니다.
 
-자세한 개발·배포 규칙은 [개발 가이드](ai_prompt/DEVELOPMENT.md)와 [macOS 운영 가이드](ai_prompt/MAC_MIGRATION_GUIDE.md)를 참고하세요.
+자세한 개발·배포 규칙은 [개발 가이드](docs/DEVELOPMENT.md)와 [macOS 운영 가이드](docs/MAC_MIGRATION_GUIDE.md)를 참고하세요.
 
 ## 문서
 
-- [서비스 컨텍스트와 기능 명세](ai_prompt/CONTEXT.md)
-- [API 명세](ai_prompt/API_SPECIFICATION.md)
-- [시스템 아키텍처](ai_prompt/ARCHITECTURE.md)
-- [개발 규칙](ai_prompt/DEVELOPMENT.md)
-- [문제 해결 기록](ai_prompt/TROUBLESHOOTING.md)
-- [작업 이력](ai_prompt/WORK_LOG.md)
+- [서비스 컨텍스트와 기능 명세](docs/CONTEXT.md)
+- [API 명세](docs/API_SPECIFICATION.md)
+- [시스템 아키텍처](docs/ARCHITECTURE.md)
+- [개발 규칙](docs/DEVELOPMENT.md)
+- [문제 해결 기록](docs/TROUBLESHOOTING.md)
+- [작업 이력](docs/WORK_LOG.md)
 
 ## 보안 원칙
 

@@ -30,14 +30,6 @@ public class CommentService {
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher; // 💡 비동기 알림 이벤트 발행자
 
-    public List<Comment> getCommentsByNoticeId(Long noticeId) {
-        return commentRepository.findAllByNoticeIdOrderByCreatedAtAsc(noticeId);
-    }
-
-    public List<Comment> getCommentsByCommunityPostId(Long communityPostId) {
-        return commentRepository.findAllByCommunityPostIdOrderByCreatedAtAsc(communityPostId);
-    }
-
     public Comment getComment(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 댓글이 존재하지 않습니다."));
@@ -174,19 +166,50 @@ public class CommentService {
     public void deleteComment(Long commentId, Long memberId, MemberRole role) {
         Comment comment = getComment(commentId);
         
-        // 작성자 본인이거나 ADMIN, SUPER_ADMIN인 경우에만 삭제 가능
-        if (role != MemberRole.ADMIN && role != MemberRole.SUPER_ADMIN && !comment.getMember().getId().equals(memberId)) {
+        // 관리자 삭제는 삭제 사유가 필요한 전용 API에서 처리합니다.
+        if (!comment.getMember().getId().equals(memberId)) {
+            if (role == MemberRole.ADMIN || role == MemberRole.SUPER_ADMIN) {
+                throw new IllegalArgumentException("관리자 댓글 삭제 API를 이용해 주세요.");
+            }
             throw new IllegalArgumentException("해당 댓글에 대한 권한이 없습니다.");
         }
 
+        if (comment.isDeleted()) {
+            return;
+        }
         
         if (comment.getCommunityPost() != null) {
+            comment.deleteByAuthor();
             comment.getCommunityPost().decrementCommentCount(); // 💡 게시글 댓글 수 감소
             communityPostRepository.save(comment.getCommunityPost()); // 💡 명시적 DB 저장
         } else if (comment.getNotice() != null) {
+            comment.deleteByAuthor();
             comment.getNotice().decrementCommentCount(); // 💡 공지사항 댓글 수 감소
             noticeRepository.save(comment.getNotice()); // 💡 명시적 DB 저장
         }
-        commentRepository.delete(comment);
+
+    }
+
+    @Transactional
+    public void deleteCommentByAdmin(Long commentId, String reason) {
+        // TODO: 댓글 조회
+        Comment comment = getComment(commentId);
+        // TODO: 이미 삭제됐으면 반환
+        if (comment.isDeleted()) {
+            return;
+        }
+        // TODO: 관리자 소프트 삭제
+        comment.deleteByAdmin(reason);
+        // TODO: 게시글 또는 공지 댓글 수 감소
+        if (comment.getCommunityPost() != null) {
+            CommunityPost post = comment.getCommunityPost();
+            post.decrementCommentCount();
+            communityPostRepository.save(post);
+        } else if (comment.getNotice() != null) {
+            Notice notice = comment.getNotice();
+            notice.decrementCommentCount();
+            noticeRepository.save(notice);
+        }
+        commentRepository.save(comment);
     }
 }

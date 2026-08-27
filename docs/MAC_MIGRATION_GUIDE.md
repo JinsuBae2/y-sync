@@ -155,7 +155,7 @@ docker compose -f docker/docker-compose.yml config
 ## 5. 브랜치와 배포 절차
 
 1. `develop`에서 `feature/*`, `fix/*`, `hotfix/*` 브랜치를 생성합니다.
-2. 코드 변경과 관련 `ai_prompt` 문서를 논리적으로 분리해 한글 커밋으로 기록합니다.
+2. 코드 변경과 관련 `docs` 문서를 논리적으로 분리해 한글 커밋으로 기록합니다.
 3. 원격 브랜치에 push하고 `develop` 대상 PR을 생성해 CI를 통과시킵니다.
 4. 릴리스할 때 `develop`에서 `main` 대상 PR을 생성합니다.
 5. `main` 병합 후 `Production Deploy`의 빌드 결과를 확인하고 `production` 승인을 수행합니다.
