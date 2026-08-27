@@ -140,6 +140,10 @@ class _CommentItem extends ConsumerWidget {
     final canReport =
         member != null && !isMine && !comment.isDeleted && onReport != null;
     final authorName = comment.isDeleted ? '삭제된 댓글' : comment.authorName;
+    final deletedByAdmin = comment.deletedBy == CommentDeletedBy.admin;
+    final deletedMessage = deletedByAdmin
+        ? '관리자에 의해 삭제된 댓글입니다.'
+        : '작성자가 삭제한 댓글입니다.';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -200,10 +204,12 @@ class _CommentItem extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content,
+                  comment.isDeleted ? deletedMessage : comment.content,
                   style: TextStyle(
                     color: comment.isDeleted
-                        ? AppDesignTokens.coral
+                        ? deletedByAdmin
+                              ? AppDesignTokens.coral
+                              : AppDesignTokens.subtle
                         : AppDesignTokens.navy,
                     fontSize: 14,
                     height: 1.45,

@@ -4,7 +4,6 @@ import com.ync.ysync.domain.*;
 import com.ync.ysync.repository.CommentRepository;
 import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.MemberRepository;
-import com.ync.ysync.repository.NoticeRepository;
 import com.ync.ysync.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,10 +20,10 @@ public class ReportService {
     private final MemberRepository memberRepository;
     private final CommunityPostRepository communityPostRepository;
     private final CommentRepository commentRepository;
-    private final NoticeRepository noticeRepository;
+    private final CommentService commentService;
 
     @Transactional
-    public Report createReport(Long reporterId, Report.TargetType targetType, Long targetId, String reason) {
+    public void createReport(Long reporterId, Report.TargetType targetType, Long targetId, String reason) {
         // 1. 중복 신고 방지
         if (reportRepository.existsByReporterIdAndTargetTypeAndTargetId(reporterId, targetType, targetId)) {
             throw new IllegalArgumentException("이미 신고한 대상입니다.");
@@ -69,22 +68,14 @@ public class ReportService {
                 log.info("게시글 {}번이 신고 5회 누적으로 자동 블라인드 처리되었습니다.", targetId);
             } else if (targetType == Report.TargetType.COMMENT) {
                 Comment comment = commentRepository.findById(targetId).orElseThrow();
-                comment.deleteByAdmin(blindReason);
-                
-                if (comment.getCommunityPost() != null) {
-                    CommunityPost post = comment.getCommunityPost();
-                    post.decrementCommentCount();
-                    communityPostRepository.save(post);
-                } else if (comment.getNotice() != null) {
-                    Notice notice = comment.getNotice();
-                    notice.decrementCommentCount();
-                    noticeRepository.save(notice);
+                if (comment.isDeleted()) {
+                    return;
                 }
-                commentRepository.save(comment);
+                commentService.deleteCommentByAdmin(comment.getId(), blindReason);
+
                 log.info("댓글 {}번이 신고 5회 누적으로 자동 블라인드 처리되었습니다.", targetId);
             }
         }
 
-        return report;
     }
 }

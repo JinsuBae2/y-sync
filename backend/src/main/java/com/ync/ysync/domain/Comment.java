@@ -59,6 +59,9 @@ public class Comment {
         this.parent = parent;
     }
 
+    @Enumerated(EnumType.STRING)
+    private CommentDeletedBy deletedBy;
+
     // 관리자 삭제 필드
     @Column(nullable = false)
     private boolean isDeleted = false;
@@ -66,13 +69,24 @@ public class Comment {
     @Column(columnDefinition = "TEXT")
     private String deletionReason;
 
+    public void deleteByAuthor() {
+        if (this.isDeleted()) {
+            return;
+        }
+        isDeleted = true;
+        deletedBy = CommentDeletedBy.AUTHOR;
+        deletionReason = null;
+    }
+
     public void deleteByAdmin(String reason) {
         this.isDeleted = true;
+        deletedBy = CommentDeletedBy.ADMIN;
         this.deletionReason = reason;
     }
 
     public void restoreByAdmin() {
         this.isDeleted = false;
+        this.deletedBy = null;
         this.deletionReason = null;
     }
 }
