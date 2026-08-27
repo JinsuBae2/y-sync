@@ -249,8 +249,12 @@ class _CommentItem extends ConsumerWidget {
                       if (canDelete) ...[
                         const SizedBox(width: 8),
                         TextButton(
-                          onPressed: () =>
-                              _deleteComment(context, ref, isAdmin: isAdmin),
+                          onPressed: () => _deleteComment(
+                            context,
+                            ref,
+                            isAdmin: isAdmin,
+                            isMine: isMine,
+                          ),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 4,
@@ -306,18 +310,10 @@ class _CommentItem extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required bool isAdmin,
+    required bool isMine,
   }) async {
     try {
-      if (isAdmin) {
-        final reason = await showDialog<String>(
-          context: context,
-          builder: (_) => const DeletionReasonDialog(),
-        );
-        if (reason == null) return;
-        await ref
-            .read(commentNotifierProvider)
-            .deleteCommentByAdmin(source, postId, comment.id, reason);
-      } else {
+      if (isMine) {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -342,6 +338,15 @@ class _CommentItem extends ConsumerWidget {
         await ref
             .read(commentNotifierProvider)
             .deleteComment(source, postId, comment.id);
+      } else if (isAdmin) {
+        final reason = await showDialog<String>(
+          context: context,
+          builder: (_) => const DeletionReasonDialog(),
+        );
+        if (reason == null) return;
+        await ref
+            .read(commentNotifierProvider)
+            .deleteCommentByAdmin(source, postId, comment.id, reason);
       }
       if (!context.mounted) return;
       ScaffoldMessenger.of(
