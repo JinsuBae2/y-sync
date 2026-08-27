@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Y-Sync 프로젝트 문서
+    url: https://github.com/JinsuBae2/y-sync/tree/develop/docs
+    about: 개발·운영 규칙과 현재 기능 범위를 먼저 확인해 주세요.
