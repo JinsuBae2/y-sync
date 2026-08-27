@@ -1,20 +1,15 @@
 package com.ync.ysync.controller;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ync.ysync.domain.AdminRequest;
-import com.ync.ysync.domain.Member;
-import com.ync.ysync.domain.MemberRole;
-import com.ync.ysync.domain.Report;
+import com.ync.ysync.domain.*;
 import com.ync.ysync.repository.AdminRequestRepository;
 import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.CommentRepository;
 import com.ync.ysync.repository.ReportRepository;
-import com.ync.ysync.domain.CommunityPost;
-import com.ync.ysync.domain.Comment;
 import com.ync.ysync.repository.MemberRepository;
-import com.ync.ysync.domain.Notice;
 import com.ync.ysync.repository.NoticeRepository;
 import com.ync.ysync.config.AuthUtil;
+import com.ync.ysync.service.CommentService;
 import lombok.AllArgsConstructor;
 import lombok.AccessLevel;
 import lombok.Builder; // 💡 추가
@@ -42,6 +37,7 @@ public class AdminController {
     private final CommentRepository commentRepository;
     private final ReportRepository reportRepository;
     private final AuthUtil authUtil;
+    private final CommentService commentService;
 
     // 💡 관리자 권한 신청 (일반 유저용)
     @PostMapping("/requests")
@@ -142,18 +138,9 @@ public class AdminController {
         String reason = body.get("reason");
         Comment comment = commentRepository.findById(id).orElse(null);
         if (comment == null) return ResponseEntity.notFound().build();
+        if (comment.isDeleted()) return ResponseEntity.ok("이미 삭제된 댓글입니다.");
 
-        comment.deleteByAdmin(reason);
-        if (comment.getCommunityPost() != null) {
-            CommunityPost post = comment.getCommunityPost();
-            post.decrementCommentCount();
-            communityPostRepository.save(post);
-        } else if (comment.getNotice() != null) {
-            Notice notice = comment.getNotice();
-            notice.decrementCommentCount();
-            noticeRepository.save(notice);
-        }
-        commentRepository.save(comment);
+        commentService.deleteCommentByAdmin(comment.getId(), reason);
         return ResponseEntity.ok("댓글이 관리자에 의해 삭제되었습니다.");
     }
 
@@ -255,7 +242,9 @@ public class AdminController {
             }
         } else if (targetType == Report.TargetType.COMMENT) {
             Comment comment = commentRepository.findById(targetId).orElse(null);
-            if (comment != null && comment.isDeleted()) {
+            if (comment != null
+                    && comment.isDeleted()
+                    && comment.getDeletedBy() != CommentDeletedBy.AUTHOR) {
                 comment.restoreByAdmin();
                 if (comment.getCommunityPost() != null) {
                     CommunityPost post = comment.getCommunityPost();

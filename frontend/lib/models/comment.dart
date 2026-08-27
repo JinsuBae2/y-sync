@@ -1,3 +1,5 @@
+enum CommentDeletedBy { author, admin }
+
 class Comment {
   final int id;
   final String content;
@@ -9,6 +11,7 @@ class Comment {
   final String? updatedAt;
   final bool isDeleted;
   final String? deletionReason;
+  final CommentDeletedBy? deletedBy;
   final int? parentId; // 💡 부모 댓글 ID
   final List<Comment>? children; // 💡 대댓글(자식) 목록
 
@@ -23,6 +26,7 @@ class Comment {
     this.updatedAt,
     this.isDeleted = false,
     this.deletionReason,
+    this.deletedBy,
     this.parentId,
     this.children,
   });
@@ -39,10 +43,32 @@ class Comment {
       updatedAt: json['updatedAt'],
       isDeleted: json['isDeleted'] ?? json['deleted'] ?? false,
       deletionReason: json['deletionReason'],
+      deletedBy: _parseDeletedBy(
+        json['deletedBy'],
+        deletionReason: json['deletionReason'],
+      ),
       parentId: json['parentId'],
       children: json['children'] != null
           ? (json['children'] as List).map((i) => Comment.fromJson(i)).toList()
           : null,
     );
+  }
+
+  static CommentDeletedBy? _parseDeletedBy(
+    Object? value, {
+    required Object? deletionReason,
+  }) {
+    switch (value?.toString().toUpperCase()) {
+      case 'AUTHOR':
+        return CommentDeletedBy.author;
+      case 'ADMIN':
+        return CommentDeletedBy.admin;
+    }
+
+    // 구형 응답 호환: 관리자 삭제는 사유가 있고, 작성자 삭제는 사유가 없습니다.
+    if (deletionReason is String && deletionReason.trim().isNotEmpty) {
+      return CommentDeletedBy.admin;
+    }
+    return null;
   }
 }
