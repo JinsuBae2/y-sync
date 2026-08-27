@@ -63,7 +63,7 @@
 | **Who** | 배진수(협업 템플릿 추가 요청·검토) |
 | **When** | 2026-08-27, Asia/Seoul |
 | **Where** | `docs/work-log-template` 브랜치, GitHub PR·Issue 작성 화면 |
-| **Status** | 템플릿 작성 및 정적 검증 완료 |
+| **Status** | 템플릿 작성·정적 검증·문서 커밋 완료 |
 
 ### **작업 개요**
 
@@ -88,7 +88,7 @@
 
 **추적**
 
-- 브랜치 `docs/work-log-template`; 커밋과 PR은 후속 기록 예정
+- 브랜치 `docs/work-log-template`, 문서 커밋 `925bdad`; PR은 후속 진행 예정
 
 ### **후속 작업**
 
@@ -103,7 +103,7 @@
 | **Who** | 배진수(템플릿 개편 요청·검토) |
 | **When** | 2026-08-27, Asia/Seoul |
 | **Where** | `docs/work-log-template` 브랜치, `README.md`, `docs/WORK_LOG.md`, `docs/DEVELOPMENT.md` |
-| **Status** | 문서 수정 및 형식 검증 완료 |
+| **Status** | 문서 수정·형식 검증·문서 커밋 완료 |
 
 ### **작업 개요**
 
@@ -131,7 +131,7 @@
 
 **추적**
 
-- 브랜치 `docs/work-log-template`; 커밋과 PR은 후속 기록 예정
+- 브랜치 `docs/work-log-template`, 문서 커밋 `925bdad`; PR은 후속 진행 예정
 
 ### **후속 작업**
 
