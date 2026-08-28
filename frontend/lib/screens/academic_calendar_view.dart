@@ -529,10 +529,41 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
       '회색': '#7F8C8D',
     };
 
+    InputDecoration fieldDecoration(String label, {String? hint}) {
+      return InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.72),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppDesignTokens.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppDesignTokens.blue, width: 1.5),
+        ),
+      );
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppDesignTokens.background.withValues(alpha: 0.96),
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
+          ),
           title: Text(event == null ? '신규 학사 일정 추가' : '학사 일정 수정'),
           content: SingleChildScrollView(
             child: Column(
@@ -540,24 +571,19 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
               children: [
                 TextField(
                   controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: '일정명',
-                    hintText: '예: 1학기 중간고사',
-                  ),
+                  decoration: fieldDecoration('일정명', hint: '예: 1학기 중간고사'),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: descController,
-                  decoration: const InputDecoration(
-                    labelText: '상세 설명',
-                    hintText: '예: 강의실 시험 공지 참고',
-                  ),
+                  decoration: fieldDecoration('상세 설명', hint: '예: 강의실 시험 공지 참고'),
                 ),
                 const SizedBox(height: 16),
                 // 날짜 선택기
                 Row(
                   children: [
                     Expanded(
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: () async {
                           final date = await showDatePicker(
                             context: context,
@@ -572,13 +598,20 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                             });
                           }
                         },
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(64),
+                          alignment: Alignment.centerLeft,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
                         child: Text(
-                          '시작일:\n${start.year}-${start.month}-${start.day}',
+                          '시작일\n${start.year}.${start.month}.${start.day}',
                         ),
                       ),
                     ),
                     Expanded(
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: () async {
                           final date = await showDatePicker(
                             context: context,
@@ -592,9 +625,14 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                             });
                           }
                         },
-                        child: Text(
-                          '종료일:\n${end.year}-${end.month}-${end.day}',
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(64),
+                          alignment: Alignment.centerLeft,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
+                        child: Text('종료일\n${end.year}.${end.month}.${end.day}'),
                       ),
                     ),
                   ],
@@ -603,7 +641,7 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                 // 색상 선택 드롭다운
                 DropdownButtonFormField<String>(
                   initialValue: selectedColor,
-                  decoration: const InputDecoration(labelText: '구분 색상'),
+                  decoration: fieldDecoration('구분 색상'),
                   items: colorsMap.entries.map((entry) {
                     final colorValue = Color(
                       int.parse(entry.value.replaceFirst('#', '0xff')),
@@ -636,7 +674,7 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             ),
           ),
           actions: [
-            TextButton(
+            FilledButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('취소'),
             ),
@@ -675,6 +713,12 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                       );
                 }
               },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppDesignTokens.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
               child: const Text('저장'),
             ),
           ],
