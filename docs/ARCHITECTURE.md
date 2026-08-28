@@ -213,3 +213,10 @@ Y-Sync 백엔드는 리눅스 VM(Oracle Cloud 1GB RAM 프리티어 환경 맞춤
 ### C. LetsEncrypt SSL 인증서 자동 갱신
 * `ysync-certbot` 컨테이너가 12시간 주기(`sleep 12h`)로 `certbot renew` 백그라운드 루프 명령을 가동합니다.
 * Nginx와 Certbot 컨테이너 간 볼륨 공유를 통해 무중단 인증서 파일 자동 갱신 구조를 취하고 있습니다.
+
+### D. 파일 저장소 단계적 분리
+
+* `STORAGE_PROVIDER=local|s3` 설정으로 파일 저장 구현체를 전환합니다. 기본값은 기존 로컬 볼륨입니다.
+* S3 운영 버킷은 서울 리전의 비공개 `y-sync-attachments-155641294529`을 사용하고, 애플리케이션 IAM 사용자는 해당 버킷의 `uploads/*`에만 접근합니다.
+* 신규 S3 객체의 DB 경로는 `/s3-uploads/{uuid}` 형식을 유지합니다. 백엔드는 요청마다 5분짜리 Presigned URL을 생성해 `302`로 리다이렉트하므로 버킷을 공개하지 않습니다.
+* 기존 `/uploads/{uuid}` 데이터와 로컬 볼륨은 그대로 제공해 파일 일괄 이전 없이 저장소를 단계적으로 전환할 수 있습니다.
