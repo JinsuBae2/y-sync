@@ -64,6 +64,16 @@ final _notice = Notice(
   commentCount: 1,
 );
 
+final _noticeWithAttachment = Notice(
+  id: 2,
+  title: '첨부 자료가 있는 공지',
+  content: '세부 자료는 첨부 파일을 확인해주세요.',
+  authorName: '관리자',
+  noticeType: 'NEWS',
+  createdAt: DateTime(2026, 8, 26).toIso8601String(),
+  imageUrls: const ['/files/guide.png', '/files/schedule.png'],
+);
+
 final _post = CommunityPost(
   id: 2,
   category: 'QA',
@@ -94,7 +104,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          noticesProvider.overrideWith((ref) async => [_notice]),
+          noticesProvider.overrideWith(
+            (ref) async => [_notice, _noticeWithAttachment],
+          ),
           myPageProvider.overrideWith(_TestMyPageNotifier.new),
           scrapsProvider.overrideWith((ref) async => []),
           unreadNotificationCountProvider.overrideWithValue(0),
@@ -107,6 +119,8 @@ void main() {
     expect(find.text('공지 제목이나 내용 검색'), findsOneWidget);
     expect(find.text('고정'), findsOneWidget);
     expect(find.text(_notice.title), findsOneWidget);
+    expect(find.text('첨부 2'), findsOneWidget);
+    expect(find.byIcon(Icons.attach_file_rounded), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -316,6 +316,23 @@ class NoticeCard extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
+                  if (notice.imageUrls?.isNotEmpty ?? false) ...[
+                    const Icon(
+                      Icons.attach_file_rounded,
+                      size: 14,
+                      color: AppDesignTokens.subtle,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '첨부 ${notice.imageUrls!.length}',
+                      style: const TextStyle(
+                        color: AppDesignTokens.subtle,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     tooltip: isScrapped ? '스크랩 해제' : '스크랩',
