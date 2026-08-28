@@ -2,8 +2,10 @@ package com.ync.ysync.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ync.ysync.domain.CommentDeletedBy;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,9 +44,12 @@ class BooleanJsonContractTest {
 
         MemberProfileController.MyCommentResponse myComment =
                 new MemberProfileController.MyCommentResponse(
-                        1L, "내용", "게시글", "NOTICE", 2L, "2026-08-25T12:00:00", true, "사유"
+                        1L, "내용", "게시글", "NOTICE", 2L, "2026-08-25T12:00:00", true, "사유",
+                        CommentDeletedBy.ADMIN
                 );
-        assertBooleanContract(objectMapper.valueToTree(myComment), "isDeleted", "deleted");
+        JsonNode myCommentJson = objectMapper.valueToTree(myComment);
+        assertBooleanContract(myCommentJson, "isDeleted", "deleted");
+        assertEquals("ADMIN", myCommentJson.get("deletedBy").asText());
     }
 
     @Test

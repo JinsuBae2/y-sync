@@ -9,6 +9,7 @@ import com.ync.ysync.repository.CommunityPostRepository;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository; // 💡 추가
 import com.ync.ysync.config.AuthUtil;
+import com.ync.ysync.domain.CommentDeletedBy;
 import com.ync.ysync.service.MemberService;
 import lombok.AllArgsConstructor;
 import lombok.AccessLevel;
@@ -127,7 +128,8 @@ public class MemberProfileController {
                             postId,
                             comment.getCreatedAt().toString(),
                             comment.isDeleted(),
-                            comment.getDeletionReason()
+                            comment.getDeletionReason(),
+                            comment.getDeletedBy()
                     );
                 })
                 .collect(Collectors.toList());
@@ -170,6 +172,7 @@ public class MemberProfileController {
         @Getter(AccessLevel.NONE)
         private boolean isDeleted;
         private String deletionReason;
+        private CommentDeletedBy deletedBy;
 
         @JsonProperty("isDeleted")
         public boolean isDeleted() {

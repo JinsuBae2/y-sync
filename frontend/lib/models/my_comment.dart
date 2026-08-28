@@ -8,6 +8,7 @@ class MyComment {
   final String createdAt;
   final bool isDeleted;
   final String? deletionReason;
+  final String? deletedBy;
 
   MyComment({
     required this.id,
@@ -18,6 +19,7 @@ class MyComment {
     required this.createdAt,
     this.isDeleted = false,
     this.deletionReason,
+    this.deletedBy,
   });
 
   factory MyComment.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,14 @@ class MyComment {
       createdAt: json['createdAt'],
       isDeleted: json['isDeleted'] ?? json['deleted'] ?? false,
       deletionReason: json['deletionReason'],
+      deletedBy: json['deletedBy'],
     );
+  }
+
+  bool get isDeletedByAdmin {
+    if (deletedBy != null) {
+      return deletedBy!.toUpperCase() == 'ADMIN';
+    }
+    return deletionReason?.trim().isNotEmpty ?? false;
   }
 }
