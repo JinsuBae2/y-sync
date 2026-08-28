@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -173,9 +174,18 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  color: AppDesignTokens.surface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppDesignTokens.divider),
+                  color: Colors.white.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.88),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppDesignTokens.navy.withValues(alpha: 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: SwitchListTile(
                   value: _anonymous,
@@ -248,10 +258,11 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppDesignTokens.blue,
+                  backgroundColor: Colors.white.withValues(alpha: 0.48),
                   minimumSize: const Size.fromHeight(48),
-                  side: const BorderSide(color: AppDesignTokens.divider),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),
@@ -276,36 +287,43 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       ),
       bottomNavigationBar: SafeArea(
         top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-          decoration: const BoxDecoration(
-            color: AppDesignTokens.surface,
-            border: Border(top: BorderSide(color: AppDesignTokens.divider)),
-          ),
-          child: FilledButton(
-            onPressed: _isLoading ? null : _savePost,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppDesignTokens.blue,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: AppDesignTokens.subtle,
-              minimumSize: const Size.fromHeight(50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.72),
+                border: Border(
+                  top: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
+                ),
+              ),
+              child: FilledButton(
+                onPressed: _isLoading ? null : _savePost,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppDesignTokens.blue,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppDesignTokens.subtle,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        isEdit ? '수정 완료' : '게시글 등록',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
               ),
             ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(
-                    isEdit ? '수정 완료' : '게시글 등록',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
           ),
         ),
       ),
@@ -324,13 +342,14 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       labelStyle: const TextStyle(color: AppDesignTokens.muted),
       hintStyle: const TextStyle(color: AppDesignTokens.subtle),
       filled: true,
-      fillColor: AppDesignTokens.surface,
+      fillColor: Colors.white.withValues(alpha: 0.68),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppDesignTokens.divider),
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(color: AppDesignTokens.blue, width: 1.5),
       ),
     );
@@ -381,44 +400,46 @@ class _OptionSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppDesignTokens.paleBlue,
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return SizedBox(
+      height: 46,
       child: Row(
         children: [
           for (final option in options)
             Expanded(
-              child: Material(
-                color: option.$1 == value
-                    ? AppDesignTokens.surface
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                child: InkWell(
-                  onTap: () => onChanged(option.$1),
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
-                      border: option.$1 == value
-                          ? Border.all(color: AppDesignTokens.divider)
-                          : null,
-                    ),
-                    child: Text(
-                      option.$2,
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: option.$1 == value
-                            ? AppDesignTokens.navy
-                            : AppDesignTokens.muted,
-                        fontSize: 13,
-                        fontWeight: option.$1 == value
-                            ? FontWeight.w700
-                            : FontWeight.w600,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    child: Material(
+                      color: option.$1 == value
+                          ? AppDesignTokens.paleBlue.withValues(alpha: 0.72)
+                          : Colors.white.withValues(alpha: 0.3),
+                      child: InkWell(
+                        onTap: () => onChanged(option.$1),
+                        child: Container(
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                          child: Text(
+                            option.$2,
+                            maxLines: 1,
+                            style: TextStyle(
+                              color: option.$1 == value
+                                  ? AppDesignTokens.navy
+                                  : AppDesignTokens.muted,
+                              fontSize: 13,
+                              fontWeight: option.$1 == value
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
