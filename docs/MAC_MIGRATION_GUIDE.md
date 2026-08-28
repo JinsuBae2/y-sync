@@ -60,11 +60,20 @@ security find-generic-password \
 
 ### 로컬로 복사하지 않는 운영 비밀값
 - `DB_PASSWORD`, `JWT_SECRET`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+- S3 애플리케이션 사용자용 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - GitHub Actions의 `SERVER_IP`, `SERVER_USER`, `SSH_PRIVATE_KEY`
 - Firebase Hosting 배포용 `FIREBASE_SERVICE_ACCOUNT_Y_SYNC_31C03`
 - Oracle VM의 `/home/ubuntu/ysync/app/docker/firebase-adminsdk.json`
 
 위 값은 GitHub `production` Environment Secrets 또는 Oracle VM에만 보관합니다. Firebase Admin SDK 키는 백엔드 FCM용이고 Firebase Hosting 배포 서비스 계정과 별개입니다. 로컬 FCM 통합 테스트가 꼭 필요한 경우에만 별도 개발용 서비스 계정을 발급하고, Git 무시 경로에 저장합니다.
+
+S3 저장소 전환 시 GitHub `production` Environment Variables에는 다음 값을 등록합니다.
+
+- `STORAGE_PROVIDER=s3`
+- `AWS_S3_BUCKET=y-sync-attachments-155641294529`
+- `AWS_REGION=ap-northeast-2`
+
+신규 S3 파일은 `/s3-uploads/**` 경로에서 5분짜리 Presigned URL로 리다이렉트되고, 기존 로컬 파일은 `/uploads/**` 경로로 계속 제공됩니다. Secret 등록 전에는 `STORAGE_PROVIDER`를 `local`로 유지합니다.
 
 ---
 
