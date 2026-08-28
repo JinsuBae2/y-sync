@@ -64,16 +64,7 @@ class MyCommentsScreen extends ConsumerWidget {
     );
 
     try {
-      final post = await ref
-          .read(communityNotifierProvider)
-          .getPost(comment.postId);
-      if (!context.mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => CommunityDetailScreen(post: post)),
-      );
-    } catch (_) {
-      try {
+      if (comment.category == 'NOTICE') {
         final notice = await ref
             .read(noticeNotifierProvider)
             .getNotice(comment.postId);
@@ -82,12 +73,21 @@ class MyCommentsScreen extends ConsumerWidget {
           context,
           MaterialPageRoute(builder: (_) => NoticeDetailScreen(notice: notice)),
         );
-      } catch (_) {
+      } else {
+        final post = await ref
+            .read(communityNotifierProvider)
+            .getPost(comment.postId);
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
+        await Navigator.push(
           context,
-        ).showSnackBar(const SnackBar(content: Text('원문을 불러올 수 없습니다.')));
+          MaterialPageRoute(builder: (_) => CommunityDetailScreen(post: post)),
+        );
       }
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('원문을 불러올 수 없습니다.')));
     }
   }
 }

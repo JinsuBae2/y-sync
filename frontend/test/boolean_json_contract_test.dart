@@ -39,6 +39,20 @@ void main() {
     expect(MyComment.fromJson(_myCommentJson('isDeleted')).isDeleted, isTrue);
     expect(MyComment.fromJson(_myCommentJson('deleted')).isDeleted, isTrue);
   });
+
+  test('내 댓글은 작성자와 관리자 삭제를 구분한다', () {
+    final author = MyComment.fromJson({
+      ..._myCommentJson('isDeleted'),
+      'deletedBy': 'AUTHOR',
+    });
+    final admin = MyComment.fromJson({
+      ..._myCommentJson('isDeleted'),
+      'deletedBy': 'ADMIN',
+    });
+
+    expect(author.isDeletedByAdmin, isFalse);
+    expect(admin.isDeletedByAdmin, isTrue);
+  });
 }
 
 Map<String, dynamic> _noticeJson(String pinnedKey) => {

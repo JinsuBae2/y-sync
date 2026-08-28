@@ -4,9 +4,20 @@ import com.ync.ysync.domain.Notice;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
+    @Modifying
+    @Query("UPDATE Notice n SET n.commentCount = n.commentCount + 1 WHERE n.id = :id")
+    int incrementCommentCount(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE Notice n SET n.commentCount = CASE WHEN n.commentCount > 0 THEN n.commentCount - 1 ELSE 0 END WHERE n.id = :id")
+    int decrementCommentCount(@Param("id") Long id);
+
     List<Notice> findAllByOrderByIsPinnedDescCreatedAtDesc();
     
     // 💡 페이징을 지원하는 전체 조회 쿼리 추가
