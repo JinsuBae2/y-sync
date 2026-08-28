@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -254,199 +256,236 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppDesignTokens.background,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: AppDesignTokens.background,
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppDesignTokens.paleBlue,
-                          borderRadius: BorderRadius.circular(8),
+      backgroundColor: const Color(0xFF071424),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0C1C32), Color(0xFF06111F)],
+              ),
+            ),
+          ),
+          const CustomPaint(painter: _LoginBackgroundPainter()),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppDesignTokens.blue.withValues(alpha: 0.22),
+                          blurRadius: 52,
+                          spreadRadius: 2,
                         ),
-                        child: const Icon(
-                          Icons.sync_rounded,
-                          size: 30,
-                          color: AppDesignTokens.blue,
-                        ),
-                      ),
-                      const SizedBox(height: 26),
-                      const Text(
-                        'Y-Sync',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: AppDesignTokens.navy,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      const Text(
-                        '영남이공대 소프트웨어융합과',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppDesignTokens.muted,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 44),
-                      _buildInputField(
-                        controller: _loginIdController,
-                        label: '학번',
-                        hint: '학번을 입력하세요',
-                        icon: Icons.badge_outlined,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        controller: _passwordController,
-                        label: '비밀번호',
-                        hint: '비밀번호를 입력하세요',
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppDesignTokens.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(28, 34, 28, 28),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.14),
+                                Colors.white.withValues(alpha: 0.07),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.22),
                             ),
                           ),
-                          onPressed: _isLoading ? null : _login,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  '로그인',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Y-Sync',
+                                style: TextStyle(
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: -1.2,
                                 ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  title: const Text(
-                                    '비밀번호 분실 안내',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                '영남이공대 소프트웨어융합과',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFFB8C3D4),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 38),
+                              _buildInputField(
+                                controller: _loginIdController,
+                                label: '학번',
+                                hint: '학번을 입력하세요',
+                                icon: Icons.badge_outlined,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInputField(
+                                controller: _passwordController,
+                                label: '비밀번호',
+                                hint: '비밀번호를 입력하세요',
+                                icon: Icons.lock_outline,
+                                isPassword: true,
+                              ),
+                              const SizedBox(height: 24),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: AppDesignTokens.blue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  content: const Text(
-                                    '비밀번호 분실 시 학생회장 또는 학과 사무실에 문의하여 초기화를 요청하세요.',
-                                    style: TextStyle(height: 1.5),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('확인'),
+                                  onPressed: _isLoading ? null : _login,
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text(
+                                          '로그인',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          title: const Text(
+                                            '비밀번호 분실 안내',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          content: const Text(
+                                            '비밀번호 분실 시 학생회장 또는 학과 사무실에 문의하여 초기화를 요청하세요.',
+                                            style: TextStyle(height: 1.5),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              child: const Text('확인'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      '비밀번호를 잊으셨나요?',
+                                      style: TextStyle(
+                                        color: Color(0xFFB8C3D4),
+                                        fontSize: 13,
+                                      ),
                                     ),
-                                  ],
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const SignupScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      '회원가입하기',
+                                      style: const TextStyle(
+                                        color: Color(0xFF71A1FF),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              const Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(color: Color(0x3DFFFFFF)),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      '또는',
+                                      style: TextStyle(
+                                        color: Color(0xFF8F9CAF),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(color: Color(0x3DFFFFFF)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildSocialButton(
+                                iconPath: '',
+                                label: 'Google로 계속',
+                                color: Colors.white.withValues(alpha: 0.08),
+                                textColor: Colors.white,
+                                borderColor: Colors.white.withValues(
+                                  alpha: 0.18,
                                 ),
-                              );
-                            },
-                            child: const Text(
-                              '비밀번호를 잊으셨나요?',
-                              style: TextStyle(
-                                color: AppDesignTokens.muted,
-                                fontSize: 13,
+                                onPressed: _showSocialLoginComingSoon,
+                                iconFallback: Icons.g_mobiledata_rounded,
                               ),
-                            ),
+                              const SizedBox(height: 24),
+                            ],
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const SignupScreen(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              '회원가입하기',
-                              style: const TextStyle(
-                                color: AppDesignTokens.blue,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      const Row(
-                        children: [
-                          Expanded(
-                            child: Divider(color: AppDesignTokens.divider),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              '또는',
-                              style: TextStyle(
-                                color: AppDesignTokens.subtle,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(color: AppDesignTokens.divider),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSocialButton(
-                        iconPath: '',
-                        label: 'Google로 계속',
-                        color: AppDesignTokens.surface,
-                        textColor: AppDesignTokens.navy,
-                        borderColor: AppDesignTokens.divider,
-                        onPressed: _showSocialLoginComingSoon,
-                        iconFallback: Icons.g_mobiledata_rounded,
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -511,23 +550,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: AppDesignTokens.navy,
+            color: Color(0xFFDCE4EF),
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPassword,
-          style: const TextStyle(fontSize: 15, color: AppDesignTokens.navy),
+          style: const TextStyle(fontSize: 15, color: Colors.white),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(
-              color: AppDesignTokens.subtle,
-              fontSize: 14,
-            ),
-            prefixIcon: Icon(icon, color: AppDesignTokens.muted, size: 20),
+            hintStyle: const TextStyle(color: Color(0xFF8794A8), fontSize: 14),
+            prefixIcon: Icon(icon, color: const Color(0xFFADB9CA), size: 20),
             filled: true,
-            fillColor: AppDesignTokens.surface,
+            fillColor: Colors.white.withValues(alpha: 0.06),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 16,
@@ -538,7 +574,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppDesignTokens.divider),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.2),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -552,4 +590,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ],
     );
   }
+}
+
+class _LoginBackgroundPainter extends CustomPainter {
+  const _LoginBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bluePaint = Paint()
+      ..color = AppDesignTokens.blue.withValues(alpha: 0.16)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final cyanPaint = Paint()
+      ..color = const Color(0xFF47D7FF).withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    canvas.drawCircle(
+      Offset(-size.width * 0.08, size.height * 0.18),
+      size.width * 0.52,
+      bluePaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 1.04, size.height * 0.72),
+      size.width * 0.58,
+      cyanPaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.18, size.height * 1.04),
+      size.width * 0.42,
+      bluePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _LoginBackgroundPainter oldDelegate) => false;
 }
