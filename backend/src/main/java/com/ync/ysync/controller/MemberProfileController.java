@@ -105,6 +105,11 @@ public class MemberProfileController {
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         List<MyCommentResponse> responses = commentRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId).stream()
+                .filter(comment -> !comment.isDeleted()
+                        || comment.getDeletedBy() == CommentDeletedBy.ADMIN
+                        || (comment.getDeletedBy() == null
+                        && comment.getDeletionReason() != null
+                        && !comment.getDeletionReason().isBlank()))
                 .map(comment -> {
                     String postTitle = "";
                     String category = "";
