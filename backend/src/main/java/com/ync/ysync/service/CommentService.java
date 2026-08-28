@@ -46,6 +46,7 @@ public class CommentService {
         if (parentId != null) {
             parent = commentRepository.findById(parentId)
                     .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
+            validateNoticeParent(parent, noticeId);
         }
 
         Comment comment = Comment.builder()
@@ -58,8 +59,7 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         // 💡 [Bug4 Fix] 댓글 수 증가 반영 및 명시적 DB 저장 (트랜잭션 플러시 보장)
-        notice.incrementCommentCount();
-        noticeRepository.save(notice);
+        noticeRepository.incrementCommentCount(noticeId);
 
         // 💡 트랜잭션이 활성화된 상태에서 Lazy Loading 없이 대상 유저 정보를 꺼냄 (지연 로딩 에러 원천 방지)
         Member author = notice.getAuthor();
@@ -90,6 +90,7 @@ public class CommentService {
         if (parentId != null) {
             parent = commentRepository.findById(parentId)
                     .orElseThrow(() -> new IllegalArgumentException("부모 댓글을 찾을 수 없습니다."));
+            validateCommunityParent(parent, communityPostId);
         }
 
         Comment comment = Comment.builder()
@@ -102,8 +103,7 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
 
         // 💡 [Bug4 Fix] 댓글 수 증가 반영 및 명시적 DB 저장 (트랜잭션 플러시 보장)
-        post.incrementCommentCount();
-        communityPostRepository.save(post);
+        communityPostRepository.incrementCommentCount(communityPostId);
 
         // 💡 트랜잭션이 활성화된 상태에서 Lazy Loading 없이 대상 유저 정보를 꺼냄 (지연 로딩 에러 원천 방지)
         Member postAuthor = post.getMember();
@@ -121,6 +121,29 @@ public class CommentService {
         }
 
         return savedComment;
+    }
+
+    private void validateNoticeParent(Comment parent, Long noticeId) {
+        if (parent.getNotice() == null || !parent.getNotice().getId().equals(noticeId)) {
+            throw new IllegalArgumentException("같은 공지사항의 댓글에만 답글을 작성할 수 있습니다.");
+        }
+        validateReplyableParent(parent);
+    }
+
+    private void validateCommunityParent(Comment parent, Long communityPostId) {
+        if (parent.getCommunityPost() == null || !parent.getCommunityPost().getId().equals(communityPostId)) {
+            throw new IllegalArgumentException("같은 게시물의 댓글에만 답글을 작성할 수 있습니다.");
+        }
+        validateReplyableParent(parent);
+    }
+
+    private void validateReplyableParent(Comment parent) {
+        if (parent.getParent() != null) {
+            throw new IllegalArgumentException("답글에는 추가 답글을 작성할 수 없습니다.");
+        }
+        if (parent.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 댓글에는 답글을 작성할 수 없습니다.");
+        }
     }
 
     // 💡 학사 공지사항 대댓글 계층형 DTO 조립 조회
@@ -180,12 +203,10 @@ public class CommentService {
         
         if (comment.getCommunityPost() != null) {
             comment.deleteByAuthor();
-            comment.getCommunityPost().decrementCommentCount(); // 💡 게시글 댓글 수 감소
-            communityPostRepository.save(comment.getCommunityPost()); // 💡 명시적 DB 저장
+            communityPostRepository.decrementCommentCount(comment.getCommunityPost().getId());
         } else if (comment.getNotice() != null) {
             comment.deleteByAuthor();
-            comment.getNotice().decrementCommentCount(); // 💡 공지사항 댓글 수 감소
-            noticeRepository.save(comment.getNotice()); // 💡 명시적 DB 저장
+            noticeRepository.decrementCommentCount(comment.getNotice().getId());
         }
 
     }
@@ -202,13 +223,9 @@ public class CommentService {
         comment.deleteByAdmin(reason);
         // TODO: 게시글 또는 공지 댓글 수 감소
         if (comment.getCommunityPost() != null) {
-            CommunityPost post = comment.getCommunityPost();
-            post.decrementCommentCount();
-            communityPostRepository.save(post);
+            communityPostRepository.decrementCommentCount(comment.getCommunityPost().getId());
         } else if (comment.getNotice() != null) {
-            Notice notice = comment.getNotice();
-            notice.decrementCommentCount();
-            noticeRepository.save(notice);
+            noticeRepository.decrementCommentCount(comment.getNotice().getId());
         }
         commentRepository.save(comment);
     }

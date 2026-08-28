@@ -136,11 +136,14 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> deleteCommentByAdmin(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
         String reason = body.get("reason");
+        if (reason == null || reason.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("삭제 사유를 입력해주세요.");
+        }
         Comment comment = commentRepository.findById(id).orElse(null);
         if (comment == null) return ResponseEntity.notFound().build();
         if (comment.isDeleted()) return ResponseEntity.ok("이미 삭제된 댓글입니다.");
 
-        commentService.deleteCommentByAdmin(comment.getId(), reason);
+        commentService.deleteCommentByAdmin(comment.getId(), reason.trim());
         return ResponseEntity.ok("댓글이 관리자에 의해 삭제되었습니다.");
     }
 
@@ -247,13 +250,9 @@ public class AdminController {
                     && comment.getDeletedBy() != CommentDeletedBy.AUTHOR) {
                 comment.restoreByAdmin();
                 if (comment.getCommunityPost() != null) {
-                    CommunityPost post = comment.getCommunityPost();
-                    post.incrementCommentCount();
-                    communityPostRepository.save(post);
+                    communityPostRepository.incrementCommentCount(comment.getCommunityPost().getId());
                 } else if (comment.getNotice() != null) {
-                    Notice notice = comment.getNotice();
-                    notice.incrementCommentCount();
-                    noticeRepository.save(notice);
+                    noticeRepository.incrementCommentCount(comment.getNotice().getId());
                 }
                 commentRepository.save(comment);
             }

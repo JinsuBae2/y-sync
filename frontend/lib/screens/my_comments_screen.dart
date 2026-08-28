@@ -3,18 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/my_comment.dart';
 import '../providers/community_provider.dart';
+import '../providers/mypage_provider.dart';
 import '../providers/notice_provider.dart';
 import '../theme/app_design_tokens.dart';
 import 'community_detail_screen.dart';
 import 'notice_detail_screen.dart';
 
 class MyCommentsScreen extends ConsumerWidget {
-  const MyCommentsScreen({super.key, required this.comments});
-
-  final List<MyComment> comments;
+  const MyCommentsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final commentsAsync = ref.watch(
+      myPageProvider.select((value) => value.whenData((data) => data.comments)),
+    );
+
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
@@ -34,18 +37,29 @@ class MyCommentsScreen extends ConsumerWidget {
           constraints: const BoxConstraints(
             maxWidth: AppDesignTokens.contentMaxWidth,
           ),
-          child: comments.isEmpty
-              ? const _EmptyComments()
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
-                  itemCount: comments.length,
-                  separatorBuilder: (_, _) =>
-                      const Divider(height: 1, color: AppDesignTokens.divider),
-                  itemBuilder: (context, index) => _CommentRow(
-                    comment: comments[index],
-                    onTap: () => _openOrigin(context, ref, comments[index]),
+          child: commentsAsync.when(
+            data: (comments) => comments.isEmpty
+                ? const _EmptyComments()
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
+                    itemCount: comments.length,
+                    separatorBuilder: (_, _) => const Divider(
+                      height: 1,
+                      color: AppDesignTokens.divider,
+                    ),
+                    itemBuilder: (context, index) => _CommentRow(
+                      comment: comments[index],
+                      onTap: () => _openOrigin(context, ref, comments[index]),
+                    ),
                   ),
-                ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => Center(
+              child: TextButton(
+                onPressed: () => ref.invalidate(myPageProvider),
+                child: const Text('댓글 목록을 다시 불러오기'),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -64,16 +78,7 @@ class MyCommentsScreen extends ConsumerWidget {
     );
 
     try {
-      final post = await ref
-          .read(communityNotifierProvider)
-          .getPost(comment.postId);
-      if (!context.mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => CommunityDetailScreen(post: post)),
-      );
-    } catch (_) {
-      try {
+      if (comment.category == 'NOTICE') {
         final notice = await ref
             .read(noticeNotifierProvider)
             .getNotice(comment.postId);
@@ -82,12 +87,21 @@ class MyCommentsScreen extends ConsumerWidget {
           context,
           MaterialPageRoute(builder: (_) => NoticeDetailScreen(notice: notice)),
         );
-      } catch (_) {
+      } else {
+        final post = await ref
+            .read(communityNotifierProvider)
+            .getPost(comment.postId);
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
+        await Navigator.push(
           context,
-        ).showSnackBar(const SnackBar(content: Text('원문을 불러올 수 없습니다.')));
+          MaterialPageRoute(builder: (_) => CommunityDetailScreen(post: post)),
+        );
       }
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('원문을 불러올 수 없습니다.')));
     }
   }
 }
@@ -147,7 +161,11 @@ class _CommentRow extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content,
+                comment.isDeleted
+                    ? comment.isDeletedByAdmin
+                          ? '관리자에 의해 삭제된 댓글입니다.'
+                          : '작성자가 삭제한 댓글입니다.'
+                    : comment.content,
                 style: TextStyle(
                   color: comment.isDeleted
                       ? AppDesignTokens.coral
@@ -157,7 +175,9 @@ class _CommentRow extends StatelessWidget {
                   height: 1.45,
                 ),
               ),
-              if (comment.isDeleted && comment.deletionReason != null) ...[
+              if (comment.isDeleted &&
+                  comment.isDeletedByAdmin &&
+                  comment.deletionReason != null) ...[
                 const SizedBox(height: 5),
                 Text(
                   '삭제 사유: ${comment.deletionReason}',

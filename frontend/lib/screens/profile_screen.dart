@@ -157,9 +157,7 @@ class _ProfileContent extends ConsumerWidget {
                 count: comments.length,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => MyCommentsScreen(comments: comments),
-                  ),
+                  MaterialPageRoute(builder: (_) => const MyCommentsScreen()),
                 ),
               ),
             ],

@@ -124,7 +124,8 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(home: MyCommentsScreen(comments: [_comment])),
+        overrides: [myPageProvider.overrideWith(_TestMyPageNotifier.new)],
+        child: const MaterialApp(home: MyCommentsScreen()),
       ),
     );
     await tester.pumpAndSettle();
