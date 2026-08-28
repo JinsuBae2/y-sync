@@ -3,18 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/my_comment.dart';
 import '../providers/community_provider.dart';
+import '../providers/mypage_provider.dart';
 import '../providers/notice_provider.dart';
 import '../theme/app_design_tokens.dart';
 import 'community_detail_screen.dart';
 import 'notice_detail_screen.dart';
 
 class MyCommentsScreen extends ConsumerWidget {
-  const MyCommentsScreen({super.key, required this.comments});
-
-  final List<MyComment> comments;
+  const MyCommentsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final commentsAsync = ref.watch(
+      myPageProvider.select((value) => value.whenData((data) => data.comments)),
+    );
+
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
@@ -34,18 +37,29 @@ class MyCommentsScreen extends ConsumerWidget {
           constraints: const BoxConstraints(
             maxWidth: AppDesignTokens.contentMaxWidth,
           ),
-          child: comments.isEmpty
-              ? const _EmptyComments()
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
-                  itemCount: comments.length,
-                  separatorBuilder: (_, _) =>
-                      const Divider(height: 1, color: AppDesignTokens.divider),
-                  itemBuilder: (context, index) => _CommentRow(
-                    comment: comments[index],
-                    onTap: () => _openOrigin(context, ref, comments[index]),
+          child: commentsAsync.when(
+            data: (comments) => comments.isEmpty
+                ? const _EmptyComments()
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
+                    itemCount: comments.length,
+                    separatorBuilder: (_, _) => const Divider(
+                      height: 1,
+                      color: AppDesignTokens.divider,
+                    ),
+                    itemBuilder: (context, index) => _CommentRow(
+                      comment: comments[index],
+                      onTap: () => _openOrigin(context, ref, comments[index]),
+                    ),
                   ),
-                ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => Center(
+              child: TextButton(
+                onPressed: () => ref.invalidate(myPageProvider),
+                child: const Text('댓글 목록을 다시 불러오기'),
+              ),
+            ),
+          ),
         ),
       ),
     );

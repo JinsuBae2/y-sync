@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_design_tokens.dart';
@@ -172,6 +174,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
         }
 
         return Scaffold(
+          extendBody: true,
           body: PageView(
             controller: pageController,
             onPageChanged: (index) {
@@ -181,71 +184,89 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
             },
             children: screens,
           ),
-          bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: AppDesignTokens.divider)),
-            ),
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                height: 76,
-                indicatorColor: AppDesignTokens.paleBlue,
-                indicatorShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          bottomNavigationBar: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  border: Border(
+                    top: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.92),
+                    ),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppDesignTokens.navy.withValues(alpha: 0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, -6),
+                    ),
+                  ],
                 ),
-                iconTheme: WidgetStateProperty.resolveWith((states) {
-                  return IconThemeData(
-                    size: 26,
-                    color: states.contains(WidgetState.selected)
-                        ? AppDesignTokens.blue
-                        : AppDesignTokens.muted,
-                  );
-                }),
-                labelTextStyle: WidgetStateProperty.resolveWith((states) {
-                  return TextStyle(
-                    fontSize: 12,
-                    fontWeight: states.contains(WidgetState.selected)
-                        ? FontWeight.w800
-                        : FontWeight.w600,
-                    color: states.contains(WidgetState.selected)
-                        ? AppDesignTokens.blue
-                        : AppDesignTokens.muted,
-                  );
-                }),
-              ),
-              child: NavigationBar(
-                selectedIndex: _currentIndex,
-                onDestinationSelected: _selectTab,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
-                    label: '홈',
+                child: NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    height: 76,
+                    indicatorColor: AppDesignTokens.paleBlue,
+                    indicatorShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    iconTheme: WidgetStateProperty.resolveWith((states) {
+                      return IconThemeData(
+                        size: 26,
+                        color: states.contains(WidgetState.selected)
+                            ? AppDesignTokens.blue
+                            : AppDesignTokens.muted,
+                      );
+                    }),
+                    labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                      return TextStyle(
+                        fontSize: 12,
+                        fontWeight: states.contains(WidgetState.selected)
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: states.contains(WidgetState.selected)
+                            ? AppDesignTokens.blue
+                            : AppDesignTokens.muted,
+                      );
+                    }),
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.campaign_outlined),
-                    selectedIcon: Icon(Icons.campaign_rounded),
-                    label: '공지',
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: _selectTab,
+                    labelBehavior:
+                        NavigationDestinationLabelBehavior.alwaysShow,
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.home_outlined),
+                        selectedIcon: Icon(Icons.home_rounded),
+                        label: '홈',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.campaign_outlined),
+                        selectedIcon: Icon(Icons.campaign_rounded),
+                        label: '공지',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.forum_outlined),
+                        selectedIcon: Icon(Icons.forum_rounded),
+                        label: '커뮤니티',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.calendar_month_outlined),
+                        selectedIcon: Icon(Icons.calendar_month_rounded),
+                        label: '일정',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.person_outline_rounded),
+                        selectedIcon: Icon(Icons.person_rounded),
+                        label: '내정보',
+                      ),
+                    ],
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.forum_outlined),
-                    selectedIcon: Icon(Icons.forum_rounded),
-                    label: '커뮤니티',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.calendar_month_outlined),
-                    selectedIcon: Icon(Icons.calendar_month_rounded),
-                    label: '일정',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline_rounded),
-                    selectedIcon: Icon(Icons.person_rounded),
-                    label: '내정보',
-                  ),
-                ],
+                ),
               ),
             ),
           ),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_design_tokens.dart';
@@ -10,6 +12,7 @@ class ContentFilterBar extends StatelessWidget {
     required this.options,
     required this.selectedValue,
     required this.onChanged,
+    this.isGlass = false,
   });
 
   final String label;
@@ -17,6 +20,7 @@ class ContentFilterBar extends StatelessWidget {
   final List<(String, String)> options;
   final String selectedValue;
   final ValueChanged<String> onChanged;
+  final bool isGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -43,26 +47,41 @@ class ContentFilterBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignTokens.divider),
-              ),
-              child: Row(
-                children: [
-                  for (final option in options)
-                    Expanded(
-                      child: _FilterOption(
-                        label: option.$2,
-                        selected: option.$1 == selectedValue,
-                        onTap: () => onChanged(option.$1),
-                      ),
+            child: isGlass
+                ? Row(
+                    children: [
+                      for (final option in options)
+                        Expanded(
+                          child: _FilterOption(
+                            label: option.$2,
+                            selected: option.$1 == selectedValue,
+                            isGlass: true,
+                            onTap: () => onChanged(option.$1),
+                          ),
+                        ),
+                    ],
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: AppDesignTokens.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppDesignTokens.divider),
                     ),
-                ],
-              ),
-            ),
+                    child: Row(
+                      children: [
+                        for (final option in options)
+                          Expanded(
+                            child: _FilterOption(
+                              label: option.$2,
+                              selected: option.$1 == selectedValue,
+                              isGlass: false,
+                              onTap: () => onChanged(option.$1),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -75,26 +94,44 @@ class _FilterOption extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    required this.isGlass,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool isGlass;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final button = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(10),
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
+            color: selected
+                ? AppDesignTokens.paleBlue.withValues(alpha: isGlass ? 0.5 : 1)
+                : isGlass
+                ? Colors.white.withValues(alpha: 0.22)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: isGlass
+                ? Border.all(color: Colors.white.withValues(alpha: 0.78))
+                : null,
+            boxShadow: isGlass
+                ? [
+                    BoxShadow(
+                      color: AppDesignTokens.navy.withValues(alpha: 0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             label,
@@ -106,6 +143,18 @@ class _FilterOption extends StatelessWidget {
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             ),
           ),
+        ),
+      ),
+    );
+
+    if (!isGlass) return button;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: button,
         ),
       ),
     );
