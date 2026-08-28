@@ -147,7 +147,11 @@ class _CommentRow extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                comment.isDeleted ? '관리자에 의해 삭제된 댓글입니다.' : comment.content,
+                comment.isDeleted
+                    ? comment.isDeletedByAdmin
+                          ? '관리자에 의해 삭제된 댓글입니다.'
+                          : '작성자가 삭제한 댓글입니다.'
+                    : comment.content,
                 style: TextStyle(
                   color: comment.isDeleted
                       ? AppDesignTokens.coral
@@ -157,7 +161,9 @@ class _CommentRow extends StatelessWidget {
                   height: 1.45,
                 ),
               ),
-              if (comment.isDeleted && comment.deletionReason != null) ...[
+              if (comment.isDeleted &&
+                  comment.isDeletedByAdmin &&
+                  comment.deletionReason != null) ...[
                 const SizedBox(height: 5),
                 Text(
                   '삭제 사유: ${comment.deletionReason}',
