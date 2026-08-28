@@ -63,7 +63,7 @@
 | **Who** | 배진수(협업 템플릿 추가 요청·검토) |
 | **When** | 2026-08-27, Asia/Seoul |
 | **Where** | `docs/work-log-template` 브랜치, GitHub PR·Issue 작성 화면 |
-| **Status** | 템플릿 작성·정적 검증·문서 커밋 완료 |
+| **Status** | PR #29·릴리스 PR #30 병합, GitHub 기본 브랜치 반영 완료 |
 
 ### **작업 개요**
 
@@ -88,11 +88,11 @@
 
 **추적**
 
-- 브랜치 `docs/work-log-template`, 문서 커밋 `925bdad`; PR은 후속 진행 예정
+- 브랜치 `docs/work-log-template`, 문서 커밋 `925bdad`·`c3184ce`, 통합 커밋 `0a7b1a0`, PR #29, 릴리스 PR #30, `main` 병합 커밋 `eaa031b`
 
 ### **후속 작업**
 
-- GitHub 기본 브랜치에 병합된 뒤 새 PR과 Issue 작성 화면에서 템플릿 노출을 확인해야 합니다.
+- 기본 브랜치의 템플릿 파일 반영을 확인했습니다. 새 PR과 Issue 생성 시 실제 입력 화면을 사용자 관점에서 한 번 확인합니다.
 
 ---
 
@@ -103,7 +103,7 @@
 | **Who** | 배진수(템플릿 개편 요청·검토) |
 | **When** | 2026-08-27, Asia/Seoul |
 | **Where** | `docs/work-log-template` 브랜치, `README.md`, `docs/WORK_LOG.md`, `docs/DEVELOPMENT.md` |
-| **Status** | 문서 수정·형식 검증·문서 커밋 완료 |
+| **Status** | PR #29·릴리스 PR #30 병합, `docs` 경로 운영 기준 반영 완료 |
 
 ### **작업 개요**
 
@@ -131,7 +131,7 @@
 
 **추적**
 
-- 브랜치 `docs/work-log-template`, 문서 커밋 `925bdad`; PR은 후속 진행 예정
+- 브랜치 `docs/work-log-template`, 문서 커밋 `925bdad`·`c3184ce`, 통합 커밋 `0a7b1a0`, PR #29, 릴리스 PR #30, `main` 병합 커밋 `eaa031b`
 
 ### **후속 작업**
 
@@ -146,7 +146,7 @@
 | **Who** | 배진수(초기 백엔드 구현·완성 요청·검토) |
 | **When** | 2026-08-27, Asia/Seoul |
 | **Where** | `fix/comment-soft-delete` 브랜치, Flutter 댓글 모델·댓글 UI와 Spring 댓글 도메인·서비스 |
-| **Status** | PR #28 CI 통과 및 `develop` 병합 완료, 운영 배포 예정 |
+| **Status** | PR #28·릴리스 PR #30 병합, 운영 배포와 기본 헬스 체크 완료 |
 
 ### **작업 개요**
 
@@ -166,15 +166,15 @@
 
 **검증**
 
-- 백엔드 `./gradlew compileJava` 성공, 변경한 Dart 파일 2개의 포맷 확인 및 정적 분석 통과, `git diff --check` 통과, PR #28의 Backend·Frontend·Configuration·Gate 통과
+- 백엔드 `./gradlew compileJava` 성공, 변경한 Dart 파일 2개의 포맷 확인 및 정적 분석 통과, `git diff --check` 통과, PR #28·#30의 Backend·Frontend·Configuration·Gate 통과, 운영 API 정상 응답과 PWA HTTP 200·캐시 헤더 확인
 
 **추적**
 
-- 코드 커밋 `89a4cf2`, 문서 커밋 `4f0249f`, PR #28, `develop` 병합 커밋 `e65b444`
+- 코드 커밋 `89a4cf2`, 문서 커밋 `4f0249f`, PR #28, `develop` 병합 커밋 `e65b444`, 릴리스 PR #30, `main` 병합 커밋 `eaa031b`, 릴리스 CI `33041269931`, Production Deploy `33041406555`
 
 ### **후속 작업**
 
-- 운영은 Hibernate `ddl-auto=update`로 nullable `deleted_by` 컬럼을 생성합니다. 운영 배포 후 작성자 삭제·관리자 삭제·중복 삭제·관리자 복구 흐름을 확인해야 합니다.
+- 자동 배포와 헬스 체크는 통과했습니다. 작성자 삭제·관리자 삭제·중복 삭제·관리자 복구 흐름은 운영 계정으로 직접 확인해야 합니다.
 
 ---
 
