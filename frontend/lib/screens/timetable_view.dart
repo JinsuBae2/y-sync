@@ -259,15 +259,20 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
         ],
       ),
       floatingActionButton: currentUser != null && (_isPersonal || isAdmin)
-          ? FloatingActionButton(
-              backgroundColor: AppDesignTokens.blue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
               ),
-              onPressed: () => _showAddEditEntryDialog(),
-              tooltip: _isPersonal ? '내 수업 추가' : '학과 수업 추가',
-              child: const Icon(Icons.add),
+              child: FloatingActionButton(
+                backgroundColor: AppDesignTokens.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                onPressed: () => _showAddEditEntryDialog(),
+                tooltip: _isPersonal ? '내 수업 추가' : '학과 수업 추가',
+                child: const Icon(Icons.add),
+              ),
             )
           : null,
     );
@@ -341,10 +346,45 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
     int startPeriod = entry?.startPeriod ?? 1;
     int endPeriod = entry?.endPeriod ?? 2;
 
+    InputDecoration fieldDecoration(String label, {String? hint}) {
+      return InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.72),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppDesignTokens.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppDesignTokens.blue, width: 1.5),
+        ),
+      );
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppDesignTokens.background.withValues(alpha: 0.96),
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.9)),
+          ),
           title: Text(
             entry == null
                 ? (isPersonalEntry ? '내 수업 추가' : '학과 수업 등록')
@@ -356,30 +396,29 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
               children: [
                 TextField(
                   controller: subjectController,
-                  decoration: const InputDecoration(
-                    labelText: '과목명',
-                    hintText: '예: 모바일 앱 개발',
-                  ),
+                  decoration: fieldDecoration('과목명', hint: '예: 모바일 앱 개발'),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: professorController,
-                  decoration: InputDecoration(
-                    labelText: isPersonalEntry ? '담당 교수 (선택)' : '담당 교수',
-                    hintText: '예: 홍길동 교수',
+                  decoration: fieldDecoration(
+                    isPersonalEntry ? '담당 교수 (선택)' : '담당 교수',
+                    hint: '예: 홍길동 교수',
                   ),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: classroomController,
-                  decoration: InputDecoration(
-                    labelText: isPersonalEntry ? '강의실 (선택)' : '강의실',
-                    hintText: '예: 정보관 303호',
+                  decoration: fieldDecoration(
+                    isPersonalEntry ? '강의실 (선택)' : '강의실',
+                    hint: '예: 정보관 303호',
                   ),
                 ),
                 const SizedBox(height: 16),
                 // 요일 선택
                 DropdownButtonFormField<int>(
                   initialValue: selectedDayIdx,
-                  decoration: const InputDecoration(labelText: '요일'),
+                  decoration: fieldDecoration('요일'),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('월요일')),
                     DropdownMenuItem(value: 1, child: Text('화요일')),
@@ -400,7 +439,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                     Expanded(
                       child: DropdownButtonFormField<int>(
                         initialValue: startPeriod,
-                        decoration: const InputDecoration(labelText: '시작 교시'),
+                        decoration: fieldDecoration('시작 교시'),
                         items: List.generate(
                           9,
                           (index) => DropdownMenuItem(
@@ -424,7 +463,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                     Expanded(
                       child: DropdownButtonFormField<int>(
                         initialValue: endPeriod,
-                        decoration: const InputDecoration(labelText: '종료 교시'),
+                        decoration: fieldDecoration('종료 교시'),
                         items: List.generate(
                           9,
                           (index) => DropdownMenuItem(
@@ -462,7 +501,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('취소'),
             ),
-            TextButton(
+            FilledButton(
               onPressed: () async {
                 final subject = subjectController.text.trim();
                 final professor = professorController.text.trim();
@@ -538,6 +577,12 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                   );
                 }
               },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppDesignTokens.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
               child: const Text('저장'),
             ),
           ],

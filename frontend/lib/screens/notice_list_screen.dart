@@ -71,22 +71,27 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
         ],
       ),
       floatingActionButton: isAdmin
-          ? FloatingActionButton(
-              backgroundColor: AppDesignTokens.blue,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
               ),
-              tooltip: '공지 작성',
-              onPressed: () async {
-                final created = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
-                );
-                if (created == true) ref.invalidate(noticesProvider);
-              },
-              child: const Icon(Icons.edit_outlined),
+              child: FloatingActionButton(
+                backgroundColor: AppDesignTokens.blue,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                tooltip: '공지 작성',
+                onPressed: () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
+                  );
+                  if (created == true) ref.invalidate(noticesProvider);
+                },
+                child: const Icon(Icons.edit_outlined),
+              ),
             )
           : null,
       body: Align(
@@ -261,6 +266,7 @@ class _GradeFilter extends StatelessWidget {
         options: _NoticeListScreenState._grades,
         selectedValue: selectedGrade,
         onChanged: onChanged,
+        isGlass: true,
       ),
     );
   }
@@ -310,6 +316,23 @@ class NoticeCard extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
+                  if (notice.imageUrls?.isNotEmpty ?? false) ...[
+                    const Icon(
+                      Icons.attach_file_rounded,
+                      size: 14,
+                      color: AppDesignTokens.subtle,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '첨부 ${notice.imageUrls!.length}',
+                      style: const TextStyle(
+                        color: AppDesignTokens.subtle,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     tooltip: isScrapped ? '스크랩 해제' : '스크랩',

@@ -6,11 +6,28 @@ import '../models/notice.dart'; // 💡 추가
 import 'notice_provider.dart';
 
 // 💡 마이페이지의 전반적인 상태(프로필, 내 글, 내 댓글, 내 공지사항)를 통합 관리하는 Notifier입니다.
-class MyPageNotifier extends AsyncNotifier<({Member member, List<CommunityPost> posts, List<MyComment> comments, List<Notice>? notices})> {
+class MyPageNotifier
+    extends
+        AsyncNotifier<
+          ({
+            Member member,
+            List<CommunityPost> posts,
+            List<MyComment> comments,
+            List<Notice>? notices,
+          })
+        > {
   @override
-  Future<({Member member, List<CommunityPost> posts, List<MyComment> comments, List<Notice>? notices})> build() async {
+  Future<
+    ({
+      Member member,
+      List<CommunityPost> posts,
+      List<MyComment> comments,
+      List<Notice>? notices,
+    })
+  >
+  build() async {
     final dio = ref.watch(dioProvider);
-    
+
     // 💡 기본 활동 내역 요청
     final futures = [
       dio.get('/members/me'),
@@ -24,6 +41,10 @@ class MyPageNotifier extends AsyncNotifier<({Member member, List<CommunityPost> 
     final member = Member.fromJson(memberJson);
     final postsJson = responses[1].data as List<dynamic>;
     final commentsJson = responses[2].data as List<dynamic>;
+    final comments = commentsJson
+        .map((json) => MyComment.fromJson(json))
+        .where((comment) => !comment.isDeleted || comment.isDeletedByAdmin)
+        .toList();
 
     List<Notice>? notices;
     // 💡 관리자(ADMIN)일 경우에만 내가 쓴 공지사항을 추가로 불러옵니다.
@@ -36,7 +57,7 @@ class MyPageNotifier extends AsyncNotifier<({Member member, List<CommunityPost> 
     return (
       member: member,
       posts: postsJson.map((json) => CommunityPost.fromJson(json)).toList(),
-      comments: commentsJson.map((json) => MyComment.fromJson(json)).toList(),
+      comments: comments,
       notices: notices,
     );
   }
@@ -48,6 +69,15 @@ class MyPageNotifier extends AsyncNotifier<({Member member, List<CommunityPost> 
   }
 }
 
-final myPageProvider = AsyncNotifierProvider<MyPageNotifier, ({Member member, List<CommunityPost> posts, List<MyComment> comments, List<Notice>? notices})>(() {
-  return MyPageNotifier();
-});
+final myPageProvider =
+    AsyncNotifierProvider<
+      MyPageNotifier,
+      ({
+        Member member,
+        List<CommunityPost> posts,
+        List<MyComment> comments,
+        List<Notice>? notices,
+      })
+    >(() {
+      return MyPageNotifier();
+    });

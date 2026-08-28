@@ -57,17 +57,22 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
 
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppDesignTokens.blue,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        tooltip: '글쓰기',
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CommunityFormScreen()),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
         ),
-        child: const Icon(Icons.edit_outlined),
+        child: FloatingActionButton(
+          backgroundColor: AppDesignTokens.blue,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          tooltip: '글쓰기',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CommunityFormScreen()),
+          ),
+          child: const Icon(Icons.edit_outlined),
+        ),
       ),
       body: SafeArea(
         bottom: false,
@@ -228,46 +233,60 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: AppDesignTokens.contentPadding,
-      child: ValueListenableBuilder<TextEditingValue>(
-        valueListenable: controller,
-        builder: (context, value, _) => TextField(
-          controller: controller,
-          onSubmitted: (_) => onSearch(),
-          textInputAction: TextInputAction.search,
-          style: const TextStyle(
-            color: AppDesignTokens.navy,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            hintText: '제목이나 내용 검색',
-            hintStyle: const TextStyle(color: AppDesignTokens.subtle),
-            prefixIcon: const Icon(
-              Icons.search_rounded,
-              color: AppDesignTokens.muted,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppDesignTokens.navy.withValues(alpha: 0.07),
+              blurRadius: 20,
+              offset: const Offset(0, 7),
             ),
-            suffixIcon: value.text.isEmpty
-                ? null
-                : IconButton(
-                    tooltip: '검색어 지우기',
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                    onPressed: () {
-                      controller.clear();
-                      onSearch();
-                    },
-                  ),
-            filled: true,
-            fillColor: AppDesignTokens.surface,
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppDesignTokens.divider),
+          ],
+        ),
+        child: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) => TextField(
+            controller: controller,
+            onSubmitted: (_) => onSearch(),
+            textInputAction: TextInputAction.search,
+            style: const TextStyle(
+              color: AppDesignTokens.navy,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: AppDesignTokens.blue,
-                width: 1.5,
+            decoration: InputDecoration(
+              hintText: '제목이나 내용 검색',
+              hintStyle: const TextStyle(color: AppDesignTokens.subtle),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: AppDesignTokens.muted,
+              ),
+              suffixIcon: value.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: '검색어 지우기',
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () {
+                        controller.clear();
+                        onSearch();
+                      },
+                    ),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.76),
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.95),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: AppDesignTokens.blue,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -305,6 +324,7 @@ class _FilterBar extends StatelessWidget {
             options: _categories,
             selectedValue: selectedCategory,
             onChanged: onCategoryChanged,
+            isGlass: true,
           ),
           const SizedBox(height: 8),
           ContentFilterBar(
@@ -313,6 +333,7 @@ class _FilterBar extends StatelessWidget {
             options: _grades,
             selectedValue: selectedGrade,
             onChanged: onGradeChanged,
+            isGlass: true,
           ),
         ],
       ),
