@@ -1,6 +1,7 @@
 package com.ync.ysync.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 // 💡 프로젝트 외부 경로에 파일을 저장하는 로컬 구현체입니다.
 @Service
+@ConditionalOnProperty(name = "ysync.storage.provider", havingValue = "local", matchIfMissing = true)
 public class LocalFileServiceImpl implements FileService {
 
     // 💡 프로퍼티에서 저장할 디렉토리 경로를 주입받습니다.
