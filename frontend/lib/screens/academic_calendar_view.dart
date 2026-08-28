@@ -436,15 +436,20 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         },
       ),
       floatingActionButton: isAdmin
-          ? FloatingActionButton(
-              backgroundColor: AppDesignTokens.blue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
               ),
-              onPressed: () => _showAddEditEventDialog(),
-              tooltip: '학사 일정 추가',
-              child: const Icon(Icons.add),
+              child: FloatingActionButton(
+                backgroundColor: AppDesignTokens.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                onPressed: () => _showAddEditEventDialog(),
+                tooltip: '학사 일정 추가',
+                child: const Icon(Icons.add),
+              ),
             )
           : null,
     );

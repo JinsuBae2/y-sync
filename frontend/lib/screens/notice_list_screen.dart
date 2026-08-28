@@ -71,22 +71,27 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
         ],
       ),
       floatingActionButton: isAdmin
-          ? FloatingActionButton(
-              backgroundColor: AppDesignTokens.blue,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
               ),
-              tooltip: '공지 작성',
-              onPressed: () async {
-                final created = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
-                );
-                if (created == true) ref.invalidate(noticesProvider);
-              },
-              child: const Icon(Icons.edit_outlined),
+              child: FloatingActionButton(
+                backgroundColor: AppDesignTokens.blue,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                tooltip: '공지 작성',
+                onPressed: () async {
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
+                  );
+                  if (created == true) ref.invalidate(noticesProvider);
+                },
+                child: const Icon(Icons.edit_outlined),
+              ),
             )
           : null,
       body: Align(
@@ -261,6 +266,7 @@ class _GradeFilter extends StatelessWidget {
         options: _NoticeListScreenState._grades,
         selectedValue: selectedGrade,
         onChanged: onChanged,
+        isGlass: true,
       ),
     );
   }
