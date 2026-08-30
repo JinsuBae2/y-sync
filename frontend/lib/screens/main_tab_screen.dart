@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/brand_logo.dart';
 import 'community_list_screen.dart';
 import 'home_screen.dart';
 import 'notice_list_screen.dart';
@@ -96,18 +97,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
                         color: darkNavy.withBlue(60),
                         child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.sync_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
+                            const BrandLogo(size: 40, padding: 4),
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Column(

@@ -10,7 +10,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: YSyncApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Y-Sync'), findsOneWidget);
+    expect(find.bySemanticsLabel('Y-Sync 천마 로고'), findsOneWidget);
     expect(find.text('로그인'), findsOneWidget);
     expect(find.text('회원가입하기'), findsOneWidget);
   });
