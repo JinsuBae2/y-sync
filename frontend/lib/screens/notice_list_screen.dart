@@ -316,7 +316,7 @@ class NoticeCard extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  if (notice.imageUrls?.isNotEmpty ?? false) ...[
+                  if (notice.attachments.isNotEmpty) ...[
                     const Icon(
                       Icons.attach_file_rounded,
                       size: 14,
@@ -324,7 +324,7 @@ class NoticeCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 2),
                     Text(
-                      '첨부 ${notice.imageUrls!.length}',
+                      '첨부 ${notice.attachments.length}',
                       style: const TextStyle(
                         color: AppDesignTokens.subtle,
                         fontSize: 11,

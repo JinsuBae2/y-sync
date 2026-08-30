@@ -11,6 +11,7 @@ import '../utils/image_url_helper.dart';
 import '../widgets/comment_thread.dart';
 import '../widgets/deletion_reason_dialog.dart';
 import '../widgets/image_viewer_screen.dart';
+import '../widgets/attachment_file_tile.dart';
 import '../widgets/linkify_text.dart';
 import 'community_form_screen.dart';
 
@@ -133,9 +134,20 @@ class CommunityDetailScreen extends ConsumerWidget {
                           height: 1.7,
                         ),
                       ),
+                      if (post.attachments.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        const Text(
+                          '첨부 파일',
+                          style: TextStyle(
+                            color: AppDesignTokens.navy,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                       if (post.imageUrls case final images?
                           when images.isNotEmpty) ...[
-                        const SizedBox(height: 22),
                         for (final image in images)
                           _PostImage(
                             url: image,
@@ -153,6 +165,10 @@ class CommunityDetailScreen extends ConsumerWidget {
                             ),
                           ),
                       ],
+                      for (final attachment in post.attachments.where(
+                        (file) => !file.isImage,
+                      ))
+                        AttachmentFileTile(attachment: attachment),
                       const SizedBox(height: 32),
                       Row(
                         children: [

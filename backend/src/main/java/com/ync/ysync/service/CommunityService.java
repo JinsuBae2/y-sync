@@ -51,6 +51,7 @@ public class CommunityService {
     // 💡 파일 이미지를 포함한 게시글 작성을 처리합니다.
     @Transactional
     public CommunityPost createPostWithImages(String category, String title, String content, boolean anonymous, Grade targetGrade, boolean isPinned, Long memberId, List<MultipartFile> images) {
+        AttachmentValidator.validate(images);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
@@ -71,6 +72,9 @@ public class CommunityService {
                     if (fileUrl != null) {
                         PostImage postImage = PostImage.builder()
                                 .imageUrl(fileUrl)
+                                .originalFilename(file.getOriginalFilename())
+                                .contentType(file.getContentType())
+                                .fileSize(file.getSize())
                                 .communityPost(post)
                                 .build();
                         post.getImages().add(postImage);
@@ -84,11 +88,12 @@ public class CommunityService {
         return communityPostRepository.save(post);
     }
 
-    // 💡 작성자 본인의 게시글만 수정하고 새 이미지가 있을 때에만 기존 이미지를 교체합니다.
+    // 작성자 본인의 게시글만 수정하고 새 파일이 있을 때에만 기존 첨부를 교체합니다.
     @Transactional
     public CommunityPost updatePost(Long id, String category, String title, String content,
                                     boolean anonymous, Grade targetGrade, Long memberId,
                                     List<MultipartFile> images) {
+        AttachmentValidator.validate(images);
         CommunityPost post = communityPostRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다."));
 
@@ -109,6 +114,9 @@ public class CommunityService {
                     if (fileUrl != null) {
                         post.getImages().add(PostImage.builder()
                                 .imageUrl(fileUrl)
+                                .originalFilename(file.getOriginalFilename())
+                                .contentType(file.getContentType())
+                                .fileSize(file.getSize())
                                 .communityPost(post)
                                 .build());
                     }

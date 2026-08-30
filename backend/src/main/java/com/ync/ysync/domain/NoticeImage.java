@@ -10,7 +10,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 💡 공지사항 게시글에 포함된 이미지를 관리하는 엔티티입니다.
+// 기존 이미지 데이터와 호환하면서 공지사항의 범용 첨부파일을 관리합니다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,6 +25,12 @@ public class NoticeImage {
     @Column(nullable = false)
     private String imageUrl;
 
+    private String originalFilename;
+
+    private String contentType;
+
+    private Long fileSize;
+
     // 💡 여러 이미지가 하나의 공지사항에 속하도록 N:1 매핑 설정
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "notice_id", nullable = false)
@@ -35,8 +41,17 @@ public class NoticeImage {
     private LocalDateTime createdAt;
 
     @Builder
-    public NoticeImage(String imageUrl, Notice notice) {
+    public NoticeImage(String imageUrl, String originalFilename, String contentType, Long fileSize,
+                       Notice notice) {
         this.imageUrl = imageUrl;
+        this.originalFilename = originalFilename;
+        this.contentType = contentType;
+        this.fileSize = fileSize;
         this.notice = notice;
+    }
+
+    public boolean isImage() {
+        if (contentType != null) return contentType.startsWith("image/");
+        return imageUrl != null && imageUrl.toLowerCase().matches(".*\\.(png|jpe?g|gif|webp|bmp)$");
     }
 }

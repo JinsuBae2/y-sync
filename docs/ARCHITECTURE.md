@@ -219,4 +219,7 @@ Y-Sync 백엔드는 리눅스 VM(Oracle Cloud 1GB RAM 프리티어 환경 맞춤
 * `STORAGE_PROVIDER=local|s3` 설정으로 파일 저장 구현체를 전환합니다. 기본값은 기존 로컬 볼륨입니다.
 * S3 운영 버킷은 서울 리전의 비공개 `y-sync-attachments-155641294529`을 사용하고, 애플리케이션 IAM 사용자는 해당 버킷의 `uploads/*`에만 접근합니다.
 * 신규 S3 객체의 DB 경로는 `/s3-uploads/{uuid}` 형식을 유지합니다. 백엔드는 요청마다 5분짜리 Presigned URL을 생성해 `302`로 리다이렉트하므로 버킷을 공개하지 않습니다.
+* 커뮤니티와 공지는 이미지뿐 아니라 PDF, HWP/HWPX, Office 문서, TXT, ZIP 첨부를 공통 지원합니다. 파일당 20MB, 게시물당 10개·총 50MB로 제한하며 실행 파일 확장자는 거부합니다.
+* API는 범용 `attachments` 메타데이터를 제공하고 기존 `imageUrls` 필드는 이미지 미리보기 및 구버전 클라이언트 호환을 위해 유지합니다.
+* 일반 파일 다운로드에는 원본 파일명을 `Content-Disposition`에 포함한 짧은 Presigned URL을 사용합니다.
 * 기존 `/uploads/{uuid}` 데이터와 로컬 볼륨은 그대로 제공해 파일 일괄 이전 없이 저장소를 단계적으로 전환할 수 있습니다.

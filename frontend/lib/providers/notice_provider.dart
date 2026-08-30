@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
@@ -8,6 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import '../models/notice.dart';
 import '../services/push_notification_service.dart';
 import '../screens/login_screen.dart';
+import '../utils/platform_file_multipart.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -20,7 +20,9 @@ const String _rawApiBaseUrl = String.fromEnvironment(
 );
 
 // 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
-const String apiBaseUrl = _rawApiBaseUrl == '' ? 'https://168-107-29-144.sslip.io/api/v1' : _rawApiBaseUrl;
+const String apiBaseUrl = _rawApiBaseUrl == ''
+    ? 'https://168-107-29-144.sslip.io/api/v1'
+    : _rawApiBaseUrl;
 
 const String _rawImageBaseUrl = String.fromEnvironment(
   'IMAGE_BASE_URL',
@@ -28,43 +30,44 @@ const String _rawImageBaseUrl = String.fromEnvironment(
 );
 
 // 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
-const String imageBaseUrl = _rawImageBaseUrl == '' ? 'https://168-107-29-144.sslip.io' : _rawImageBaseUrl;
-
+const String imageBaseUrl = _rawImageBaseUrl == ''
+    ? 'https://168-107-29-144.sslip.io'
+    : _rawImageBaseUrl;
 
 final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio(BaseOptions(
-    baseUrl: apiBaseUrl,
-  ));
+  final dio = Dio(BaseOptions(baseUrl: apiBaseUrl));
 
-  dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (options, handler) async {
-      // 💡 매 요청마다 SecureStorage에서 JWT 토큰을 읽어와 Authorization 헤더에 추가합니다.
-      final storage = ref.read(secureStorageProvider);
-      final token = await storage.read(key: 'jwt_token');
-      
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
-      return handler.next(options);
-    },
-    onResponse: (response, handler) {
-      return handler.next(response);
-    },
-    onError: (DioException e, handler) async {
-      if (e.response?.statusCode == 401) {
-        // 💡 401 Unauthorized 발생 시 좀비 토큰일 수 있으므로 로컬 세션(토큰) 삭제 및 강제 로그인 창 이동
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        // 💡 매 요청마다 SecureStorage에서 JWT 토큰을 읽어와 Authorization 헤더에 추가합니다.
         final storage = ref.read(secureStorageProvider);
-        await storage.delete(key: 'jwt_token');
-        
-        // 순환 참조(Circular Dependency) 방지를 위해 authProvider 대신 전역 네비게이터를 사용합니다.
-        PushNotificationService.navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-      return handler.next(e);
-    },
-  ));
+        final token = await storage.read(key: 'jwt_token');
+
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      },
+      onResponse: (response, handler) {
+        return handler.next(response);
+      },
+      onError: (DioException e, handler) async {
+        if (e.response?.statusCode == 401) {
+          // 💡 401 Unauthorized 발생 시 좀비 토큰일 수 있으므로 로컬 세션(토큰) 삭제 및 강제 로그인 창 이동
+          final storage = ref.read(secureStorageProvider);
+          await storage.delete(key: 'jwt_token');
+
+          // 순환 참조(Circular Dependency) 방지를 위해 authProvider 대신 전역 네비게이터를 사용합니다.
+          PushNotificationService.navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return handler.next(e);
+      },
+    ),
+  );
 
   return dio;
 });
@@ -79,9 +82,11 @@ class SearchKeywordNotifier extends Notifier<String> {
   }
 }
 
-final searchKeywordProvider = NotifierProvider<SearchKeywordNotifier, String>(() {
-  return SearchKeywordNotifier();
-});
+final searchKeywordProvider = NotifierProvider<SearchKeywordNotifier, String>(
+  () {
+    return SearchKeywordNotifier();
+  },
+);
 
 // 💡 현재 선택된 공지사항 학년 탭을 관리합니다.
 class NoticeGradeNotifier extends Notifier<String> {
@@ -102,14 +107,14 @@ final noticeGradeProvider = NotifierProvider<NoticeGradeNotifier, String>(() {
 final noticesProvider = FutureProvider<List<Notice>>((ref) async {
   final dio = ref.watch(dioProvider);
   final keyword = ref.watch(searchKeywordProvider);
-  
+
   // 키워드가 비어있으면 전체 조회, 값이 있으면 검색 쿼리 사용
-  final String path = keyword.trim().isEmpty 
-      ? '/notices' 
+  final String path = keyword.trim().isEmpty
+      ? '/notices'
       : '/notices/search?keyword=${Uri.encodeComponent(keyword.trim())}';
-      
+
   final response = await dio.get(path);
-  
+
   // 💡 백엔드 페이징 API 적용으로 인해, 전체 조회의 경우 Page<NoticeResponse> 형식(Map)으로 반환됩니다.
   final List<dynamic> data;
   if (keyword.trim().isEmpty) {
@@ -117,7 +122,7 @@ final noticesProvider = FutureProvider<List<Notice>>((ref) async {
   } else {
     data = response.data as List<dynamic>;
   }
-  
+
   return data.map((json) => Notice.fromJson(json)).toList();
 });
 
@@ -132,44 +137,41 @@ class NoticeNotifier {
     return Notice.fromJson(response.data);
   }
 
-  Future<void> createNotice(String title, String content, String noticeType, {String targetGrade = 'ALL', List<XFile>? images, String? eventStartDate, String? eventEndDate}) async {
+  Future<void> createNotice(
+    String title,
+    String content,
+    String noticeType, {
+    String targetGrade = 'ALL',
+    List<PlatformFile>? files,
+    String? eventStartDate,
+    String? eventEndDate,
+  }) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
-    
-    formData.files.add(MapEntry(
-      'request',
-      MultipartFile.fromString(
-        jsonEncode({
-          'title': title,
-          'content': content,
-          'noticeType': noticeType,
-          'targetGrade': targetGrade,
-          'isPinned': false,
-          'eventStartDate': eventStartDate,
-          'eventEndDate': eventEndDate,
-        }),
-        contentType: MediaType('application', 'json'),
-      ),
-    ));
 
-    if (images != null && images.isNotEmpty) {
-      for (XFile file in images) {
-        if (kIsWeb) {
-          final bytes = await file.readAsBytes();
-          formData.files.add(MapEntry(
-            'images',
-            MultipartFile.fromBytes(
-              bytes,
-              filename: file.name,
-              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
-            ),
-          ));
-        } else {
-          formData.files.add(MapEntry(
-            'images',
-            await MultipartFile.fromFile(file.path),
-          ));
-        }
+    formData.files.add(
+      MapEntry(
+        'request',
+        MultipartFile.fromString(
+          jsonEncode({
+            'title': title,
+            'content': content,
+            'noticeType': noticeType,
+            'targetGrade': targetGrade,
+            'isPinned': false,
+            'eventStartDate': eventStartDate,
+            'eventEndDate': eventEndDate,
+          }),
+          contentType: MediaType('application', 'json'),
+        ),
+      ),
+    );
+
+    if (files != null && files.isNotEmpty) {
+      for (final file in files) {
+        formData.files.add(
+          MapEntry('files', await platformFileToMultipart(file)),
+        );
       }
     }
 
@@ -177,44 +179,42 @@ class NoticeNotifier {
     ref.invalidate(noticesProvider);
   }
 
-  Future<void> updateNotice(int id, String title, String content, String noticeType, {String targetGrade = 'ALL', List<XFile>? images, String? eventStartDate, String? eventEndDate}) async {
+  Future<void> updateNotice(
+    int id,
+    String title,
+    String content,
+    String noticeType, {
+    String targetGrade = 'ALL',
+    List<PlatformFile>? files,
+    String? eventStartDate,
+    String? eventEndDate,
+  }) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
-    
-    formData.files.add(MapEntry(
-      'request',
-      MultipartFile.fromString(
-        jsonEncode({
-          'title': title,
-          'content': content,
-          'noticeType': noticeType,
-          'targetGrade': targetGrade,
-          'isPinned': false,
-          'eventStartDate': eventStartDate,
-          'eventEndDate': eventEndDate,
-        }),
-        contentType: MediaType('application', 'json'),
-      ),
-    ));
 
-    if (images != null && images.isNotEmpty) {
-      for (XFile file in images) {
-        if (kIsWeb) {
-          final bytes = await file.readAsBytes();
-          formData.files.add(MapEntry(
-            'images',
-            MultipartFile.fromBytes(
-              bytes,
-              filename: file.name,
-              contentType: MediaType('image', file.name.endsWith('.png') ? 'png' : 'jpeg'),
-            ),
-          ));
-        } else {
-          formData.files.add(MapEntry(
-            'images',
-            await MultipartFile.fromFile(file.path),
-          ));
-        }
+    formData.files.add(
+      MapEntry(
+        'request',
+        MultipartFile.fromString(
+          jsonEncode({
+            'title': title,
+            'content': content,
+            'noticeType': noticeType,
+            'targetGrade': targetGrade,
+            'isPinned': false,
+            'eventStartDate': eventStartDate,
+            'eventEndDate': eventEndDate,
+          }),
+          contentType: MediaType('application', 'json'),
+        ),
+      ),
+    );
+
+    if (files != null && files.isNotEmpty) {
+      for (final file in files) {
+        formData.files.add(
+          MapEntry('files', await platformFileToMultipart(file)),
+        );
       }
     }
 

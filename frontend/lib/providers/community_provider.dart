@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/community_post.dart';
+import '../utils/platform_file_multipart.dart';
 import 'notice_provider.dart';
 
 // 💡 현재 선택된 커뮤니티 카테고리를 관리합니다. (Riverpod 3.x 호환 Notifier 사용)
@@ -97,7 +97,7 @@ class CommunityNotifier {
     required String content,
     required bool anonymous,
     required String targetGrade,
-    List<XFile>? images,
+    List<PlatformFile>? files,
   }) async {
     final dio = ref.read(dioProvider);
 
@@ -121,29 +121,11 @@ class CommunityNotifier {
       ),
     );
 
-    // 이미지 파일 파트 추가
-    if (images != null && images.isNotEmpty) {
-      for (XFile file in images) {
-        if (kIsWeb) {
-          final bytes = await file.readAsBytes();
-          formData.files.add(
-            MapEntry(
-              'images',
-              MultipartFile.fromBytes(
-                bytes,
-                filename: file.name,
-                contentType: MediaType(
-                  'image',
-                  file.name.endsWith('.png') ? 'png' : 'jpeg',
-                ),
-              ),
-            ),
-          );
-        } else {
-          formData.files.add(
-            MapEntry('images', await MultipartFile.fromFile(file.path)),
-          );
-        }
+    if (files != null && files.isNotEmpty) {
+      for (final file in files) {
+        formData.files.add(
+          MapEntry('files', await platformFileToMultipart(file)),
+        );
       }
     }
 
@@ -151,7 +133,7 @@ class CommunityNotifier {
     ref.invalidate(communityPostsProvider);
   }
 
-  // 💡 작성자 본인의 게시글을 수정하며 새 이미지가 선택된 경우에만 기존 이미지를 교체합니다.
+  // 작성자 본인의 게시글을 수정하며 새 파일이 선택된 경우에만 기존 첨부를 교체합니다.
   Future<void> updatePost({
     required int id,
     required String category,
@@ -159,7 +141,7 @@ class CommunityNotifier {
     required String content,
     required bool anonymous,
     required String targetGrade,
-    List<XFile>? images,
+    List<PlatformFile>? files,
   }) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
@@ -181,28 +163,11 @@ class CommunityNotifier {
       ),
     );
 
-    if (images != null && images.isNotEmpty) {
-      for (final file in images) {
-        if (kIsWeb) {
-          final bytes = await file.readAsBytes();
-          formData.files.add(
-            MapEntry(
-              'images',
-              MultipartFile.fromBytes(
-                bytes,
-                filename: file.name,
-                contentType: MediaType(
-                  'image',
-                  file.name.endsWith('.png') ? 'png' : 'jpeg',
-                ),
-              ),
-            ),
-          );
-        } else {
-          formData.files.add(
-            MapEntry('images', await MultipartFile.fromFile(file.path)),
-          );
-        }
+    if (files != null && files.isNotEmpty) {
+      for (final file in files) {
+        formData.files.add(
+          MapEntry('files', await platformFileToMultipart(file)),
+        );
       }
     }
 
