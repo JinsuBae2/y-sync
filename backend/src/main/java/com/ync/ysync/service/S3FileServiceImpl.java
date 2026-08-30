@@ -2,6 +2,8 @@ package com.ync.ysync.service;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
@@ -66,14 +68,22 @@ public class S3FileServiceImpl implements FileService {
     }
 
     public URI createPresignedDownloadUri(String filename) {
+        return createPresignedDownloadUri(filename, null);
+    }
+
+    public URI createPresignedDownloadUri(String filename, String downloadName) {
         String safeFilename = requireSafeFilename(filename);
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+        GetObjectRequest.Builder getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
-                .key(OBJECT_PREFIX + safeFilename)
-                .build();
+                .key(OBJECT_PREFIX + safeFilename);
+        if (downloadName != null && !downloadName.isBlank()) {
+            String encodedName = URLEncoder.encode(safeDownloadName(downloadName), StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+            getObjectRequest.responseContentDisposition("attachment; filename*=UTF-8''" + encodedName);
+        }
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
                 .signatureDuration(presignDuration)
-                .getObjectRequest(getObjectRequest)
+                .getObjectRequest(getObjectRequest.build())
                 .build();
         return URI.create(s3Presigner.presignGetObject(presignRequest).url().toString());
     }
@@ -91,5 +101,12 @@ public class S3FileServiceImpl implements FileService {
             throw new IllegalArgumentException("올바르지 않은 파일 경로입니다.");
         }
         return filename;
+    }
+
+    private static String safeDownloadName(String downloadName) {
+        String name = downloadName.replace('\\', '/');
+        name = name.substring(name.lastIndexOf('/') + 1).replace("\r", "").replace("\n", "").trim();
+        if (name.isEmpty()) return "attachment";
+        return name.length() > 180 ? name.substring(name.length() - 180) : name;
     }
 }

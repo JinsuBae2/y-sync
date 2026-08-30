@@ -10,7 +10,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-// 💡 게시글에 포함된 이미지를 관리하는 엔티티입니다.
+// 기존 이미지 데이터와 호환하면서 게시글의 범용 첨부파일을 관리합니다.
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,6 +25,12 @@ public class PostImage {
     @Column(nullable = false)
     private String imageUrl;
 
+    private String originalFilename;
+
+    private String contentType;
+
+    private Long fileSize;
+
     // 💡 여러 이미지가 하나의 게시글(CommunityPost)에 속하도록 N:1 매핑 설정
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "community_post_id", nullable = false)
@@ -35,8 +41,17 @@ public class PostImage {
     private LocalDateTime createdAt;
 
     @Builder
-    public PostImage(String imageUrl, CommunityPost communityPost) {
+    public PostImage(String imageUrl, String originalFilename, String contentType, Long fileSize,
+                     CommunityPost communityPost) {
         this.imageUrl = imageUrl;
+        this.originalFilename = originalFilename;
+        this.contentType = contentType;
+        this.fileSize = fileSize;
         this.communityPost = communityPost;
+    }
+
+    public boolean isImage() {
+        if (contentType != null) return contentType.startsWith("image/");
+        return imageUrl != null && imageUrl.toLowerCase().matches(".*\\.(png|jpe?g|gif|webp|bmp)$");
     }
 }

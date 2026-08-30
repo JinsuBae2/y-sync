@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -20,8 +21,11 @@ public class S3FileController {
     }
 
     @GetMapping("/s3-uploads/{filename:.+}")
-    public ResponseEntity<Void> download(@PathVariable String filename) {
-        URI downloadUri = fileService.createPresignedDownloadUri(filename);
+    public ResponseEntity<Void> download(
+            @PathVariable String filename,
+            @RequestParam(required = false) String name
+    ) {
+        URI downloadUri = fileService.createPresignedDownloadUri(filename, name);
         return ResponseEntity.status(HttpStatus.FOUND).location(downloadUri).build();
     }
 }

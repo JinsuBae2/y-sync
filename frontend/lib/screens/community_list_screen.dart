@@ -485,6 +485,22 @@ class CommunityPostCard extends ConsumerWidget {
                       fontSize: 12,
                     ),
                   ),
+                  if (post.attachments.isNotEmpty) ...[
+                    const SizedBox(width: 14),
+                    const Icon(
+                      Icons.attach_file_rounded,
+                      size: 15,
+                      color: AppDesignTokens.subtle,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${post.attachments.length}',
+                      style: const TextStyle(
+                        color: AppDesignTokens.subtle,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   SizedBox.square(
                     dimension: 36,

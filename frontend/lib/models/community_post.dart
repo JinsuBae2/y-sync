@@ -1,3 +1,5 @@
+import 'attachment.dart';
+
 // 💡 커뮤니티 게시글 모델 클래스입니다.
 class CommunityPost {
   final int id;
@@ -16,6 +18,7 @@ class CommunityPost {
   final int viewCount;
   final int commentCount;
   final List<String>? imageUrls; // 💡 이미지 URL 목록 추가
+  final List<Attachment> attachments;
 
   CommunityPost({
     required this.id,
@@ -33,7 +36,18 @@ class CommunityPost {
     this.viewCount = 0,
     this.commentCount = 0,
     this.imageUrls,
-  });
+    List<Attachment>? attachments,
+  }) : attachments =
+           attachments ??
+           (imageUrls ?? const [])
+               .map(
+                 (url) => Attachment(
+                   url: url,
+                   originalFilename: '이미지',
+                   isImage: true,
+                 ),
+               )
+               .toList();
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) {
     return CommunityPost(
@@ -54,6 +68,21 @@ class CommunityPost {
       imageUrls: json['imageUrls'] != null
           ? List<String>.from(json['imageUrls'])
           : null,
+      attachments: json['attachments'] != null
+          ? (json['attachments'] as List)
+                .map(
+                  (item) => Attachment.fromJson(item as Map<String, dynamic>),
+                )
+                .toList()
+          : (json['imageUrls'] as List<dynamic>? ?? const [])
+                .map(
+                  (url) => Attachment(
+                    url: url as String,
+                    originalFilename: '이미지',
+                    isImage: true,
+                  ),
+                )
+                .toList(),
     );
   }
 }

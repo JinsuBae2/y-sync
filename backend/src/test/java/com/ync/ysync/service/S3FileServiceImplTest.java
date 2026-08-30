@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 import java.net.URI;
 import java.time.Duration;
@@ -67,5 +68,24 @@ class S3FileServiceImplTest {
     void rejectsTraversalInDownloadFilename() {
         assertThatThrownBy(() -> fileService.createPresignedDownloadUri("../secret.txt"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void addsOriginalFilenameWhenDownloadingAttachment() throws Exception {
+        PresignedGetObjectRequest presigned = mock(PresignedGetObjectRequest.class);
+        when(presigned.url()).thenReturn(
+                URI.create("https://example-bucket.s3.ap-northeast-2.amazonaws.com/object?signature=test").toURL()
+        );
+        when(presigner.presignGetObject(any(GetObjectPresignRequest.class))).thenReturn(presigned);
+
+        fileService.createPresignedDownloadUri(
+                "550e8400-e29b-41d4-a716-446655440000.pdf",
+                "학사 안내.pdf"
+        );
+
+        ArgumentCaptor<GetObjectPresignRequest> captor = ArgumentCaptor.forClass(GetObjectPresignRequest.class);
+        verify(presigner).presignGetObject(captor.capture());
+        assertThat(captor.getValue().getObjectRequest().responseContentDisposition())
+                .contains("attachment", "%ED%95%99%EC%82%AC%20%EC%95%88%EB%82%B4.pdf");
     }
 }
