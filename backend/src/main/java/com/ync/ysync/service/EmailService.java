@@ -18,13 +18,21 @@ public class EmailService {
      * SMTP 전송 오류가 발생하더라도 로컬 개발 환경 편의를 위해 로그를 출력하고 정상 처리되는 폴백을 제공합니다.
      */
     public void sendVerificationCode(String toEmail, String code) {
+        sendCode(toEmail, code, "가입", "회원가입 본인 인증");
+    }
+
+    public void sendPasswordResetCode(String toEmail, String code) {
+        sendCode(toEmail, code, "비밀번호 재설정", "비밀번호 재설정 본인 인증");
+    }
+
+    private void sendCode(String toEmail, String code, String subjectPurpose, String bodyPurpose) {
         log.info("인증 이메일 발송 시도 - 수신자: {}", toEmail);
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(toEmail);
-            message.setSubject("[Y-Sync] 영남이공대학교 모바일 학생 커뮤니티 가입 인증 번호");
+            message.setSubject("[Y-Sync] " + subjectPurpose + " 인증 번호");
             message.setText("안녕하세요. 영남이공대학교 소프트웨어융합과 모바일 학생 커뮤니티 Y-Sync입니다.\n\n" +
-                    "회원가입 본인 인증을 위한 6자리 인증 번호는 다음과 같습니다.\n\n" +
+                    bodyPurpose + "을 위한 6자리 인증 번호는 다음과 같습니다.\n\n" +
                     "인증 번호: [" + code + "]\n\n" +
                     "인증 번호 입력 유효 시간은 5분입니다. 시간 내에 입력해주세요.\n\n" +
                     "감사합니다.");

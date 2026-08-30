@@ -31,10 +31,11 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
-    public String generateToken(String loginId, String role) {
+    public String generateToken(String loginId, String role, int authVersion) {
         return Jwts.builder()
                 .subject(loginId)
                 .claim("role", role)
+                .claim("authVersion", authVersion)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key)

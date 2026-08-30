@@ -56,7 +56,11 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
   }
 
   // 💡 회원 목록 페이징 & 검색 조회
-  Future<void> fetchMembers({int page = 0, int size = 15, String? search}) async {
+  Future<void> fetchMembers({
+    int page = 0,
+    int size = 15,
+    String? search,
+  }) async {
     state = state.copyWith(isLoading: true);
     try {
       final dio = ref.read(dioProvider);
@@ -82,7 +86,9 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
       );
     } catch (e) {
       String msg = '회원 목록을 불러오는 중 오류가 발생했습니다.';
-      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
         msg = e.response?.data['message'];
       }
       state = state.copyWith(isLoading: false, errorMessage: msg);
@@ -93,14 +99,15 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
   Future<void> createMember(String loginId, String name, String role) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.post('/admin/members', data: {
-        'loginId': loginId,
-        'name': name,
-        'role': role,
-      });
+      await dio.post(
+        '/admin/members',
+        data: {'loginId': loginId, 'name': name, 'role': role},
+      );
       await fetchMembers(); // 목록 갱신
     } catch (e) {
-      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
         throw Exception(e.response?.data['message']);
       }
       throw Exception('학생 사전 등록 중 오류가 발생했습니다.');
@@ -118,7 +125,9 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
       await dio.post('/admin/members/csv', data: formData);
       await fetchMembers(); // 목록 갱신
     } catch (e) {
-      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
         throw Exception(e.response?.data['message']);
       }
       throw Exception('CSV 파일 업로드 중 오류가 발생했습니다.');
@@ -129,30 +138,46 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
   Future<void> updateMember(int id, String name, String role) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.put('/admin/members/$id', data: {
-        'name': name,
-        'role': role,
-      });
+      await dio.put('/admin/members/$id', data: {'name': name, 'role': role});
       await fetchMembers(); // 목록 갱신
     } catch (e) {
-      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
         throw Exception(e.response?.data['message']);
       }
       throw Exception('정보 수정 중 오류가 발생했습니다.');
     }
   }
 
-  // 💡 비밀번호 초기화 및 계정 리셋
-  Future<void> resetPassword(int id) async {
+  // 등록된 이메일로 비밀번호 재설정 안내 발송
+  Future<void> sendPasswordResetEmail(int id) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.post('/admin/members/$id/reset-password');
-      await fetchMembers(); // 목록 갱신
+      await dio.post('/admin/members/$id/password-reset-email');
     } catch (e) {
-      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
         throw Exception(e.response?.data['message']);
       }
-      throw Exception('비밀번호 초기화 중 오류가 발생했습니다.');
+      throw Exception('비밀번호 재설정 안내 발송 중 오류가 발생했습니다.');
+    }
+  }
+
+  // 이메일과 비밀번호를 지우고 재가입 대기 상태로 전환
+  Future<void> resetRegistration(int id) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post('/admin/members/$id/reset-registration');
+      await fetchMembers();
+    } catch (e) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
+        throw Exception(e.response?.data['message']);
+      }
+      throw Exception('계정 재등록 초기화 중 오류가 발생했습니다.');
     }
   }
 
@@ -163,7 +188,9 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
       await dio.delete('/admin/members/$id');
       await fetchMembers(); // 목록 갱신
     } catch (e) {
-      if (e is DioException && e.response?.data is Map && e.response?.data['message'] != null) {
+      if (e is DioException &&
+          e.response?.data is Map &&
+          e.response?.data['message'] != null) {
         throw Exception(e.response?.data['message']);
       }
       throw Exception('회원 삭제 중 오류가 발생했습니다.');
@@ -171,6 +198,7 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
   }
 }
 
-final adminMemberProvider = NotifierProvider<AdminMemberNotifier, AdminMemberState>(() {
-  return AdminMemberNotifier();
-});
+final adminMemberProvider =
+    NotifierProvider<AdminMemberNotifier, AdminMemberState>(() {
+      return AdminMemberNotifier();
+    });

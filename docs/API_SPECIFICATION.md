@@ -77,6 +77,36 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
   ```
 - **Response (200 OK)**: 없음 (Void)
 
+#### 6. 비밀번호 재설정 인증번호 요청 (`POST /auth/password-reset/request`)
+- 활성 계정의 학번과 이름을 확인한 뒤 회원가입 시 인증한 학교 이메일로 인증번호를 발송합니다.
+- **Request Body**
+  ```json
+  {
+    "loginId": "20261234",
+    "name": "홍길동"
+  }
+  ```
+
+#### 7. 비밀번호 재설정 확정 (`POST /auth/password-reset/confirm`)
+- 비밀번호를 변경하고 기존 JWT와 FCM 토큰을 무효화합니다. 계정 권한, 게시글, 댓글과 정지 상태는 유지됩니다.
+- **Request Body**
+  ```json
+  {
+    "loginId": "20261234",
+    "code": "123456",
+    "newPassword": "newPassword123!"
+  }
+  ```
+
+#### 8. 관리자 비밀번호 재설정 안내 (`POST /admin/members/{id}/password-reset-email`)
+- **ADMIN / SUPER_ADMIN 전용**
+- 등록된 학교 이메일로 인증번호를 발송하며 계정 데이터는 변경하지 않습니다.
+
+#### 9. 관리자 계정 재등록 초기화 (`POST /admin/members/{id}/reset-registration`)
+- **ADMIN / SUPER_ADMIN 전용**
+- 등록 이메일과 비밀번호를 초기화하고 가입 대기 상태로 전환합니다.
+- 기존 JWT와 FCM 토큰은 무효화되며 권한, 게시글, 댓글과 정지 상태는 유지됩니다.
+
 ---
 
 ### 📢 Notice (공지사항)

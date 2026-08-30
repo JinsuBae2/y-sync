@@ -503,15 +503,53 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
     );
   }
 
-  // 💡 계정 리셋(비밀번호 초기화 및 비활성화) 확인 다이얼로그
-  void _showResetConfirm(Member member) {
+  void _showPasswordResetEmailConfirm(Member member) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('계정 초기화 및 리셋'),
+        title: const Text('비밀번호 재설정 안내'),
+        content: Text(
+          '${member.name} (${member.loginId}) 학생의 등록된 학교 이메일로 '
+          '비밀번호 재설정 인증번호를 보낼까요?\n\n'
+          '계정, 권한, 게시글과 댓글은 변경되지 않습니다.',
+          style: const TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              try {
+                await ref
+                    .read(adminMemberProvider.notifier)
+                    .sendPasswordResetEmail(member.id);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  _showSuccessSnackBar('등록된 이메일로 인증번호를 발송했습니다.');
+                }
+              } catch (e) {
+                _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
+              }
+            },
+            child: const Text('인증번호 발송'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRegistrationResetConfirm(Member member) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('계정 재등록 초기화'),
         content: Text(
           '정말 ${member.name} (${member.loginId}) 학생의 비밀번호를 지우고 가입 대기 상태로 리셋하시겠습니까?\n\n'
-          '이 작업을 완료하면 기존 패스워드는 유실되며, 학생은 이메일 인증 가입 절차를 다시 밟아야 로그인이 가능해집니다.',
+          '이 작업을 완료하면 등록 이메일과 비밀번호가 삭제되고, '
+          '학생은 이메일 인증 가입 절차를 다시 진행해야 합니다.\n\n'
+          '게시글, 댓글, 권한과 정지 상태는 유지됩니다.',
           style: const TextStyle(height: 1.5),
         ),
         actions: [
@@ -524,7 +562,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
               try {
                 await ref
                     .read(adminMemberProvider.notifier)
-                    .resetPassword(member.id);
+                    .resetRegistration(member.id);
                 if (context.mounted) {
                   Navigator.pop(context);
                   _showSuccessSnackBar('계정이 가입 대기 상태로 초기화되었습니다.');
@@ -537,7 +575,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
               backgroundColor: Colors.orange.shade800,
               foregroundColor: Colors.white,
             ),
-            child: const Text('계정 리셋'),
+            child: const Text('재등록 초기화'),
           ),
         ],
       ),
@@ -811,8 +849,10 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                   onSelected: (action) {
                     if (action == 'edit') {
                       _showEditDialog(member);
-                    } else if (action == 'reset') {
-                      _showResetConfirm(member);
+                    } else if (action == 'passwordReset') {
+                      _showPasswordResetEmailConfirm(member);
+                    } else if (action == 'registrationReset') {
+                      _showRegistrationResetConfirm(member);
                     } else if (action == 'delete') {
                       _showDeleteConfirm(member);
                     }
@@ -914,6 +954,16 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                         children: [
                           IconButton(
                             icon: const Icon(
+                              Icons.mark_email_read_outlined,
+                              color: Colors.blue,
+                              size: 18,
+                            ),
+                            tooltip: '비밀번호 재설정 안내',
+                            onPressed: () =>
+                                _showPasswordResetEmailConfirm(member),
+                          ),
+                          IconButton(
+                            icon: const Icon(
                               Icons.edit_outlined,
                               color: Colors.blue,
                               size: 18,
@@ -927,8 +977,9 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                               color: Colors.orange,
                               size: 18,
                             ),
-                            tooltip: '계정 초기화/리셋',
-                            onPressed: () => _showResetConfirm(member),
+                            tooltip: '계정 재등록 초기화',
+                            onPressed: () =>
+                                _showRegistrationResetConfirm(member),
                           ),
                           IconButton(
                             icon: const Icon(
@@ -986,12 +1037,22 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
         ),
       ),
       const PopupMenuItem(
-        value: 'reset',
+        value: 'passwordReset',
+        child: Row(
+          children: [
+            Icon(Icons.mark_email_read_outlined, size: 20, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('비밀번호 재설정 안내'),
+          ],
+        ),
+      ),
+      const PopupMenuItem(
+        value: 'registrationReset',
         child: Row(
           children: [
             Icon(Icons.lock_reset_rounded, size: 20, color: Colors.orange),
             SizedBox(width: 8),
-            Text('계정 초기화/리셋', style: TextStyle(color: Colors.orange)),
+            Text('재등록 초기화', style: TextStyle(color: Colors.orange)),
           ],
         ),
       ),

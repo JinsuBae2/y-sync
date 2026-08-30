@@ -44,12 +44,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (loginId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt, loginId)) {
-                    // 💡 차단 유저 가드
-                    boolean suspended = memberRepository.findByLoginId(loginId)
-                            .map(Member::isSuspended)
-                            .orElse(false);
+                    Member member = memberRepository.findByLoginId(loginId).orElse(null);
+                    if (member == null) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
 
-                    if (suspended) {
+                    Integer tokenAuthVersion = jwtUtil.extractClaim(jwt,
+                            claims -> claims.get("authVersion", Integer.class));
+                    int effectiveTokenVersion = tokenAuthVersion != null ? tokenAuthVersion : 0;
+                    if (effectiveTokenVersion != member.getAuthVersion() || !member.isActivated()) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"message\": \"로그인 정보가 변경되었습니다. 다시 로그인해 주세요.\"}");
+                        return;
+                    }
+
+                    if (member.isSuspended()) {
                         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                         response.setContentType("application/json;charset=UTF-8");
                         response.getWriter().write("{\"message\": \"차단된 계정입니다. 관리자에게 문의하세요.\"}");
