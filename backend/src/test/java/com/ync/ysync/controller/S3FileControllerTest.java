@@ -20,9 +20,9 @@ class S3FileControllerTest {
         URI presignedUri = URI.create(
                 "https://example-bucket.s3.ap-northeast-2.amazonaws.com/object?signature=test"
         );
-        when(fileService.createPresignedDownloadUri(filename)).thenReturn(presignedUri);
+        when(fileService.createPresignedDownloadUri(filename, null)).thenReturn(presignedUri);
 
-        ResponseEntity<Void> response = controller.download(filename);
+        ResponseEntity<Void> response = controller.download(filename, null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
         assertThat(response.getHeaders().getLocation()).isEqualTo(presignedUri);

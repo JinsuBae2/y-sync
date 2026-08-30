@@ -60,11 +60,12 @@ public class CommunityController {
     }
 
     // 💡 게시글 작성
-    @Operation(summary = "커뮤니티 게시글 생성 (이미지 업로드 지원)", description = "학생이 새로운 게시글을 작성합니다. 첨부 이미지가 있을 경우 다중 업로드(Multipart)를 지원합니다.")
+    @Operation(summary = "커뮤니티 게시글 생성 (파일 업로드 지원)", description = "학생이 새로운 게시글을 작성하며 여러 첨부파일을 업로드할 수 있습니다.")
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createPost(
             @RequestPart("request") CommunityRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
         Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
@@ -76,18 +77,19 @@ public class CommunityController {
                 request.getTargetGrade(),
                 request.isPinned(),
                 memberId,
-                images
+                mergeFiles(images, files)
         );
         return ResponseEntity.ok(CommunityResponse.from(post));
     }
 
-    // 💡 작성자 본인이 게시글 내용과 설정을 수정하며 새 이미지가 전달되면 기존 이미지를 교체합니다.
-    @Operation(summary = "커뮤니티 게시글 수정", description = "작성자 본인이 기존 게시글과 첨부 이미지를 수정합니다.")
+    // 작성자 본인이 게시글 내용과 설정을 수정하며 새 파일이 전달되면 기존 첨부를 교체합니다.
+    @Operation(summary = "커뮤니티 게시글 수정", description = "작성자 본인이 기존 게시글과 첨부파일을 수정합니다.")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<?> updatePost(
             @PathVariable Long id,
             @RequestPart("request") CommunityRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
         Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
@@ -100,7 +102,7 @@ public class CommunityController {
                     request.isAnonymous(),
                     request.getTargetGrade(),
                     memberId,
-                    images
+                    mergeFiles(images, files)
             );
             return ResponseEntity.ok(CommunityResponse.from(post));
         } catch (IllegalArgumentException e) {
@@ -164,6 +166,7 @@ public class CommunityController {
         private long viewCount;
         private long commentCount;
         private List<String> imageUrls;
+        private List<AttachmentResponse> attachments;
 
         @JsonProperty("isDeleted")
         public boolean isDeleted() {
@@ -192,8 +195,28 @@ public class CommunityController {
                     .isPinned(post.isPinned())
                     .viewCount(post.getViewCount())
                     .commentCount(post.getCommentCount())
-                    .imageUrls(post.getImages().stream().map(com.ync.ysync.domain.PostImage::getImageUrl).collect(Collectors.toList()))
+                    .imageUrls(post.getImages().stream().filter(com.ync.ysync.domain.PostImage::isImage).map(com.ync.ysync.domain.PostImage::getImageUrl).collect(Collectors.toList()))
+                    .attachments(post.getImages().stream().map(file -> AttachmentResponse.builder()
+                            .url(file.getImageUrl())
+                            .originalFilename(file.getOriginalFilename() != null ? file.getOriginalFilename() : filenameFrom(file.getImageUrl()))
+                            .contentType(file.getContentType())
+                            .size(file.getFileSize())
+                            .image(file.isImage())
+                            .build()).collect(Collectors.toList()))
                     .build();
         }
+    }
+
+    private static List<MultipartFile> mergeFiles(List<MultipartFile> images, List<MultipartFile> files) {
+        return java.util.stream.Stream.concat(
+                images == null ? java.util.stream.Stream.empty() : images.stream(),
+                files == null ? java.util.stream.Stream.empty() : files.stream()
+        ).toList();
+    }
+
+    private static String filenameFrom(String url) {
+        if (url == null) return "첨부파일";
+        int slash = url.lastIndexOf('/');
+        return slash >= 0 ? url.substring(slash + 1) : url;
     }
 }

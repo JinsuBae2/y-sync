@@ -9,6 +9,7 @@ import '../theme/app_design_tokens.dart';
 import '../utils/image_url_helper.dart';
 import '../widgets/comment_thread.dart';
 import '../widgets/image_viewer_screen.dart';
+import '../widgets/attachment_file_tile.dart';
 import '../widgets/linkify_text.dart';
 import 'notice_form_screen.dart';
 
@@ -100,9 +101,20 @@ class NoticeDetailScreen extends ConsumerWidget {
                           height: 1.7,
                         ),
                       ),
+                      if (notice.attachments.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        const Text(
+                          '첨부 파일',
+                          style: TextStyle(
+                            color: AppDesignTokens.navy,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                       if (notice.imageUrls case final images?
                           when images.isNotEmpty) ...[
-                        const SizedBox(height: 22),
                         for (final image in images)
                           _NoticeImage(
                             url: image,
@@ -120,6 +132,10 @@ class NoticeDetailScreen extends ConsumerWidget {
                             ),
                           ),
                       ],
+                      for (final attachment in notice.attachments.where(
+                        (file) => !file.isImage,
+                      ))
+                        AttachmentFileTile(attachment: attachment),
                       const SizedBox(height: 32),
                       Row(
                         children: [

@@ -61,12 +61,13 @@ public class NoticeController {
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
-    @Operation(summary = "공지사항 생성 (이미지 업로드 지원)", description = "관리자가 새로운 공지사항을 생성합니다. 첨부 이미지가 있을 경우 다중 업로드(Multipart)를 지원하며 전체 사용자에게 알림이 발송됩니다.")
+    @Operation(summary = "공지사항 생성 (파일 업로드 지원)", description = "관리자가 여러 첨부파일과 함께 공지사항을 생성할 수 있습니다.")
     @PostMapping(consumes = {"multipart/form-data"})
     @PreAuthorize("hasRole('ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> createNotice(
             @RequestPart("request") NoticeRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
         Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
 
@@ -76,17 +77,18 @@ public class NoticeController {
             type = NoticeType.valueOf(request.getNoticeType());
         }
 
-        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), request.getEventStartDate(), request.getEventEndDate(), memberId, images);
+        Notice notice = noticeService.createNotice(request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), request.getEventStartDate(), request.getEventEndDate(), memberId, mergeFiles(images, files));
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 
-    @Operation(summary = "공지사항 수정 (이미지 포함)", description = "관리자가 기존 공지사항을 수정합니다. 텍스트와 이미지 정보를 업데이트할 수 있습니다.")
+    @Operation(summary = "공지사항 수정 (파일 포함)", description = "관리자가 기존 공지사항의 텍스트와 첨부파일을 업데이트할 수 있습니다.")
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
     @PreAuthorize("hasRole('ADMIN')") // 💡 관리자 전용
     public ResponseEntity<?> updateNotice(
             @PathVariable Long id,
             @RequestPart("request") NoticeRequest request,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
         Long memberId = authUtil.getLoginMemberId();
         String roleStr = authUtil.getLoginMemberRole();
         if (memberId == null || roleStr == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
@@ -97,7 +99,7 @@ public class NoticeController {
         }
 
         try {
-            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), request.getEventStartDate(), request.getEventEndDate(), memberId, MemberRole.valueOf(roleStr), images);
+            Notice notice = noticeService.updateNotice(id, request.getTitle(), request.getContent(), type, request.getTargetGrade(), request.isPinned(), request.getEventStartDate(), request.getEventEndDate(), memberId, MemberRole.valueOf(roleStr), mergeFiles(images, files));
             return ResponseEntity.ok(NoticeResponse.from(notice));
         } catch (IllegalArgumentException e) {
             if (e.getMessage().contains("권한이 없습니다")) {
@@ -138,5 +140,12 @@ public class NoticeController {
         private boolean isPinned;
         private java.time.LocalDate eventStartDate;
         private java.time.LocalDate eventEndDate;
+    }
+
+    private static List<MultipartFile> mergeFiles(List<MultipartFile> images, List<MultipartFile> files) {
+        return java.util.stream.Stream.concat(
+                images == null ? java.util.stream.Stream.empty() : images.stream(),
+                files == null ? java.util.stream.Stream.empty() : files.stream()
+        ).toList();
     }
 }

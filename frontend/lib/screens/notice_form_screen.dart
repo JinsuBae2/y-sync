@@ -1,14 +1,13 @@
-import 'dart:io';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../models/notice.dart';
 import '../providers/notice_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/selected_attachment_list.dart';
 
 class NoticeFormScreen extends ConsumerStatefulWidget {
   const NoticeFormScreen({super.key, this.notice});
@@ -26,7 +25,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   String _noticeType = 'NEWS';
   String _targetGrade = 'ALL';
   bool _isLoading = false;
-  final List<XFile> _images = [];
+  final List<PlatformFile> _files = [];
   bool _isEvent = false;
   DateTime _eventStartDate = DateTime.now();
   DateTime _eventEndDate = DateTime.now();
@@ -64,10 +63,54 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
-    final selectedImages = await ImagePicker().pickMultiImage();
-    if (!mounted || selectedImages.isEmpty) return;
-    setState(() => _images.addAll(selectedImages));
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const [
+        'png',
+        'jpg',
+        'jpeg',
+        'gif',
+        'webp',
+        'pdf',
+        'hwp',
+        'hwpx',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'ppt',
+        'pptx',
+        'txt',
+        'zip',
+      ],
+    );
+    if (!mounted || result == null) return;
+    if (_files.length + result.files.length > 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('첨부파일은 최대 10개까지 선택할 수 있습니다.')),
+      );
+      return;
+    }
+    if (result.files.any((file) => file.size > 20 * 1024 * 1024)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('파일 하나의 크기는 20MB 이하여야 합니다.')),
+      );
+      return;
+    }
+    final totalSize = [
+      ..._files,
+      ...result.files,
+    ].fold<int>(0, (sum, file) => sum + file.size);
+    if (totalSize > 50 * 1024 * 1024) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('첨부파일 전체 크기는 50MB 이하여야 합니다.')),
+      );
+      return;
+    }
+    setState(() => _files.addAll(result.files));
   }
 
   Future<void> _submit() async {
@@ -92,7 +135,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           content,
           _noticeType,
           targetGrade: _targetGrade,
-          images: _images,
+          files: _files,
           eventStartDate: startDate,
           eventEndDate: endDate,
         );
@@ -103,7 +146,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           content,
           _noticeType,
           targetGrade: _targetGrade,
-          images: _images,
+          files: _files,
           eventStartDate: startDate,
           eventEndDate: endDate,
         );
@@ -292,14 +335,22 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 ),
               ],
               const SizedBox(height: 28),
-              const _FormSectionTitle(title: '첨부 이미지'),
+              const _FormSectionTitle(
+                title: '첨부 파일',
+                subtitle: '이미지, PDF, HWP, Office 문서 등을 첨부할 수 있어요.',
+              ),
+              if (isEdit && widget.notice!.attachments.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  '새 파일을 선택하지 않으면 기존 첨부파일이 유지됩니다.',
+                  style: TextStyle(color: AppDesignTokens.muted, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 10),
               OutlinedButton.icon(
-                onPressed: _isLoading ? null : _pickImages,
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: Text(
-                  _images.isEmpty ? '이미지 선택' : '${_images.length}장 추가됨',
-                ),
+                onPressed: _isLoading ? null : _pickFiles,
+                icon: const Icon(Icons.attach_file_rounded),
+                label: Text(_files.isEmpty ? '파일 선택' : '${_files.length}개 추가됨'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppDesignTokens.blue,
                   backgroundColor: Colors.white.withValues(alpha: 0.48),
@@ -310,19 +361,11 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                   ),
                 ),
               ),
-              if (_images.isNotEmpty) ...[
+              if (_files.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                SizedBox(
-                  height: 92,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _images.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) => _ImagePreview(
-                      image: _images[index],
-                      onRemove: () => setState(() => _images.removeAt(index)),
-                    ),
-                  ),
+                SelectedAttachmentList(
+                  files: _files,
+                  onRemove: (index) => setState(() => _files.removeAt(index)),
                 ),
               ],
             ],
@@ -584,51 +627,6 @@ class _DateField extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ImagePreview extends StatelessWidget {
-  const _ImagePreview({required this.image, required this.onRemove});
-
-  final XFile image;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          width: 92,
-          height: 92,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppDesignTokens.divider),
-            image: DecorationImage(
-              image: kIsWeb
-                  ? NetworkImage(image.path) as ImageProvider
-                  : FileImage(File(image.path)),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: Material(
-            color: AppDesignTokens.navy.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(4),
-            child: InkWell(
-              onTap: onRemove,
-              borderRadius: BorderRadius.circular(4),
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.close_rounded, color: Colors.white, size: 16),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
