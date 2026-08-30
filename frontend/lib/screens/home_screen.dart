@@ -8,6 +8,7 @@ import '../models/notice.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/notice_provider.dart';
+import '../widgets/brand_logo.dart';
 import '../widgets/notification_action_button.dart';
 import 'deep_link_loading_screen.dart';
 
@@ -358,6 +359,8 @@ class _HomeHeader extends StatelessWidget {
       children: [
         Row(
           children: [
+            const BrandLogo(size: 40, padding: 3),
+            const SizedBox(width: 8),
             const Text(
               'Y-Sync',
               style: TextStyle(

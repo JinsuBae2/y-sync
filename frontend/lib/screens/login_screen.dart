@@ -311,16 +311,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              Semantics(
+                                image: true,
+                                label: 'Y-Sync 천마 로고',
+                                child: Container(
+                                  width: 76,
+                                  height: 76,
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFF3F7FF,
+                                    ).withValues(alpha: 0.96),
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppDesignTokens.blue.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        blurRadius: 22,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Image.asset(
+                                    'assets/branding/cheonma_logo.png',
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
                               const Text(
                                 'Y-Sync',
                                 style: TextStyle(
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white,
-                                  letterSpacing: -1.2,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 5),
                               const Text(
                                 '영남이공대 소프트웨어융합과',
                                 style: TextStyle(
@@ -329,7 +364,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(height: 38),
+                              const SizedBox(height: 32),
                               _buildInputField(
                                 controller: _loginIdController,
                                 label: '학번',

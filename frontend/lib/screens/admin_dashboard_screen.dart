@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_design_tokens.dart';
+import '../widgets/brand_logo.dart';
 import 'admin_approval_tab.dart';
 import 'admin_member_tab.dart';
 import 'admin_post_management_screen.dart';
@@ -265,16 +266,7 @@ class _AdminLogo extends StatelessWidget {
   const _AdminLogo();
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 40,
-    height: 40,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: AppDesignTokens.paleBlue,
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: const Icon(Icons.sync_rounded, color: AppDesignTokens.blue),
-  );
+  Widget build(BuildContext context) => const BrandLogo(size: 40, padding: 4);
 }
 
 class _SidebarDestination extends StatelessWidget {
