@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import '../providers/auth_provider.dart';
 import '../models/member.dart';
+import '../widgets/brand_logo.dart';
 import 'login_screen.dart';
 import 'main_tab_screen.dart';
 import 'pin_setup_screen.dart';
@@ -38,7 +39,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     final useBiometric = await _storage.read(key: 'use_biometric') == 'true';
     final userPin = await _storage.read(key: 'user_pin');
-    final hasSeenPinSetup = await _storage.read(key: 'has_seen_pin_setup') == 'true';
+    final hasSeenPinSetup =
+        await _storage.read(key: 'has_seen_pin_setup') == 'true';
 
     if (useBiometric) {
       bool authenticated = false;
@@ -81,12 +83,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void _promptPin(String correctPin) {
     if (!mounted) return;
     final pinController = TextEditingController();
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('PIN 입력', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'PIN 입력',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: pinController,
           keyboardType: TextInputType.number,
@@ -162,7 +167,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   void _navigateToLogin() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const LoginScreen()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
   }
 
   @override
@@ -208,7 +215,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.sync_rounded, size: 80, color: Colors.white),
+            const BrandLogo(size: 96, padding: 9, borderRadius: 28),
             const SizedBox(height: 24),
             const Text(
               'Y-Sync',
