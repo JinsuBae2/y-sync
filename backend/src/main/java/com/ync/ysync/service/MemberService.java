@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,13 +34,29 @@ public class MemberService {
 
     // 💡 인증 코드 및 가입 허가 정보를 담을 인메모리 스토리지
     private final ConcurrentHashMap<String, VerificationInfo> verificationCodes = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, LocalDateTime> verifiedStudents = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, VerifiedInfo> verifiedStudents = new ConcurrentHashMap<>();
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    private enum VerificationPurpose {
+        SIGNUP,
+        PASSWORD_RESET
+    }
 
     @Getter
     @AllArgsConstructor
     private static class VerificationInfo {
         private final String code;
         private final LocalDateTime expiredAt;
+        private final String email;
+        private final VerificationPurpose purpose;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private static class VerifiedInfo {
+        private final LocalDateTime expiredAt;
+        private final String email;
+        private final VerificationPurpose purpose;
     }
 
     /**
@@ -67,18 +84,19 @@ public class MemberService {
         verifyStudentForSignup(loginId, name);
 
         // 이메일 형식 검증 (도메인이 ync.ac.kr 인지 점검)
-        String toEmail = email.trim();
-        if (!toEmail.contains("@")) {
-            toEmail = toEmail + "@ync.ac.kr";
-        } else if (!toEmail.endsWith("@ync.ac.kr")) {
-            throw new IllegalArgumentException("영남이공대학교 이메일(@ync.ac.kr)만 사용 가능합니다.");
-        }
+        String toEmail = normalizeSchoolEmail(email);
+        memberRepository.findByEmail(toEmail)
+                .filter(existing -> !existing.getLoginId().equals(loginId))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("이미 다른 계정에 등록된 이메일입니다.");
+                });
 
         // 2. 6자리 인증번호 생성
-        String code = String.format("%06d", (int) (Math.random() * 1000000));
+        String code = generateVerificationCode();
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5); // 5분 유효
 
-        verificationCodes.put(loginId, new VerificationInfo(code, expiredAt));
+        verificationCodes.put(loginId,
+                new VerificationInfo(code, expiredAt, toEmail, VerificationPurpose.SIGNUP));
 
         // 3. 이메일 발송
         emailService.sendVerificationCode(toEmail, code);
@@ -87,7 +105,12 @@ public class MemberService {
     /**
      * 인증번호 검증
      */
-    public boolean verifyCode(String loginId, String code) {
+    public boolean verifySignupCode(String loginId, String code) {
+        verifyCode(loginId, code, VerificationPurpose.SIGNUP);
+        return true;
+    }
+
+    private void verifyCode(String loginId, String code, VerificationPurpose purpose) {
         VerificationInfo info = verificationCodes.get(loginId);
         if (info == null) {
             throw new IllegalArgumentException("인증 요청 기록이 없거나 만료되었습니다.");
@@ -102,11 +125,15 @@ public class MemberService {
             throw new IllegalArgumentException("인증 번호가 일치하지 않습니다.");
         }
 
+        if (info.getPurpose() != purpose) {
+            throw new IllegalArgumentException("인증 목적이 올바르지 않습니다. 인증번호를 다시 요청해 주세요.");
+        }
+
         // 인증 통과 기록 저장 (10분간 유효)
-        verifiedStudents.put(loginId, LocalDateTime.now().plusMinutes(10));
+        verifiedStudents.put(loginId,
+                new VerifiedInfo(LocalDateTime.now().plusMinutes(10), info.getEmail(), purpose));
         verificationCodes.remove(loginId);
-        log.info("인증 성공 - 학번: {}", loginId);
-        return true;
+        log.info("인증 성공 - 학번: {}, 목적: {}", loginId, purpose);
     }
 
     /**
@@ -115,8 +142,9 @@ public class MemberService {
     @Transactional
     public Member signup(String loginId, String password, String name) {
         // 1. 이메일 인증 통과 여부 검증
-        LocalDateTime verifiedUntil = verifiedStudents.get(loginId);
-        if (verifiedUntil == null || verifiedUntil.isBefore(LocalDateTime.now())) {
+        VerifiedInfo verifiedInfo = verifiedStudents.get(loginId);
+        if (verifiedInfo == null || verifiedInfo.getExpiredAt().isBefore(LocalDateTime.now())
+                || verifiedInfo.getPurpose() != VerificationPurpose.SIGNUP) {
             verifiedStudents.remove(loginId);
             throw new IllegalArgumentException("이메일 인증이 완료되지 않았거나 인증 시간이 초과되었습니다.");
         }
@@ -136,6 +164,7 @@ public class MemberService {
 
         // 4. 패스워드 설정 및 계정 활성화
         member.setPassword(passwordEncoder.encode(password));
+        member.setEmail(verifiedInfo.getEmail());
         member.setActivated(true);
 
         // 인증 성공 만료 처리
@@ -143,6 +172,86 @@ public class MemberService {
         log.info("회원 가입 완료 - 학번: {}, 이름: {}", loginId, name);
 
         return memberRepository.save(member);
+    }
+
+    public void requestPasswordReset(String loginId, String name) {
+        Member member = memberRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException("등록된 계정 정보를 확인할 수 없습니다."));
+
+        if (!member.isActivated() || !member.getName().equals(name)) {
+            throw new IllegalArgumentException("등록된 계정 정보를 확인할 수 없습니다.");
+        }
+
+        sendPasswordResetCode(member);
+    }
+
+    public void requestPasswordResetByAdmin(Long id) {
+        Member member = findById(id);
+        if (member.getRole() == MemberRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("SUPER_ADMIN 계정은 관리자 도구로 재설정할 수 없습니다.");
+        }
+        if (!member.isActivated()) {
+            throw new IllegalArgumentException("가입 대기 계정은 비밀번호를 재설정할 수 없습니다.");
+        }
+
+        sendPasswordResetCode(member);
+        log.info("관리자 비밀번호 재설정 안내 발송 - ID: {}, 학번: {}", id, member.getLoginId());
+    }
+
+    private void sendPasswordResetCode(Member member) {
+        if (member.getEmail() == null || member.getEmail().isBlank()) {
+            throw new IllegalArgumentException("등록된 이메일이 없습니다. 계정 재등록 초기화를 이용해 주세요.");
+        }
+
+        String code = generateVerificationCode();
+        verificationCodes.put(member.getLoginId(),
+                new VerificationInfo(code, LocalDateTime.now().plusMinutes(5), member.getEmail(),
+                        VerificationPurpose.PASSWORD_RESET));
+        emailService.sendPasswordResetCode(member.getEmail(), code);
+    }
+
+    @Transactional
+    public void confirmPasswordReset(String loginId, String code, String newPassword) {
+        validatePassword(newPassword);
+        verifyCode(loginId, code, VerificationPurpose.PASSWORD_RESET);
+
+        VerifiedInfo verifiedInfo = verifiedStudents.get(loginId);
+        Member member = memberRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException("등록된 계정을 찾을 수 없습니다."));
+        if (verifiedInfo == null || !verifiedInfo.getEmail().equals(member.getEmail())) {
+            verifiedStudents.remove(loginId);
+            throw new IllegalArgumentException("인증 정보가 일치하지 않습니다. 다시 시도해 주세요.");
+        }
+
+        member.setPassword(passwordEncoder.encode(newPassword));
+        member.setAuthVersion(member.getAuthVersion() + 1);
+        member.setFcmToken(null);
+        verifiedStudents.remove(loginId);
+        memberRepository.save(member);
+        log.info("비밀번호 재설정 완료 - 학번: {}", loginId);
+    }
+
+    private String normalizeSchoolEmail(String email) {
+        String normalized = email.trim().toLowerCase();
+        if (!normalized.contains("@")) {
+            normalized += "@ync.ac.kr";
+        }
+        if (!normalized.endsWith("@ync.ac.kr")) {
+            throw new IllegalArgumentException("영남이공대학교 이메일(@ync.ac.kr)만 사용 가능합니다.");
+        }
+        return normalized;
+    }
+
+    private String generateVerificationCode() {
+        return String.format("%06d", secureRandom.nextInt(1_000_000));
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 8 || password.length() > 64
+                || !password.matches(".*[A-Za-z].*") || !password.matches(".*\\d.*")
+                || !password.matches(".*[^A-Za-z0-9].*")) {
+            throw new IllegalArgumentException("비밀번호는 8~64자의 영문, 숫자, 특수문자를 포함해야 합니다.");
+        }
     }
 
     /**
@@ -349,16 +458,21 @@ public class MemberService {
      * 사용자가 이메일 인증을 통해 다시 가입 프로세스를 밟도록 구성합니다. (완벽한 계정 리셋)
      */
     @Transactional
-    public void resetMemberPassword(Long id) {
+    public void resetMemberRegistration(Long id) {
         Member member = findById(id);
         if (member.getRole() == MemberRole.SUPER_ADMIN) {
             throw new IllegalArgumentException("SUPER_ADMIN 계정의 비밀번호는 관리자 도구로 초기화할 수 없습니다.");
         }
 
         member.setPassword(passwordEncoder.encode("TEMP_" + member.getLoginId() + "_" + System.currentTimeMillis()));
+        member.setEmail(null);
         member.setActivated(false); // 가입 대기 상태로 리셋
+        member.setAuthVersion(member.getAuthVersion() + 1);
+        member.setFcmToken(null);
+        verificationCodes.remove(member.getLoginId());
+        verifiedStudents.remove(member.getLoginId());
         memberRepository.save(member);
-        log.info("관리자 회원 계정 비밀번호 초기화 완료 - ID: {}, 학번: {} (가입 대기 상태로 리셋)", id, member.getLoginId());
+        log.info("관리자 회원 계정 재등록 초기화 완료 - ID: {}, 학번: {} (가입 대기 상태로 전환)", id, member.getLoginId());
     }
 
     /**

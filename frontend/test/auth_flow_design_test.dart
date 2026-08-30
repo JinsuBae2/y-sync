@@ -39,6 +39,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('비밀번호 재설정은 학번과 이름을 먼저 확인한다', (tester) async {
+    _setMobileViewport(tester);
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('비밀번호를 잊으셨나요?'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('비밀번호 재설정'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '학번'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '이름'), findsOneWidget);
+    expect(find.text('인증번호 받기'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('회원가입은 학생 확인 단계를 먼저 보여준다', (tester) async {
     _setMobileViewport(tester);
     await tester.pumpWidget(
