@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-08-30 - TLS 인증서 갱신 후 Nginx 자동 반영
+
+| 항목 | 내용 |
+|---|---|
+| **Who** | 배진수(운영 인증서 장애 확인·보완 요청) |
+| **When** | 2026-08-30, Asia/Seoul |
+| **Where** | `fix/certbot-nginx-reload` 브랜치, Docker Compose 인증서 갱신 구성 |
+| **Status** | 로컬 구성 검증 완료, 운영 반영 대기 |
+
+### **작업 개요**
+
+**변경 내용**
+
+- Certbot이 인증서를 실제로 갱신한 경우 Nginx master process에 HUP 신호를 보내 새 인증서를 자동으로 다시 읽도록 구성했습니다.
+
+**목적**
+
+- 인증서 파일은 갱신됐지만 Nginx가 이전 인증서를 계속 제공해 수동 reload가 필요했던 운영 장애의 재발을 방지하기 위해서입니다.
+
+### **구현**
+
+- Certbot 컨테이너가 Nginx 컨테이너의 PID namespace를 공유하도록 설정했습니다.
+- `certbot renew`의 deploy hook에서만 Nginx reload 신호를 보내 갱신이 없는 주기에는 불필요한 reload가 발생하지 않도록 했습니다.
+
+### **검증 및 추적**
+
+**검증**
+
+- `docker compose -f docker/docker-compose.yml config --quiet`: 성공
+- `git diff --check`: 이상 없음
+
+**추적**
+
+- 브랜치: `fix/certbot-nginx-reload`
+- 관련 PR: 생성 후 기록
+
+### **후속 작업**
+
+- 운영 반영 후 Certbot 갱신 로그와 외부에서 제공되는 인증서의 일련번호·만료일이 자동으로 변경되는지 확인합니다.
+
+---
+
 ## 2026-08-30 - 커뮤니티·공지 범용 첨부파일 지원
 
 | 항목 | 내용 |
