@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-08-30 - 데스크톱 PWA 천마 아이콘 캐시 갱신
+
+| 항목 | 내용 |
+|---|---|
+| **Who** | 배진수(데스크톱 아이콘 적용 요청) |
+| **When** | 2026-08-30, Asia/Seoul |
+| **Where** | Flutter Web PWA manifest·favicon·apple-touch-icon |
+| **Status** | 로컬 구현·검증 완료, 배포 대기 |
+
+### **작업 개요**
+
+- Chrome으로 설치한 데스크톱 PWA가 기존 아이콘 URL을 캐시하는 문제를 해소하기 위해 천마 아이콘 파일명을 `cheonma-v2`로 버전 갱신했습니다.
+- `manifest.json`, favicon, apple-touch-icon 참조를 모두 새 URL로 변경했습니다.
+- 네이티브 macOS·Windows·Linux 프로젝트는 추가하지 않았습니다.
+
+### **후속 작업**
+
+- 배포 후 기존 PWA를 완전히 종료하고 재실행해 manifest 아이콘 갱신을 확인합니다. OS 바로가기 캐시가 남아 있으면 PWA를 한 번 제거한 뒤 재설치합니다.
+
+### **검증**
+
+- `flutter test --no-pub test/firebase_hosting_config_test.dart`: 2개 통과
+- `flutter build web --release --no-pub`: 성공
+- `git diff --check`: 이상 없음
+
+---
+
 ## 2026-08-30 - 비밀번호 재설정과 계정 재등록 초기화 분리
 
 | 항목 | 내용 |
