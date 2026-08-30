@@ -33,4 +33,21 @@ void main() {
     expect(cacheControls['/'], contains('no-store'));
     expect(cacheControls['/flutter_service_worker.js'], contains('no-store'));
   });
+
+  test('데스크톱 PWA는 버전된 천마 아이콘을 참조한다', () {
+    final manifest = jsonDecode(File('web/manifest.json').readAsStringSync());
+    final iconSources = (manifest['icons'] as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map((icon) => icon['src'] as String)
+        .toList();
+    final indexHtml = File('web/index.html').readAsStringSync();
+
+    expect(iconSources, hasLength(4));
+    for (final source in iconSources) {
+      expect(source, contains('cheonma-v2'));
+      expect(File('web/$source').existsSync(), isTrue, reason: source);
+    }
+    expect(indexHtml, contains('favicon-cheonma-v2.png'));
+    expect(indexHtml, contains('manifest.json?v=cheonma-v2'));
+  });
 }
