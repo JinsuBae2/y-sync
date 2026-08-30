@@ -28,6 +28,10 @@ public class Member {
     @Setter
     private String password;
 
+    @Column(unique = true)
+    @Setter
+    private String email;
+
     @Column(nullable = false)
     @Setter
     private String name;
@@ -72,6 +76,10 @@ public class Member {
     @Setter
     @Column(nullable = false)
     private boolean isSuspended = false; // 💡 차단 여부 필드 추가
+
+    @Setter
+    @Column(nullable = false, columnDefinition = "int default 0")
+    private int authVersion = 0;
 
     @CreatedDate
     @Column(updatable = false)

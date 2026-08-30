@@ -88,15 +88,33 @@ public class AdminMemberController {
         }
     }
 
-    @PostMapping("/{id}/reset-password")
-    @Operation(summary = "회원 비밀번호 초기화 및 비활성화", description = "특정 회원의 비밀번호를 초기화하고 활성화 상태를 가입 대기(false) 상태로 리셋합니다.")
-    public ResponseEntity<?> resetPassword(@PathVariable Long id) {
+    @PostMapping("/{id}/password-reset-email")
+    @Operation(summary = "비밀번호 재설정 안내 발송", description = "회원의 등록 이메일로 비밀번호 재설정 인증번호를 전송합니다. 계정 데이터와 권한은 변경하지 않습니다.")
+    public ResponseEntity<?> sendPasswordResetEmail(@PathVariable Long id) {
         try {
-            memberService.resetMemberPassword(id);
-            return ResponseEntity.ok(Map.of("message", "비밀번호 초기화 및 계정 리셋이 완료되었습니다."));
+            memberService.requestPasswordResetByAdmin(id);
+            return ResponseEntity.ok(Map.of("message", "등록된 이메일로 비밀번호 재설정 안내를 발송했습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @PostMapping("/{id}/reset-registration")
+    @Operation(summary = "계정 재등록 초기화", description = "이메일과 비밀번호를 초기화하고 가입 대기 상태로 전환합니다. 게시글, 댓글, 권한과 정지 상태는 유지합니다.")
+    public ResponseEntity<?> resetRegistration(@PathVariable Long id) {
+        try {
+            memberService.resetMemberRegistration(id);
+            return ResponseEntity.ok(Map.of("message", "계정이 재등록 대기 상태로 초기화되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Deprecated
+    @PostMapping("/{id}/reset-password")
+    @Operation(summary = "계정 재등록 초기화(구형 호환)", description = "구형 관리자 클라이언트 호환용입니다. reset-registration을 사용해 주세요.", deprecated = true)
+    public ResponseEntity<?> resetPasswordCompatibility(@PathVariable Long id) {
+        return resetRegistration(id);
     }
 
     @PostMapping("/{id}/suspend")

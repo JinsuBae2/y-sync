@@ -41,6 +41,186 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _showPasswordResetDialog() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final loginIdController = TextEditingController(
+      text: _loginIdController.text.trim(),
+    );
+    final nameController = TextEditingController();
+    final codeController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    var codeSent = false;
+    var isSubmitting = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: const Text(
+            '비밀번호 재설정',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    codeSent
+                        ? '등록된 학교 이메일로 받은 인증번호와 새 비밀번호를 입력해 주세요.'
+                        : '학번과 이름을 확인한 뒤 등록된 학교 이메일로 인증번호를 보냅니다.',
+                    style: const TextStyle(height: 1.5),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: loginIdController,
+                    enabled: !codeSent,
+                    decoration: const InputDecoration(
+                      labelText: '학번',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (!codeSent)
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: '이름',
+                        border: OutlineInputBorder(),
+                      ),
+                    )
+                  else ...[
+                    TextField(
+                      controller: codeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: '6자리 인증번호',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: newPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: '새 비밀번호',
+                        helperText: '영문, 숫자, 특수문자를 포함한 8자 이상',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: '새 비밀번호 확인',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.pop(dialogContext),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final loginId = loginIdController.text.trim();
+                      if (loginId.isEmpty) return;
+                      if (!codeSent && nameController.text.trim().isEmpty) {
+                        return;
+                      }
+                      if (codeSent &&
+                          (codeController.text.trim().isEmpty ||
+                              newPasswordController.text.isEmpty)) {
+                        return;
+                      }
+                      if (codeSent &&
+                          newPasswordController.text !=
+                              confirmPasswordController.text) {
+                        _showErrorSnackBar('새 비밀번호가 서로 다릅니다.');
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        if (!codeSent) {
+                          await ref
+                              .read(authProvider.notifier)
+                              .requestPasswordReset(
+                                loginId,
+                                nameController.text.trim(),
+                              );
+                          if (dialogContext.mounted) {
+                            setDialogState(() {
+                              codeSent = true;
+                              isSubmitting = false;
+                            });
+                          }
+                        } else {
+                          await ref
+                              .read(authProvider.notifier)
+                              .confirmPasswordReset(
+                                loginId,
+                                codeController.text.trim(),
+                                newPasswordController.text,
+                              );
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext);
+                            _loginIdController.text = loginId;
+                            _passwordController.clear();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해 주세요.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (dialogContext.mounted) {
+                          setDialogState(() => isSubmitting = false);
+                        }
+                        _showErrorSnackBar(
+                          e.toString().replaceAll('Exception: ', ''),
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(codeSent ? '비밀번호 변경' : '인증번호 받기'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    loginIdController.dispose();
+    nameController.dispose();
+    codeController.dispose();
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
+  }
+
   Future<void> _showSocialLoginComingSoon() async {
     // 💡 비활성화된 소셜 인증 API를 호출하지 않고 향후 지원 예정임을 안내합니다.
     await showDialog<void>(
@@ -416,35 +596,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   TextButton(
-                                    onPressed: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          title: const Text(
-                                            '비밀번호 분실 안내',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                          content: const Text(
-                                            '비밀번호 분실 시 학생회장 또는 학과 사무실에 문의하여 초기화를 요청하세요.',
-                                            style: TextStyle(height: 1.5),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: const Text('확인'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
+                                    onPressed: _showPasswordResetDialog,
                                     child: const Text(
                                       '비밀번호를 잊으셨나요?',
                                       style: TextStyle(
