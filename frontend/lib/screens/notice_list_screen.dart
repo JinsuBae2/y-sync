@@ -6,9 +6,9 @@ import '../providers/mypage_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/scrap_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../utils/content_detail_navigation.dart';
 import '../widgets/content_filter_bar.dart';
 import '../widgets/notification_action_button.dart';
-import 'deep_link_loading_screen.dart';
 import 'notice_form_screen.dart';
 
 class NoticeListScreen extends ConsumerStatefulWidget {
@@ -125,7 +125,26 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
                     ref.read(noticeGradeProvider.notifier).updateGrade(grade),
               ),
               const SizedBox(height: 10),
-              Expanded(child: _buildNoticeList(noticesAsync, selectedGrade)),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _buildNoticeList(noticesAsync, selectedGrade),
+                    ),
+                    if (noticesAsync.isRefreshing)
+                      const Positioned(
+                        top: 0,
+                        left: 20,
+                        right: 20,
+                        child: LinearProgressIndicator(
+                          minHeight: 3,
+                          color: AppDesignTokens.blue,
+                          backgroundColor: AppDesignTokens.paleBlue,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -167,16 +186,15 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
             itemBuilder: (context, index) => NoticeCard(
               notice: filteredNotices[index],
               onOpen: () async {
-                await Navigator.push(
+                final changed = await openContentDetail(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => DeepLinkLoadingScreen(
-                      targetType: 'NOTICE',
-                      targetId: '${filteredNotices[index].id}',
-                    ),
-                  ),
+                  ref,
+                  targetType: 'NOTICE',
+                  targetId: filteredNotices[index].id,
                 );
-                ref.invalidate(noticesProvider);
+                if (changed == true) {
+                  ref.invalidate(noticesProvider);
+                }
               },
             ),
           ),

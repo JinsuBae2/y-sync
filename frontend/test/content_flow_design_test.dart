@@ -8,12 +8,14 @@ import 'package:y_sync/models/my_comment.dart';
 import 'package:y_sync/models/notice.dart';
 import 'package:y_sync/providers/auth_provider.dart';
 import 'package:y_sync/providers/comment_provider.dart';
+import 'package:y_sync/providers/community_provider.dart';
 import 'package:y_sync/providers/mypage_provider.dart';
 import 'package:y_sync/providers/notice_provider.dart';
 import 'package:y_sync/providers/notification_provider.dart';
 import 'package:y_sync/providers/scrap_provider.dart';
 import 'package:y_sync/screens/community_detail_screen.dart';
 import 'package:y_sync/screens/community_form_screen.dart';
+import 'package:y_sync/screens/community_list_screen.dart';
 import 'package:y_sync/screens/notice_detail_screen.dart';
 import 'package:y_sync/screens/notice_form_screen.dart';
 import 'package:y_sync/screens/notice_list_screen.dart';
@@ -39,6 +41,20 @@ class _TestMyPageNotifier extends MyPageNotifier {
     comments: const <MyComment>[],
     notices: null,
   );
+}
+
+class _TestNoticeNotifier extends NoticeNotifier {
+  _TestNoticeNotifier(super.ref);
+
+  @override
+  Future<Notice> getNotice(int id) async => _notice;
+}
+
+class _TestCommunityNotifier extends CommunityNotifier {
+  _TestCommunityNotifier(super.ref);
+
+  @override
+  Future<CommunityPost> getPost(int id) async => _post;
 }
 
 final _member = Member(
@@ -121,6 +137,77 @@ void main() {
     expect(find.text(_notice.title), findsOneWidget);
     expect(find.text('첨부 2'), findsOneWidget);
     expect(find.byIcon(Icons.attach_file_rounded), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('공지 상세를 읽고 돌아오면 기존 목록을 다시 요청하지 않는다', (tester) async {
+    _setMobileViewport(tester);
+    var requestCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          noticesProvider.overrideWith((ref) async {
+            requestCount += 1;
+            return [_notice];
+          }),
+          noticeNotifierProvider.overrideWith(_TestNoticeNotifier.new),
+          myPageProvider.overrideWith(_TestMyPageNotifier.new),
+          commentsProvider.overrideWith((ref, arg) async => []),
+          scrapsProvider.overrideWith((ref) async => []),
+          unreadNotificationCountProvider.overrideWithValue(0),
+        ],
+        child: const MaterialApp(home: NoticeListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(requestCount, 1);
+
+    await tester.tap(find.text(_notice.title));
+    await tester.pumpAndSettle();
+    expect(find.text(_notice.content), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text(_notice.title), findsOneWidget);
+    expect(requestCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('커뮤니티 상세를 읽고 돌아오면 기존 목록을 다시 요청하지 않는다', (tester) async {
+    _setMobileViewport(tester);
+    var requestCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          communityPostsProvider.overrideWith((ref) async {
+            requestCount += 1;
+            return [_post];
+          }),
+          communityNotifierProvider.overrideWith(_TestCommunityNotifier.new),
+          commentsProvider.overrideWith((ref, arg) async => []),
+          scrapsProvider.overrideWith((ref) async => []),
+          unreadNotificationCountProvider.overrideWithValue(0),
+        ],
+        child: const MaterialApp(home: CommunityListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(requestCount, 1);
+
+    await tester.tap(find.text(_post.title));
+    await tester.pumpAndSettle();
+    expect(find.text(_post.content), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text(_post.title), findsOneWidget);
+    expect(requestCount, 1);
     expect(tester.takeException(), isNull);
   });
 
