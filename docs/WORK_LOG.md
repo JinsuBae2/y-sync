@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-09-01 - iOS 가장자리 스와이프 복귀 및 홈 하단 잘림 수정
+
+| 항목 | 내용 |
+|---|---|
+| **Who** | 배진수(iPhone 스와이프 복귀 지연·조회수 미반영·홈 하단 잘림 제보) |
+| **When** | 2026-09-01, Asia/Seoul |
+| **Where** | `fix/adaptive-swipe-navigation` 브랜치, Flutter 플랫폼별 상세 라우트·목록 갱신·홈 화면 |
+| **Status** | 로컬 구현·검증 완료, 사용자 확인 대기 |
+
+### **작업 개요**
+
+- iOS에서는 `CupertinoPageRoute`를 사용해 화면 왼쪽 가장자리의 interactive pop gesture를 지원하고, Android와 그 외 플랫폼은 기존 `MaterialPageRoute`를 유지했습니다.
+- 스와이프 중에는 기존 목록을 그대로 유지하고 제스처가 완료된 뒤에만 Provider를 무효화해 조회수 증가 결과를 비차단 방식으로 반영합니다.
+- 공지·커뮤니티 목록과 홈의 상세 복귀가 단순 열람인지 수정인지와 관계없이, 상세 진입으로 증가한 조회수를 복귀 후 목록에 동기화하도록 변경했습니다.
+- 모바일 홈 목록 하단 여백을 116px로 늘려 76px 하단 내비게이션 바 뒤에 마지막 인기글이 가려지지 않도록 했으며, 데스크톱은 기존 36px 여백을 유지했습니다.
+
+### **검증 및 추적**
+
+- iOS `CupertinoPageRoute`와 Android·Fuchsia·Linux·macOS·Windows의 `MaterialPageRoute` 선택 테스트를 추가했습니다.
+- iOS 화면 왼쪽 5px에서 오른쪽으로 드래그하는 위젯 테스트로 상세 복귀와 복귀 후 목록 갱신을 확인했습니다.
+- 모바일 홈 `ListView`의 116px 하단 여백 회귀 테스트를 추가했습니다.
+- 변경 파일 대상 `flutter analyze --no-pub`: 이슈 없음
+- `flutter test --no-pub`: 38개 통과
+- `flutter build web --release --no-pub`: 성공
+- `git diff --check`: 이상 없음
+
+### **후속 작업**
+
+- 운영 반영 후 iPhone PWA 실기기에서 가장자리 스와이프 프레임과 조회수 표시를 확인합니다.
+- Android 시스템 뒤로가기·예측형 뒤로가기와 Web 브라우저 뒤로가기는 기존 Material 라우트 동작이 유지되는지 운영 환경에서 확인합니다.
+
+---
+
 ## 2026-09-01 - 상세 화면 복귀와 목록 갱신 체감 속도 개선
 
 | 항목 | 내용 |

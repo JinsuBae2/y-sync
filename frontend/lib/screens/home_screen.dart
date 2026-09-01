@@ -53,7 +53,12 @@ class HomeScreen extends ConsumerWidget {
               onRefresh: () => _refresh(ref),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  22,
+                  20,
+                  MediaQuery.sizeOf(context).width < 900 ? 116 : 36,
+                ),
                 children: [
                   _HomeHeader(memberName: memberName),
                   const SizedBox(height: 26),
@@ -229,13 +234,13 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
     Notice notice,
   ) async {
-    final changed = await openContentDetail(
+    final result = await openContentDetail(
       context,
       ref,
       targetType: 'NOTICE',
       targetId: notice.id,
     );
-    if (changed == true) {
+    if (result != null) {
       ref.invalidate(homeNoticesProvider);
     }
   }
@@ -245,13 +250,13 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
     CommunityPost post,
   ) async {
-    final changed = await openContentDetail(
+    final result = await openContentDetail(
       context,
       ref,
       targetType: 'COMMUNITY',
       targetId: post.id,
     );
-    if (changed == true) {
+    if (result != null) {
       ref.invalidate(homeCommunityPostsProvider);
     }
   }

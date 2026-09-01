@@ -186,13 +186,13 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
             itemBuilder: (context, index) => NoticeCard(
               notice: filteredNotices[index],
               onOpen: () async {
-                final changed = await openContentDetail(
+                final result = await openContentDetail(
                   context,
                   ref,
                   targetType: 'NOTICE',
                   targetId: filteredNotices[index].id,
                 );
-                if (changed == true) {
+                if (result != null) {
                   ref.invalidate(noticesProvider);
                 }
               },
