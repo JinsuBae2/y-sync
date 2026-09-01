@@ -170,13 +170,13 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
             itemBuilder: (context, index) => CommunityPostCard(
               post: posts[index],
               onOpen: () async {
-                final changed = await openContentDetail(
+                final result = await openContentDetail(
                   context,
                   ref,
                   targetType: 'COMMUNITY',
                   targetId: posts[index].id,
                 );
-                if (changed == true) {
+                if (result != null) {
                   ref.invalidate(communityPostsProvider);
                 }
               },
