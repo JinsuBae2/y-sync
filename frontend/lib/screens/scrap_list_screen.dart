@@ -85,12 +85,13 @@ class ScrapListScreen extends ConsumerWidget {
     );
 
     try {
+      bool? changed;
       if (scrap.targetType == 'NOTICE') {
         final notice = await ref
             .read(noticeNotifierProvider)
             .getNotice(scrap.targetId);
         if (!context.mounted) return;
-        await Navigator.push(
+        changed = await Navigator.push<bool>(
           context,
           MaterialPageRoute(builder: (_) => NoticeDetailScreen(notice: notice)),
         );
@@ -99,18 +100,19 @@ class ScrapListScreen extends ConsumerWidget {
             .read(communityNotifierProvider)
             .getPost(scrap.targetId);
         if (!context.mounted) return;
-        await Navigator.push(
+        changed = await Navigator.push<bool>(
           context,
           MaterialPageRoute(builder: (_) => CommunityDetailScreen(post: post)),
         );
+      }
+      if (changed == true) {
+        ref.invalidate(scrapsProvider);
       }
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('글을 불러올 수 없습니다.')));
-    } finally {
-      ref.invalidate(scrapsProvider);
     }
   }
 }
