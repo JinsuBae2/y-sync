@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y_sync/models/comment.dart';
@@ -140,8 +141,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('공지 상세를 읽고 돌아오면 기존 목록을 다시 요청하지 않는다', (tester) async {
+  testWidgets('공지 상세에서 돌아오면 조회수를 반영하도록 목록을 갱신한다', (tester) async {
     _setMobileViewport(tester);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
     var requestCount = 0;
 
     await tester.pumpWidget(
@@ -168,15 +171,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(_notice.content), findsOneWidget);
 
-    await tester.pageBack();
+    final backGesture = await tester.startGesture(const Offset(5, 420));
+    await backGesture.moveBy(const Offset(320, 0));
+    await backGesture.up();
     await tester.pumpAndSettle();
+    debugDefaultTargetPlatformOverride = null;
 
     expect(find.text(_notice.title), findsOneWidget);
-    expect(requestCount, 1);
+    expect(requestCount, 2);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('커뮤니티 상세를 읽고 돌아오면 기존 목록을 다시 요청하지 않는다', (tester) async {
+  testWidgets('커뮤니티 상세에서 돌아오면 조회수를 반영하도록 목록을 갱신한다', (tester) async {
     _setMobileViewport(tester);
     var requestCount = 0;
 
@@ -207,7 +213,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(_post.title), findsOneWidget);
-    expect(requestCount, 1);
+    expect(requestCount, 2);
     expect(tester.takeException(), isNull);
   });
 

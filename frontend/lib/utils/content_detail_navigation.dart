@@ -6,8 +6,11 @@ import '../providers/notice_provider.dart';
 import '../screens/community_detail_screen.dart';
 import '../screens/notice_detail_screen.dart';
 import '../theme/app_design_tokens.dart';
+import 'adaptive_page_route.dart';
 
-Future<bool?> openContentDetail(
+enum ContentDetailResult { viewed, changed }
+
+Future<ContentDetailResult?> openContentDetail(
   BuildContext context,
   WidgetRef ref, {
   required String targetType,
@@ -34,10 +37,13 @@ Future<bool?> openContentDetail(
     await loadingDialog;
     if (!context.mounted) return null;
 
-    return Navigator.push<bool>(
+    final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => detailScreen),
+      adaptivePageRoute(builder: (_) => detailScreen),
     );
+    return changed == true
+        ? ContentDetailResult.changed
+        : ContentDetailResult.viewed;
   } catch (_) {
     if (!context.mounted) return null;
     Navigator.of(context, rootNavigator: true).pop();
