@@ -8,9 +8,9 @@ import '../models/notice.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/notice_provider.dart';
+import '../utils/content_detail_navigation.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/notification_action_button.dart';
-import 'deep_link_loading_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({
@@ -229,16 +229,15 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
     Notice notice,
   ) async {
-    await Navigator.push(
+    final changed = await openContentDetail(
       context,
-      MaterialPageRoute(
-        builder: (_) => DeepLinkLoadingScreen(
-          targetType: 'NOTICE',
-          targetId: '${notice.id}',
-        ),
-      ),
+      ref,
+      targetType: 'NOTICE',
+      targetId: notice.id,
     );
-    ref.invalidate(homeNoticesProvider);
+    if (changed == true) {
+      ref.invalidate(homeNoticesProvider);
+    }
   }
 
   Future<void> _openCommunityPost(
@@ -246,16 +245,15 @@ class HomeScreen extends ConsumerWidget {
     WidgetRef ref,
     CommunityPost post,
   ) async {
-    await Navigator.push(
+    final changed = await openContentDetail(
       context,
-      MaterialPageRoute(
-        builder: (_) => DeepLinkLoadingScreen(
-          targetType: 'COMMUNITY',
-          targetId: '${post.id}',
-        ),
-      ),
+      ref,
+      targetType: 'COMMUNITY',
+      targetId: post.id,
     );
-    ref.invalidate(homeCommunityPostsProvider);
+    if (changed == true) {
+      ref.invalidate(homeCommunityPostsProvider);
+    }
   }
 
   void _openNoticeList(WidgetRef ref) {

@@ -5,10 +5,10 @@ import '../models/community_post.dart';
 import '../providers/community_provider.dart';
 import '../providers/scrap_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../utils/content_detail_navigation.dart';
 import '../utils/image_url_helper.dart';
 import '../widgets/content_filter_bar.dart';
 import '../widgets/notification_action_button.dart';
-import 'deep_link_loading_screen.dart';
 import 'community_form_screen.dart';
 
 class CommunityListScreen extends ConsumerStatefulWidget {
@@ -103,7 +103,27 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: _buildPosts(postsAsync, selectedGrade: selectedGrade),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: _buildPosts(
+                          postsAsync,
+                          selectedGrade: selectedGrade,
+                        ),
+                      ),
+                      if (postsAsync.isRefreshing)
+                        const Positioned(
+                          top: 0,
+                          left: 20,
+                          right: 20,
+                          child: LinearProgressIndicator(
+                            minHeight: 3,
+                            color: AppDesignTokens.blue,
+                            backgroundColor: AppDesignTokens.paleBlue,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -150,16 +170,15 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
             itemBuilder: (context, index) => CommunityPostCard(
               post: posts[index],
               onOpen: () async {
-                await Navigator.push(
+                final changed = await openContentDetail(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => DeepLinkLoadingScreen(
-                      targetType: 'COMMUNITY',
-                      targetId: '${posts[index].id}',
-                    ),
-                  ),
+                  ref,
+                  targetType: 'COMMUNITY',
+                  targetId: posts[index].id,
                 );
-                ref.invalidate(communityPostsProvider);
+                if (changed == true) {
+                  ref.invalidate(communityPostsProvider);
+                }
               },
             ),
           ),
