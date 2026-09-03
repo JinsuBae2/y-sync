@@ -11,7 +11,7 @@
 | **Who** | 배진수(보안 점검 결과 제공·검토) |
 | **When** | 2026-09-03, Asia/Seoul |
 | **Where** | `fix/security-hardening` 브랜치, Spring Boot 회원 관리·JWT, GitHub Actions, Gradle wrapper, Docker Compose |
-| **Status** | 구현 및 로컬 검증 완료, PR #53 CI 통과, 리뷰·병합 대기 |
+| **Status** | PR #53 CI 통과 및 `develop` 병합 완료, 운영 릴리스 대기 |
 
 ### **작업 개요**
 
@@ -33,10 +33,11 @@
 - 코드 커밋 `44d30a0`
 - 문서 커밋 `ccaec60`, PR #53
 - GitHub Actions 실행 `33725169117`의 Backend, Frontend, Configuration, Gate 통과
+- PR #53 `develop` 병합 커밋 `483427f`
 
 ### **후속 작업**
 
-- PR CI와 리뷰를 통과한 뒤 `develop`에 병합합니다.
+- `develop`에서 `main`으로 릴리스 PR을 생성하고 운영 배포 결과를 후속 기록합니다.
 - 운영 반영 시 GitHub Environment의 `JWT_SECRET` 존재 여부와 서버 업로드 디렉터리 소유권을 확인합니다.
 
 ---
