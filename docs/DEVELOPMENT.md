@@ -53,7 +53,7 @@
 | `DB_URL` | MySQL 접속 URL | `jdbc:mysql://127.0.0.1:3306/ysync_db?...` |
 | `DB_USERNAME` | 데이터베이스 계정명 | `root` |
 | `DB_PASSWORD` | 데이터베이스 패스워드 | `[your_db_password]` |
-| `JWT_SECRET` | JWT 서명용 비밀키 | `[your_jwt_secret_key]` |
+| `JWT_SECRET` | JWT 서명용 비밀키 | 없음(필수, 누락 시 기동 실패) |
 
 ### B. 개발 도구(IDE)별 설정 방법
 * **IntelliJ IDEA**: `Run/Debug Configurations` ➡️ `Edit Configurations...` ➡️ Spring Boot Application 실행 설정 ➡️ `Environment variables` 필드에 입력 (형식: `DB_PASSWORD=your_password;JWT_SECRET=your_secret`).
@@ -66,6 +66,7 @@
   $env:JWT_SECRET="your_custom_jwt_secret_key"
   ./gradlew bootRun
   ```
+
 * **Windows (CMD)**:
   ```cmd
   set DB_PASSWORD=your_db_password
@@ -78,6 +79,10 @@
   export JWT_SECRET="your_custom_jwt_secret_key"
   ./gradlew bootRun
   ```
+
+### D. Docker 비root 사용자 권한
+
+백엔드는 `ysync` 비root 사용자로 실행됩니다. Compose 빌드 인자 `APP_UID`와 `APP_GID`의 기본값은 `1000`이며, 운영 배포 워크플로는 원격 배포 사용자의 실제 UID/GID를 자동으로 전달합니다. 수동 배포에서는 `docker/uploads`를 실행 사용자 소유로 먼저 생성한 뒤 Compose를 실행합니다.
 
 ---
 

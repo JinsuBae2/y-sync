@@ -29,6 +29,9 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
     container_name: ysync-backend
     expose:
       - "8080"

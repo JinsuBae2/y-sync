@@ -30,7 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String loginId;
-        final String role;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -40,8 +39,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         jwt = authHeader.substring(7);
         try {
             loginId = jwtUtil.extractLoginId(jwt);
-            role = jwtUtil.extractClaim(jwt, claims -> claims.get("role", String.class));
-
             if (loginId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt, loginId)) {
                     Member member = memberRepository.findByLoginId(loginId).orElse(null);
@@ -68,7 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            loginId, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
+                            loginId, null, Collections.singletonList(
+                                    new SimpleGrantedAuthority("ROLE_" + member.getRole().name())));
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
