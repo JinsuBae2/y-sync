@@ -18,7 +18,7 @@
 - 일반 ADMIN의 `SUPER_ADMIN` 생성·승격 및 기존 `SUPER_ADMIN` 변경을 서비스 계층에서 차단했습니다.
 - 회원 관리 응답을 DTO로 제한하고 비밀번호 직렬화를 방어적으로 차단했습니다.
 - 역할 변경 시 `authVersion`을 올리고 JWT 인증 권한을 데이터베이스의 현재 역할로 구성했습니다.
-- JWT 고정 기본 키를 제거하고, 외부 action 전체 SHA 고정, Gradle 배포본 체크섬, CODEOWNERS, Dependency Review와 Dependabot을 추가했습니다.
+- JWT 고정 기본 키를 제거하고, 외부 action 전체 SHA 고정, Gradle 배포본 체크섬, CODEOWNERS와 Dependabot을 추가했습니다.
 - 백엔드 컨테이너를 비root 사용자로 전환하고 운영 배포 사용자의 UID/GID와 바인드 마운트 권한을 맞췄습니다.
 
 ### **검증 및 추적**
@@ -29,6 +29,7 @@
 - `JWT_SECRET` 제거 상태에서 `PlaceholderResolutionException`으로 기동 실패 확인
 - Docker 이미지 빌드 성공, 기본 사용자 `ysync`와 UID/GID `1000:1000`, `/app/uploads` 쓰기 확인
 - Docker Compose 설정 검사 및 `git diff --check` 통과
+- Dependency Review는 저장소 Dependency Graph 비활성 상태에서 지원되지 않아 제거하고 Dependabot 정기 점검으로 전환
 - 코드 커밋 `44d30a0`
 - 문서 커밋 `ccaec60`, PR #53
 

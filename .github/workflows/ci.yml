@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -93,18 +92,6 @@ jobs:
             exit 1
           fi
 
-  dependency-review:
-    name: Dependency Review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Review Dependency Changes
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
-
   gate:
     name: Gate
     if: always()
@@ -112,7 +99,6 @@ jobs:
       - backend
       - frontend
       - configuration
-      - dependency-review
     runs-on: ubuntu-latest
 
     steps:
@@ -121,16 +107,10 @@ jobs:
           BACKEND_RESULT: ${{ needs.backend.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           CONFIGURATION_RESULT: ${{ needs.configuration.result }}
-          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
         run: |
           if [ "$BACKEND_RESULT" != success ] \
             || [ "$FRONTEND_RESULT" != success ] \
             || [ "$CONFIGURATION_RESULT" != success ]; then
             echo 'One or more required CI jobs failed.' >&2
-            exit 1
-          fi
-          if [ "$DEPENDENCY_REVIEW_RESULT" != success ] \
-            && [ "$DEPENDENCY_REVIEW_RESULT" != skipped ]; then
-            echo 'Dependency review failed.' >&2
             exit 1
           fi
