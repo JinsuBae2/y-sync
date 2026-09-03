@@ -1,5 +1,5 @@
 # 💡 실행 스테이지 (초경량 Alpine JRE 사용 - GitHub Actions 러너가 빌드한 JAR을 복사하여 실행만 수행)
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 ARG APP_UID=1000
