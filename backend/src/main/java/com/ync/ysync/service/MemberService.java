@@ -330,7 +330,9 @@ public class MemberService {
      * 관리자 단건 사전 등록
      */
     @Transactional
-    public Member createMemberByAdmin(String loginId, String name, MemberRole role) {
+    public Member createMemberByAdmin(String loginId, String name, MemberRole role, MemberRole actorRole) {
+        MemberRole requestedRole = role != null ? role : MemberRole.USER;
+        validateRoleAssignment(actorRole, requestedRole);
         // 이미 등록된 학번인 경우
         if (memberRepository.findByLoginId(loginId).isPresent()) {
             throw new IllegalArgumentException("이미 등록되었거나 사용 중인 학번입니다.");
@@ -341,7 +343,7 @@ public class MemberService {
                 .password(passwordEncoder.encode("TEMP_" + loginId + "_" + System.currentTimeMillis())) // 임시 비밀번호 (로그인
                                                                                                         // 불가능 상태 유도)
                 .name(name)
-                .role(role != null ? role : MemberRole.USER)
+                .role(requestedRole)
                 .isActivated(false) // 비활성화 상태로 등록
                 .provider(AuthProvider.LOCAL)
                 .authType(AuthType.PASSWORD)
@@ -355,7 +357,7 @@ public class MemberService {
      * CSV 데이터 일괄 업로드 등록
      */
     @Transactional
-    public void createMembersByCsv(InputStream csvStream) {
+    public void createMembersByCsv(InputStream csvStream, MemberRole actorRole) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(csvStream, StandardCharsets.UTF_8))) {
             String line;
             boolean isFirstLine = true;
@@ -399,6 +401,7 @@ public class MemberService {
                         // ignore
                     }
                 }
+                validateRoleAssignment(actorRole, role);
 
                 // 중복 회원 건너뛰기
                 if (memberRepository.findByLoginId(loginId).isEmpty()) {
@@ -425,18 +428,30 @@ public class MemberService {
      * 관리자 권한 회원 정보 수정 (이름, 권한)
      */
     @Transactional
-    public Member updateMemberByAdmin(Long id, String name, MemberRole role) {
+    public Member updateMemberByAdmin(Long id, String name, MemberRole role, MemberRole actorRole) {
         Member member = findById(id);
+
+        if (actorRole != MemberRole.SUPER_ADMIN && member.getRole() == MemberRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("ADMIN은 SUPER_ADMIN 계정을 변경할 수 없습니다.");
+        }
 
         if (name != null && !name.trim().isEmpty()) {
             member.setName(name);
         }
-        if (role != null) {
+        if (role != null && role != member.getRole()) {
+            validateRoleAssignment(actorRole, role);
             member.setRole(role);
+            member.setAuthVersion(member.getAuthVersion() + 1);
         }
 
         log.info("관리자 회원정보 수정 완료 - ID: {}, 수정된 이름: {}, 권한: {}", id, member.getName(), member.getRole());
         return memberRepository.save(member);
+    }
+
+    private void validateRoleAssignment(MemberRole actorRole, MemberRole requestedRole) {
+        if (requestedRole == MemberRole.SUPER_ADMIN && actorRole != MemberRole.SUPER_ADMIN) {
+            throw new IllegalArgumentException("SUPER_ADMIN 권한은 SUPER_ADMIN만 부여할 수 있습니다.");
+        }
     }
 
     /**

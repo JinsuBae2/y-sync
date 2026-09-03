@@ -1,5 +1,6 @@
 package com.ync.ysync.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class Member {
 
     @Column(nullable = false)
     @Setter
+    @JsonIgnore
     private String password;
 
     @Column(unique = true)

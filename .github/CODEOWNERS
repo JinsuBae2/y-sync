@@ -1,0 +1,5 @@
+# Repository owner inferred from the configured origin and commit history.
+/.github/workflows/ @JinsuBae2
+/backend/Dockerfile @JinsuBae2
+/docker/ @JinsuBae2
+/backend/gradle/wrapper/ @JinsuBae2

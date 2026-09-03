@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -93,10 +93,10 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '21'
           distribution: temurin
@@ -117,7 +117,7 @@ jobs:
           tar -czf deploy.tar.gz -C deploy_dist .
 
       - name: Upload Backend Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: backend-deploy
           path: deploy.tar.gz
@@ -132,10 +132,10 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.41.4'
           channel: stable
@@ -156,7 +156,7 @@ jobs:
           flutter build web --release
 
       - name: Upload Frontend Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: frontend-web
           path: frontend/build/web
@@ -182,18 +182,18 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Download Backend Artifact
         if: needs.detect_changes.outputs.backend == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: backend-deploy
           path: .
 
       - name: Copy Backend Artifact via SSH
         if: needs.detect_changes.outputs.backend == 'true'
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
@@ -203,7 +203,7 @@ jobs:
 
       - name: Deploy Backend
         if: needs.detect_changes.outputs.backend == 'true'
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -228,6 +228,10 @@ jobs:
             rm deploy.tar.gz
             cd docker
 
+            mkdir -p uploads
+            export APP_UID="$(id -u)"
+            export APP_GID="$(id -g)"
+
             previous_backend_image="$(docker inspect --format='{{.Image}}' ysync-backend 2>/dev/null || true)"
             docker compose up -d --build --remove-orphans
 
@@ -245,14 +249,14 @@ jobs:
 
       - name: Download Frontend Artifact
         if: needs.detect_changes.outputs.frontend == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: frontend-web
           path: frontend/build/web
 
       - name: Deploy Frontend to Firebase Hosting
         if: needs.detect_changes.outputs.frontend == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        uses: FirebaseExtended/action-hosting-deploy@7c850a480ce753f4f06f010801fc5a43787740bb # v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_Y_SYNC_31C03 }}
