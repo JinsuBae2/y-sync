@@ -11,7 +11,7 @@
 | **Who** | 배진수(보안 점검 결과 제공·검토) |
 | **When** | 2026-09-03, Asia/Seoul |
 | **Where** | `fix/security-hardening` 브랜치, Spring Boot 회원 관리·JWT, GitHub Actions, Gradle wrapper, Docker Compose |
-| **Status** | 구현 및 로컬 검증 완료, PR 생성 대기 |
+| **Status** | 구현 및 로컬 검증 완료, PR #53 생성 및 CI 확인 중 |
 
 ### **작업 개요**
 
@@ -30,6 +30,7 @@
 - Docker 이미지 빌드 성공, 기본 사용자 `ysync`와 UID/GID `1000:1000`, `/app/uploads` 쓰기 확인
 - Docker Compose 설정 검사 및 `git diff --check` 통과
 - 코드 커밋 `44d30a0`
+- 문서 커밋 `ccaec60`, PR #53
 
 ### **후속 작업**
 
