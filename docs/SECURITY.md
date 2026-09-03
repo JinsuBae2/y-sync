@@ -32,7 +32,7 @@
 
 - GitHub Actions의 외부 action은 전체 commit SHA로 고정합니다. 버전 주석은 업데이트 판단을 위한 정보일 뿐 실행 기준은 SHA입니다.
 - Gradle wrapper 배포본은 `distributionSha256Sum`으로 검증합니다.
-- Dependabot은 Gradle, Dart/Pub, GitHub Actions와 백엔드 Docker 기반 이미지를 매주 확인합니다.
+- Dependabot은 백엔드 Gradle 의존성을 월 1회 확인하고 한 개의 그룹 PR로 묶습니다. 동시 자동 PR은 한 개로 제한합니다.
 - workflow, Docker, Compose와 Gradle wrapper 변경은 `.github/CODEOWNERS`의 검토 대상입니다.
 
 GitHub Dependency Review는 저장소의 Dependency Graph가 활성화되지 않아 CI에서 지원되지 않았습니다. 기존 빌드를 실패시키지 않도록 해당 job은 제외하고 Dependabot 기반 정기 점검을 사용합니다.
