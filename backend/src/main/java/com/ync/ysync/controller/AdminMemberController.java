@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,24 +29,26 @@ public class AdminMemberController {
 
     @GetMapping
     @Operation(summary = "회원 목록 조회", description = "학과 회원 목록을 페이징 및 이름/학번 검색으로 조회합니다.")
-    public ResponseEntity<Page<Member>> getMembers(
+    public ResponseEntity<Page<AdminMemberResponse>> getMembers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "15") int size,
             @RequestParam(required = false) String search) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Member> members = memberService.getMembers(pageRequest, search);
+        Page<AdminMemberResponse> members = memberService.getMembers(pageRequest, search)
+                .map(AdminMemberResponse::from);
         return ResponseEntity.ok(members);
     }
 
     @PostMapping
     @Operation(summary = "학생 단건 사전등록", description = "관리자가 학생의 학번, 이름, 권한을 입력하여 사전에 등록시킵니다. (미활성 상태)")
-    public ResponseEntity<?> createMember(@RequestBody AdminCreateMemberRequest request) {
+    public ResponseEntity<?> createMember(@RequestBody AdminCreateMemberRequest request, Authentication authentication) {
         if (request.getLoginId() == null || request.getName() == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
         }
         try {
-            Member member = memberService.createMemberByAdmin(request.getLoginId(), request.getName(), request.getRole());
-            return ResponseEntity.ok(member);
+            Member member = memberService.createMemberByAdmin(
+                    request.getLoginId(), request.getName(), request.getRole(), currentRole(authentication));
+            return ResponseEntity.ok(AdminMemberResponse.from(member));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -53,12 +56,12 @@ public class AdminMemberController {
 
     @PostMapping("/csv")
     @Operation(summary = "학생 CSV 대량 일괄 등록", description = "학번,이름,역할이 적힌 CSV 파일을 업로드하여 학생들을 일괄 등록합니다.")
-    public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "파일이 비어있습니다."));
         }
         try {
-            memberService.createMembersByCsv(file.getInputStream());
+            memberService.createMembersByCsv(file.getInputStream(), currentRole(authentication));
             return ResponseEntity.ok(Map.of("message", "CSV 일괄 사전 등록이 완료되었습니다."));
         } catch (Exception e) {
             log.error("CSV 일괄 사전 등록 실패", e);
@@ -68,10 +71,12 @@ public class AdminMemberController {
 
     @PutMapping("/{id}")
     @Operation(summary = "학생 정보 수정", description = "학생의 이름 및 권한을 수정합니다.")
-    public ResponseEntity<?> updateMember(@PathVariable Long id, @RequestBody AdminUpdateMemberRequest request) {
+    public ResponseEntity<?> updateMember(@PathVariable Long id, @RequestBody AdminUpdateMemberRequest request,
+            Authentication authentication) {
         try {
-            Member member = memberService.updateMemberByAdmin(id, request.getName(), request.getRole());
-            return ResponseEntity.ok(member);
+            Member member = memberService.updateMemberByAdmin(
+                    id, request.getName(), request.getRole(), currentRole(authentication));
+            return ResponseEntity.ok(AdminMemberResponse.from(member));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -150,5 +155,13 @@ public class AdminMemberController {
     public static class AdminUpdateMemberRequest {
         private String name;
         private MemberRole role;
+    }
+
+    private MemberRole currentRole(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().replaceFirst("^ROLE_", ""))
+                .map(MemberRole::valueOf)
+                .max(Enum::compareTo)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 권한을 확인할 수 없습니다."));
     }
 }

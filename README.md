@@ -130,6 +130,7 @@ docker compose -f docker/docker-compose.yml config
 - [API 명세](docs/API_SPECIFICATION.md)
 - [시스템 아키텍처](docs/ARCHITECTURE.md)
 - [개발 규칙](docs/DEVELOPMENT.md)
+- [보안 운영 기준](docs/SECURITY.md)
 - [문제 해결 기록](docs/TROUBLESHOOTING.md)
 - [작업 이력](docs/WORK_LOG.md)
 

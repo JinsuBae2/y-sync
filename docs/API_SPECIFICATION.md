@@ -107,6 +107,18 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 - 등록 이메일과 비밀번호를 초기화하고 가입 대기 상태로 전환합니다.
 - 기존 JWT와 FCM 토큰은 무효화되며 권한, 게시글, 댓글과 정지 상태는 유지됩니다.
 
+#### 10. 관리자 회원 목록 (`GET /admin/members`)
+- **ADMIN / SUPER_ADMIN 전용**
+- `Member` 엔티티가 아닌 관리자 회원 DTO를 반환합니다.
+- 응답에는 `id`, `loginId`, `name`, `role`, 알림 설정, 활성·정지 상태와 생성 시각만 포함합니다.
+- `password`, `fcmToken`, `socialId`, `authVersion`은 반환하지 않습니다.
+
+#### 11. 관리자 회원 등록·수정 (`POST /admin/members`, `POST /admin/members/csv`, `PUT /admin/members/{id}`)
+- 일반 `ADMIN`은 자신이나 다른 회원에게 `SUPER_ADMIN` 역할을 부여하거나 `SUPER_ADMIN` 계정을 생성할 수 없습니다.
+- 일반 `ADMIN`은 기존 `SUPER_ADMIN` 계정을 수정할 수 없습니다.
+- 역할이 변경되면 기존 JWT는 즉시 무효화됩니다.
+- `SUPER_ADMIN` 역할의 생성·변경은 현재 `SUPER_ADMIN`만 수행할 수 있습니다.
+
 ---
 
 ### 📢 Notice (공지사항)
