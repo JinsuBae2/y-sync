@@ -150,7 +150,7 @@ void main() {
                 title: '수강신청 마감',
                 startDate: apiDate,
                 endDate: apiDate,
-                color: '#246BFD',
+                color: '#FF5733',
                 type: 'ACADEMIC',
               ),
             ],
@@ -190,6 +190,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('수강신청 마감'), findsOneWidget);
+    final marker = tester.widget<Container>(
+      find.byKey(const ValueKey('calendar-event-marker-1')),
+    );
+    final markerDecoration = marker.decoration! as BoxDecoration;
+    expect(markerDecoration.color, const Color(0xFFFF5733));
+    final accent = tester.widget<Container>(
+      find.byKey(const ValueKey('calendar-event-accent-1')),
+    );
+    final accentDecoration = accent.decoration! as BoxDecoration;
+    expect(accentDecoration.color, const Color(0xFFFF5733));
     final lastDay = DateTime(today.year, today.month + 1, 0).day.toString();
     final lastDateBottom = tester.getBottomLeft(find.text(lastDay).last).dy;
     final eventHeaderTop = tester
