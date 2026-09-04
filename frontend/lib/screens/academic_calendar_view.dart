@@ -8,6 +8,14 @@ import '../providers/notice_provider.dart';
 import '../theme/app_design_tokens.dart';
 import 'notice_detail_screen.dart';
 
+Color _calendarEventColor(String value) {
+  final hex = value.trim().replaceFirst('#', '');
+  if (hex.length != 6) return AppDesignTokens.blue;
+
+  final parsed = int.tryParse(hex, radix: 16);
+  return parsed == null ? AppDesignTokens.blue : Color(0xFF000000 | parsed);
+}
+
 // 💡 학사 일정을 캘린더 형식으로 보여주는 뷰입니다.
 class AcademicCalendarView extends ConsumerStatefulWidget {
   const AcademicCalendarView({super.key});
@@ -142,14 +150,16 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             if (events.isEmpty) return null;
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: events.take(3).map((event) {
+              children: events.take(3).map((rawEvent) {
+                final event = rawEvent as CalendarEvent;
                 return Container(
+                  key: ValueKey('calendar-event-marker-${event.id}'),
                   margin: const EdgeInsets.symmetric(horizontal: 1.0),
                   width: 5,
                   height: 5,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppDesignTokens.blue,
+                    color: _calendarEventColor(event.color),
                   ),
                 );
               }).toList(),
@@ -225,12 +235,11 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                       child: ListTile(
                         contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
                         leading: Container(
+                          key: ValueKey('calendar-event-accent-${event.id}'),
                           width: 4,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: isNoticeLink
-                                ? AppDesignTokens.blue
-                                : AppDesignTokens.navy,
+                            color: _calendarEventColor(event.color),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
