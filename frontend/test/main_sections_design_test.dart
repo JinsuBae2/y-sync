@@ -16,6 +16,7 @@ import 'package:y_sync/providers/notification_provider.dart';
 import 'package:y_sync/providers/scrap_provider.dart';
 import 'package:y_sync/providers/timetable_provider.dart';
 import 'package:y_sync/screens/community_list_screen.dart';
+import 'package:y_sync/screens/academic_calendar_view.dart';
 import 'package:y_sync/screens/profile_screen.dart';
 import 'package:y_sync/screens/schedule_tab_screen.dart';
 
@@ -224,6 +225,63 @@ void main() {
     await tester.tap(find.byTooltip('내 수업 추가'));
     await tester.pumpAndSettle();
     expect(find.text('내 수업 추가'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('데스크톱 일정 달력과 목록 너비를 분할선 드래그로 조절한다', (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          calendarEventsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AcademicCalendarView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final panelFinder = find.byKey(const ValueKey('calendar-panel'));
+    final handleFinder = find.byKey(const ValueKey('calendar-resize-handle'));
+    final initialWidth = tester.getSize(panelFinder).width;
+
+    expect(tester.getSize(handleFinder).width, 24);
+    await tester.drag(handleFinder, const Offset(120, 0));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(panelFinder).width, greaterThan(initialWidth + 80));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('모바일 일정 달력과 목록 높이를 분할선 터치 드래그로 조절한다', (tester) async {
+    _setMobileViewport(tester);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          calendarEventsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AcademicCalendarView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final panelFinder = find.byKey(const ValueKey('mobile-calendar-panel'));
+    final handleFinder = find.byKey(
+      const ValueKey('mobile-calendar-resize-handle'),
+    );
+    final initialHeight = tester.getSize(panelFinder).height;
+
+    expect(tester.getSize(handleFinder).height, 28);
+    await tester.drag(handleFinder, const Offset(0, 100));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(panelFinder).height, greaterThan(initialHeight + 70));
     expect(tester.takeException(), isNull);
   });
 

@@ -6,9 +6,11 @@ import 'package:y_sync/models/calendar_event.dart';
 import 'package:y_sync/models/community_post.dart';
 import 'package:y_sync/models/member.dart';
 import 'package:y_sync/models/notice.dart';
+import 'package:y_sync/models/timetable_entry.dart';
 import 'package:y_sync/providers/auth_provider.dart';
 import 'package:y_sync/providers/home_provider.dart';
 import 'package:y_sync/providers/notification_provider.dart';
+import 'package:y_sync/providers/timetable_provider.dart';
 import 'package:y_sync/screens/home_screen.dart';
 
 class _TestAuthNotifier extends AuthNotifier {
@@ -31,7 +33,7 @@ void main() {
     await initializeDateFormatting('ko_KR');
   });
 
-  testWidgets('홈은 개인 시간표 없이 핵심 공지와 공통 정보를 표시한다', (tester) async {
+  testWidgets('홈은 현재 수업과 최근 공지를 분리해 표시한다', (tester) async {
     tester.view.physicalSize = const Size(320, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -40,12 +42,28 @@ void main() {
     final now = DateTime.now();
     final eventDate = now.add(const Duration(days: 2));
     final deadline = now.add(const Duration(days: 5));
+    final classTime = DateTime(2026, 9, 7, 9, 20);
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authProvider.overrideWith(_TestAuthNotifier.new),
           unreadNotificationCountProvider.overrideWithValue(1),
+          homeNowProvider.overrideWithValue(classTime),
+          personalTimetableEntriesProvider.overrideWith(
+            (ref) async => [
+              TimetableEntry(
+                id: 1,
+                grade: 'PERSONAL',
+                dayOfWeek: 'MONDAY',
+                subjectName: '모바일 프로그래밍',
+                professorName: '김교수',
+                classroom: '공학관 301호',
+                startPeriod: 1,
+                endPeriod: 3,
+              ),
+            ],
+          ),
           homeNoticesProvider.overrideWith(
             (ref) async => [
               Notice(
@@ -109,9 +127,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('안녕하세요, 배진수님'), findsOneWidget);
-    expect(find.text('2학기 수강신청 및 개강 안내'), findsOneWidget);
+    expect(find.text('현재 수업'), findsOneWidget);
+    expect(find.text('모바일 프로그래밍'), findsOneWidget);
+    expect(find.text('09:00–12:00 · 공학관 301호'), findsOneWidget);
     expect(find.text('다가오는 학사일정'), findsOneWidget);
-    expect(find.text('오늘 수업'), findsNothing);
     final listView = tester.widget<ListView>(find.byType(ListView));
     expect(listView.padding, const EdgeInsets.fromLTRB(20, 22, 20, 116));
     expect(tester.takeException(), isNull);
@@ -120,7 +139,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('최근 공지'), findsOneWidget);
+    expect(find.text('2학기 수강신청 및 개강 안내'), findsOneWidget);
     expect(find.text('커뮤니티 인기글'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('수업 전에는 다음 수업과 남은 시간을 표시한다', (tester) async {
+    tester.view.physicalSize = const Size(320, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          unreadNotificationCountProvider.overrideWithValue(0),
+          homeNowProvider.overrideWithValue(DateTime(2026, 9, 7, 8, 30)),
+          personalTimetableEntriesProvider.overrideWith(
+            (ref) async => [
+              TimetableEntry(
+                id: 2,
+                grade: 'PERSONAL',
+                dayOfWeek: 'MONDAY',
+                subjectName: '자료구조',
+                professorName: '이교수',
+                classroom: '강의동 201호',
+                startPeriod: 1,
+                endPeriod: 2,
+              ),
+            ],
+          ),
+          homeNoticesProvider.overrideWith((ref) async => []),
+          homeCalendarEventsProvider.overrideWith((ref) async => []),
+          homeCommunityPostsProvider.overrideWith((ref) async => []),
+        ],
+        child: MaterialApp(
+          home: HomeScreen(
+            onOpenNotices: () {},
+            onOpenCommunity: () {},
+            onOpenSchedule: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('다음 수업'), findsOneWidget);
+    expect(find.text('자료구조'), findsOneWidget);
+    expect(find.text('30분 후'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
