@@ -170,7 +170,7 @@ public class MemberProfileController {
 
 ### 점검 순서
 
-1. 운영 상태 API `https://168-107-29-144.sslip.io/api/v1/hello`가 HTTP `200`으로 응답하는지 확인합니다.
+1. 운영 도메인의 상태 API `/api/v1/hello`가 HTTP `200`으로 응답하는지 확인합니다.
 2. 응답하지 않으면 Oracle VM의 Nginx, Spring Boot 컨테이너, MySQL 순서로 상태와 로그를 확인합니다.
 3. 상태 API가 정상이라면 점검 화면의 `지금 다시 확인`을 누릅니다.
 4. 계속 표시되면 PWA를 완전히 종료한 뒤 다시 실행하고, 브라우저 개발자 도구에서 `/api/v1/hello` 요청이 CORS·DNS·인증서 또는 로컬 네트워크 문제로 차단됐는지 확인합니다.
