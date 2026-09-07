@@ -27,6 +27,10 @@ class AcademicCalendarView extends ConsumerStatefulWidget {
 
 class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   double _horizontalRatio = 0.55; // PC/Web 가로 분할 비율 (55%가 캘린더)
+  bool _isDividerHovered = false;
+  bool _isDividerDragging = false;
+  double? _mobileCalendarHeight;
+  bool _isMobileDividerDragging = false;
   final CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -367,12 +371,15 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
               if (constraints.maxWidth >= 768) {
                 // 💻 PC/Web Layout: Horizontal split with vertical drag divider
                 final totalWidth = constraints.maxWidth;
+                const dividerWidth = 24.0;
+                final resizableWidth = totalWidth - dividerWidth;
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Left panel: Calendar Card
                     SizedBox(
-                      width: totalWidth * _horizontalRatio,
+                      key: const ValueKey('calendar-panel'),
+                      width: resizableWidth * _horizontalRatio,
                       child: SingleChildScrollView(
                         child: _buildCalendarCard(
                           rowHeight: 48.0,
@@ -384,25 +391,50 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                     ),
                     // Resizable divider handle
                     GestureDetector(
-                      behavior: HitTestBehavior.translucent,
+                      key: const ValueKey('calendar-resize-handle'),
+                      behavior: HitTestBehavior.opaque,
+                      onDoubleTap: () {
+                        setState(() => _horizontalRatio = 0.55);
+                      },
+                      onHorizontalDragStart: (_) {
+                        setState(() => _isDividerDragging = true);
+                      },
                       onHorizontalDragUpdate: (details) {
                         setState(() {
-                          _horizontalRatio += details.delta.dx / totalWidth;
+                          _horizontalRatio += details.delta.dx / resizableWidth;
                           _horizontalRatio = _horizontalRatio.clamp(0.35, 0.70);
                         });
                       },
+                      onHorizontalDragEnd: (_) {
+                        setState(() => _isDividerDragging = false);
+                      },
+                      onHorizontalDragCancel: () {
+                        setState(() => _isDividerDragging = false);
+                      },
                       child: MouseRegion(
+                        opaque: true,
                         cursor: SystemMouseCursors.resizeLeftRight,
+                        onEnter: (_) {
+                          setState(() => _isDividerHovered = true);
+                        },
+                        onExit: (_) {
+                          setState(() => _isDividerHovered = false);
+                        },
                         child: Container(
-                          width: 10,
+                          width: dividerWidth,
                           color: AppDesignTokens.background,
                           child: Center(
-                            child: Container(
-                              width: 3,
-                              height: 50,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 120),
+                              width: _isDividerDragging ? 5 : 4,
+                              height: _isDividerDragging || _isDividerHovered
+                                  ? 76
+                                  : 56,
                               decoration: BoxDecoration(
-                                color: AppDesignTokens.divider,
-                                borderRadius: BorderRadius.circular(1.5),
+                                color: _isDividerDragging || _isDividerHovered
+                                    ? AppDesignTokens.blue
+                                    : AppDesignTokens.divider,
+                                borderRadius: BorderRadius.circular(3),
                               ),
                             ),
                           ),
@@ -420,15 +452,87 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                   ],
                 );
               } else {
-                // 💡 모바일은 달력 전체를 먼저 배치해 마지막 주 날짜가 잘리지 않도록 합니다.
+                const dividerHeight = 28.0;
+                const minimumListHeight = 150.0;
+                final minimumCalendarHeight = constraints.maxHeight < 520
+                    ? 250.0
+                    : 300.0;
+                final availableMaximum =
+                    constraints.maxHeight - dividerHeight - minimumListHeight;
+                final maximumCalendarHeight =
+                    availableMaximum < minimumCalendarHeight
+                    ? minimumCalendarHeight
+                    : availableMaximum;
+                final calendarHeight =
+                    (_mobileCalendarHeight ?? constraints.maxHeight * 0.48)
+                        .clamp(minimumCalendarHeight, maximumCalendarHeight)
+                        .toDouble();
+                final mobileRowHeight = ((calendarHeight - 96) / 6)
+                    .clamp(30.0, 58.0)
+                    .toDouble();
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildCalendarCard(
-                      rowHeight: constraints.maxHeight < 500 ? 34.0 : 38.0,
-                      daysOfWeekHeight: 24.0,
-                      allEvents: allEvents,
-                      theme: theme,
+                    SizedBox(
+                      key: const ValueKey('mobile-calendar-panel'),
+                      height: calendarHeight,
+                      child: SingleChildScrollView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        child: _buildCalendarCard(
+                          rowHeight: mobileRowHeight,
+                          daysOfWeekHeight: 24.0,
+                          allEvents: allEvents,
+                          theme: theme,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      key: const ValueKey('mobile-calendar-resize-handle'),
+                      behavior: HitTestBehavior.opaque,
+                      onDoubleTap: () {
+                        setState(() => _mobileCalendarHeight = null);
+                      },
+                      onVerticalDragStart: (_) {
+                        setState(() {
+                          _mobileCalendarHeight = calendarHeight;
+                          _isMobileDividerDragging = true;
+                        });
+                      },
+                      onVerticalDragUpdate: (details) {
+                        setState(() {
+                          _mobileCalendarHeight =
+                              ((_mobileCalendarHeight ?? calendarHeight) +
+                                      details.delta.dy)
+                                  .clamp(
+                                    minimumCalendarHeight,
+                                    maximumCalendarHeight,
+                                  )
+                                  .toDouble();
+                        });
+                      },
+                      onVerticalDragEnd: (_) {
+                        setState(() => _isMobileDividerDragging = false);
+                      },
+                      onVerticalDragCancel: () {
+                        setState(() => _isMobileDividerDragging = false);
+                      },
+                      child: SizedBox(
+                        height: dividerHeight,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 120),
+                            width: _isMobileDividerDragging ? 72 : 52,
+                            height: _isMobileDividerDragging ? 5 : 4,
+                            decoration: BoxDecoration(
+                              color: _isMobileDividerDragging
+                                  ? AppDesignTokens.blue
+                                  : AppDesignTokens.divider,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                     Expanded(
                       child: _buildEventList(

@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 import '../models/calendar_event.dart';
 import '../models/community_post.dart';
 import '../models/notice.dart';
+import '../models/timetable_entry.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/notice_provider.dart';
+import '../providers/timetable_provider.dart';
 import '../utils/content_detail_navigation.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/notification_action_button.dart';
@@ -38,6 +40,8 @@ class HomeScreen extends ConsumerWidget {
     final noticesAsync = ref.watch(homeNoticesProvider);
     final eventsAsync = ref.watch(homeCalendarEventsProvider);
     final postsAsync = ref.watch(homeCommunityPostsProvider);
+    final timetableAsync = ref.watch(personalTimetableEntriesProvider);
+    final now = ref.watch(homeNowProvider);
     final memberName = authState.asData?.value?.name ?? '학생';
 
     return Scaffold(
@@ -62,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   _HomeHeader(memberName: memberName),
                   const SizedBox(height: 26),
-                  _buildPinnedNotice(context, ref, noticesAsync),
+                  _buildTodayClass(timetableAsync, now),
                   const SizedBox(height: 30),
                   _SectionHeader(
                     title: '다가오는 학사일정',
@@ -100,31 +104,33 @@ class HomeScreen extends ConsumerWidget {
     ref.invalidate(homeNoticesProvider);
     ref.invalidate(homeCalendarEventsProvider);
     ref.invalidate(homeCommunityPostsProvider);
+    ref.invalidate(personalTimetableEntriesProvider);
     await Future.wait([
       ref.read(homeNoticesProvider.future),
       ref.read(homeCalendarEventsProvider.future),
       ref.read(homeCommunityPostsProvider.future),
+      ref.read(personalTimetableEntriesProvider.future),
     ]);
   }
 
-  Widget _buildPinnedNotice(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<List<Notice>> noticesAsync,
+  Widget _buildTodayClass(
+    AsyncValue<List<TimetableEntry>> timetableAsync,
+    DateTime now,
   ) {
-    return noticesAsync.when(
-      data: (notices) {
-        final featured = _featuredNotice(notices);
-        if (featured == null) return const SizedBox.shrink();
-        return _PinnedNoticeHero(
-          notice: featured,
-          deadlineLabel: _noticeDeadlineLabel(featured),
-          gradeLabel: _gradeLabel(featured.targetGrade),
-          onTap: () => _openNotice(context, ref, featured),
-        );
+    return timetableAsync.when(
+      data: (entries) {
+        final classInfo = _classInfoForNow(entries, now);
+        return _TodayClassHero(info: classInfo, onTap: onOpenSchedule);
       },
       loading: () => const _LoadingBlock(height: 214),
-      error: (error, stackTrace) => const SizedBox.shrink(),
+      error: (error, stackTrace) => _TodayClassHero(
+        info: const _HomeClassInfo(
+          state: _HomeClassState.unavailable,
+          title: '시간표를 불러오지 못했어요',
+          detail: '일정 화면에서 다시 확인해 주세요.',
+        ),
+        onTap: onOpenSchedule,
+      ),
     );
   }
 
@@ -164,11 +170,7 @@ class HomeScreen extends ConsumerWidget {
   ) {
     return noticesAsync.when(
       data: (notices) {
-        final featuredId = _featuredNotice(notices)?.id;
-        final recent = _recentNotices(
-          notices,
-          excludedId: featuredId,
-        ).take(2).toList();
+        final recent = _recentNotices(notices).take(3).toList();
         if (recent.isEmpty) {
           return const _EmptyRow(
             icon: Icons.article_outlined,
@@ -189,7 +191,7 @@ class HomeScreen extends ConsumerWidget {
           ],
         );
       },
-      loading: () => const _LoadingRows(count: 2),
+      loading: () => const _LoadingRows(count: 3),
       error: (error, stackTrace) =>
           _InlineError(onRetry: () => ref.invalidate(homeNoticesProvider)),
     );
@@ -267,20 +269,79 @@ class HomeScreen extends ConsumerWidget {
     onOpenNotices();
   }
 
-  static Notice? _featuredNotice(List<Notice> notices) {
-    for (final notice in notices) {
-      if (notice.isPinned) return notice;
-    }
-    for (final notice in notices) {
-      if (notice.noticeType == 'NOTICE') return notice;
-    }
-    return null;
+  static List<Notice> _recentNotices(List<Notice> notices) {
+    final sorted = notices.toList();
+    sorted.sort((a, b) {
+      if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+      return b.createdAt.compareTo(a.createdAt);
+    });
+    return sorted;
   }
 
-  static List<Notice> _recentNotices(List<Notice> notices, {int? excludedId}) {
-    final sorted = notices.where((notice) => notice.id != excludedId).toList();
-    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return sorted;
+  static _HomeClassInfo _classInfoForNow(
+    List<TimetableEntry> entries,
+    DateTime now,
+  ) {
+    final day = switch (now.weekday) {
+      DateTime.monday => 'MONDAY',
+      DateTime.tuesday => 'TUESDAY',
+      DateTime.wednesday => 'WEDNESDAY',
+      DateTime.thursday => 'THURSDAY',
+      DateTime.friday => 'FRIDAY',
+      _ => null,
+    };
+    final todayEntries =
+        entries.where((entry) => entry.dayOfWeek == day).toList()
+          ..sort((a, b) => a.startPeriod.compareTo(b.startPeriod));
+
+    for (final entry in todayEntries) {
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        8 + entry.startPeriod,
+      );
+      final end = DateTime(now.year, now.month, now.day, 9 + entry.endPeriod);
+      if (!now.isBefore(start) && now.isBefore(end)) {
+        return _HomeClassInfo(
+          state: _HomeClassState.current,
+          title: entry.subjectName,
+          detail: _classDetail(entry),
+        );
+      }
+      if (now.isBefore(start)) {
+        return _HomeClassInfo(
+          state: _HomeClassState.next,
+          title: entry.subjectName,
+          detail: _classDetail(entry),
+          minutesUntil: start.difference(now).inMinutes,
+        );
+      }
+    }
+
+    if (todayEntries.isNotEmpty) {
+      return const _HomeClassInfo(
+        state: _HomeClassState.finished,
+        title: '오늘 수업이 모두 끝났어요',
+        detail: '수고했어요. 다음 일정도 확인해 보세요.',
+      );
+    }
+    return _HomeClassInfo(
+      state: entries.isEmpty ? _HomeClassState.empty : _HomeClassState.noClass,
+      title: entries.isEmpty ? '개인 시간표를 등록해 주세요' : '오늘은 수업이 없어요',
+      detail: entries.isEmpty
+          ? '시간표를 등록하면 다음 수업을 바로 알려드려요.'
+          : '다가오는 학사일정을 확인해 보세요.',
+    );
+  }
+
+  static String _classDetail(TimetableEntry entry) {
+    final startHour = 8 + entry.startPeriod;
+    final endHour = 9 + entry.endPeriod;
+    final location = entry.classroom.trim().isEmpty
+        ? ''
+        : ' · ${entry.classroom}';
+    return '${startHour.toString().padLeft(2, '0')}:00–${endHour.toString().padLeft(2, '0')}:00$location';
   }
 
   static List<CalendarEvent> _upcomingEvents(List<CalendarEvent> events) {
@@ -303,17 +364,6 @@ class HomeScreen extends ConsumerWidget {
     return sorted;
   }
 
-  static String? _noticeDeadlineLabel(Notice notice) {
-    final rawDate = notice.eventStartDate ?? notice.eventEndDate;
-    final date = rawDate == null ? null : DateTime.tryParse(rawDate);
-    if (date == null) return null;
-    final days = DateUtils.dateOnly(
-      date,
-    ).difference(DateUtils.dateOnly(DateTime.now())).inDays;
-    if (days < 0) return null;
-    return days == 0 ? '오늘 마감' : '마감 D-$days';
-  }
-
   static String _eventDDayLabel(CalendarEvent event) {
     final today = DateUtils.dateOnly(DateTime.now());
     final start = DateTime.tryParse(event.startDate);
@@ -326,19 +376,6 @@ class HomeScreen extends ConsumerWidget {
     final days = DateUtils.dateOnly(start).difference(today).inDays;
     if (days == 0) return 'D-DAY';
     return days > 0 ? 'D-$days' : '';
-  }
-
-  static String _gradeLabel(String grade) {
-    switch (grade) {
-      case 'GRADE_1':
-        return '1학년';
-      case 'GRADE_2':
-        return '2학년';
-      case 'GRADE_3':
-        return '3학년';
-      default:
-        return '전체 학년';
-    }
   }
 
   static bool _isNew(String createdAt) {
@@ -417,23 +454,50 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-class _PinnedNoticeHero extends StatelessWidget {
-  const _PinnedNoticeHero({
-    required this.notice,
-    required this.deadlineLabel,
-    required this.gradeLabel,
-    required this.onTap,
+enum _HomeClassState { current, next, finished, noClass, empty, unavailable }
+
+class _HomeClassInfo {
+  const _HomeClassInfo({
+    required this.state,
+    required this.title,
+    required this.detail,
+    this.minutesUntil,
   });
 
-  final Notice notice;
-  final String? deadlineLabel;
-  final String gradeLabel;
+  final _HomeClassState state;
+  final String title;
+  final String detail;
+  final int? minutesUntil;
+}
+
+class _TodayClassHero extends StatelessWidget {
+  const _TodayClassHero({required this.info, required this.onTap});
+
+  final _HomeClassInfo info;
   final VoidCallback onTap;
+
+  String get _eyebrow => switch (info.state) {
+    _HomeClassState.current => '현재 수업',
+    _HomeClassState.next => '다음 수업',
+    _HomeClassState.finished => '오늘의 수업',
+    _HomeClassState.noClass => '오늘의 수업',
+    _HomeClassState.empty => '오늘의 수업',
+    _HomeClassState.unavailable => '오늘의 수업',
+  };
+
+  IconData get _icon => switch (info.state) {
+    _HomeClassState.current => Icons.play_circle_outline_rounded,
+    _HomeClassState.next => Icons.schedule_rounded,
+    _HomeClassState.finished => Icons.check_circle_outline_rounded,
+    _HomeClassState.noClass => Icons.free_breakfast_outlined,
+    _HomeClassState.empty => Icons.calendar_month_outlined,
+    _HomeClassState.unavailable => Icons.sync_problem_rounded,
+  };
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: HomeScreen._navy,
+      color: HomeScreen._blue,
       borderRadius: BorderRadius.circular(8),
       elevation: 2,
       shadowColor: HomeScreen._navy.withValues(alpha: 0.16),
@@ -446,8 +510,8 @@ class _PinnedNoticeHero extends StatelessWidget {
               right: 18,
               bottom: 18,
               child: Icon(
-                Icons.campaign_outlined,
-                size: 142,
+                Icons.auto_stories_outlined,
+                size: 132,
                 color: Colors.white12,
               ),
             ),
@@ -456,71 +520,72 @@ class _PinnedNoticeHero extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: HomeScreen._coral,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          '필독',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      Icon(_icon, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        _eyebrow,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      if (deadlineLabel != null)
-                        Text(
-                          deadlineLabel!,
-                          style: const TextStyle(
-                            color: HomeScreen._coral,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                      const Spacer(),
+                      if (info.minutesUntil != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${info.minutesUntil}분 후',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 20),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 470),
                     child: Text(
-                      notice.title,
+                      info.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 26,
                         height: 1.3,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 10),
+                  Text(
+                    info.detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFDCE8FF),
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
                   Row(
                     children: [
-                      Text(
-                        gradeLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Container(width: 1, height: 16, color: Colors.white24),
-                      const SizedBox(width: 14),
                       const Text(
-                        '자세히 보기',
+                        '시간표 보기',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -537,7 +602,7 @@ class _PinnedNoticeHero extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.arrow_forward_rounded,
-                          color: HomeScreen._navy,
+                          color: HomeScreen._blue,
                           size: 20,
                         ),
                       ),
