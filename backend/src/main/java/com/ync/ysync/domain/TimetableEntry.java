@@ -23,6 +23,10 @@ public class TimetableEntry {
     @Setter
     private Grade grade;
 
+    @Column(nullable = false, columnDefinition = "int default 1")
+    @Setter
+    private int classNumber = 1;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Setter
@@ -49,8 +53,9 @@ public class TimetableEntry {
     private int endPeriod;
 
     @Builder
-    public TimetableEntry(Grade grade, DayOfWeek dayOfWeek, String subjectName, String professorName, String classroom, int startPeriod, int endPeriod) {
+    public TimetableEntry(Grade grade, int classNumber, DayOfWeek dayOfWeek, String subjectName, String professorName, String classroom, int startPeriod, int endPeriod) {
         this.grade = grade;
+        this.classNumber = classNumber;
         this.dayOfWeek = dayOfWeek;
         this.subjectName = subjectName;
         this.professorName = professorName;

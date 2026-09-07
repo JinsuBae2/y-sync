@@ -90,8 +90,8 @@ public class PersonalTimetableService {
     }
 
     private void validate(DayOfWeek dayOfWeek, String subjectName, int startPeriod, int endPeriod) {
-        if (dayOfWeek == null || dayOfWeek.getValue() > DayOfWeek.FRIDAY.getValue()) {
-            throw new IllegalArgumentException("개인 시간표는 월요일부터 금요일까지만 등록할 수 있습니다.");
+        if (dayOfWeek == null || dayOfWeek.getValue() > DayOfWeek.SATURDAY.getValue()) {
+            throw new IllegalArgumentException("개인 시간표는 월요일부터 토요일까지만 등록할 수 있습니다.");
         }
         if (subjectName == null || subjectName.trim().isEmpty()) {
             throw new IllegalArgumentException("과목명을 입력해 주세요.");

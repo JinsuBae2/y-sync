@@ -18,14 +18,30 @@ final selectedTimetableGradeProvider =
       return SelectedTimetableGradeNotifier();
     });
 
+class SelectedTimetableClassNotifier extends Notifier<int> {
+  @override
+  int build() => 1;
+
+  void updateClass(int classNumber) => state = classNumber;
+}
+
+final selectedTimetableClassProvider =
+    NotifierProvider<SelectedTimetableClassNotifier, int>(
+      SelectedTimetableClassNotifier.new,
+    );
+
 // 💡 선택한 학년의 시간표 데이터를 서버로부터 실시간 페치하는 FutureProvider
 final timetableEntriesProvider = FutureProvider<List<TimetableEntry>>((
   ref,
 ) async {
   final dio = ref.watch(dioProvider);
   final grade = ref.watch(selectedTimetableGradeProvider);
+  final classNumber = ref.watch(selectedTimetableClassProvider);
 
-  final response = await dio.get('/timetable/$grade');
+  final response = await dio.get(
+    '/timetable/$grade',
+    queryParameters: {'classNumber': classNumber},
+  );
   final List<dynamic> data = response.data as List<dynamic>;
   return data.map((json) => TimetableEntry.fromJson(json)).toList();
 });
@@ -46,6 +62,7 @@ class TimetableNotifier {
 
   Future<void> createEntry({
     required String grade,
+    required int classNumber,
     required String dayOfWeek,
     required String subjectName,
     required String professorName,
@@ -59,6 +76,7 @@ class TimetableNotifier {
         '/timetable',
         data: {
           'grade': grade,
+          'classNumber': classNumber,
           'dayOfWeek': dayOfWeek,
           'subjectName': subjectName,
           'professorName': professorName,
@@ -82,6 +100,7 @@ class TimetableNotifier {
   Future<void> updateEntry({
     required int id,
     required String grade,
+    required int classNumber,
     required String dayOfWeek,
     required String subjectName,
     required String professorName,
@@ -95,6 +114,7 @@ class TimetableNotifier {
         '/timetable/$id',
         data: {
           'grade': grade,
+          'classNumber': classNumber,
           'dayOfWeek': dayOfWeek,
           'subjectName': subjectName,
           'professorName': professorName,

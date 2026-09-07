@@ -1,6 +1,7 @@
 class TimetableEntry {
   final int id;
   final String grade; // GRADE_1, GRADE_2, GRADE_3
+  final int classNumber;
   final String dayOfWeek; // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY
   final String subjectName;
   final String professorName;
@@ -11,6 +12,7 @@ class TimetableEntry {
   TimetableEntry({
     required this.id,
     required this.grade,
+    this.classNumber = 1,
     required this.dayOfWeek,
     required this.subjectName,
     required this.professorName,
@@ -23,6 +25,7 @@ class TimetableEntry {
     return TimetableEntry(
       id: json['id'],
       grade: json['grade'] ?? 'PERSONAL',
+      classNumber: json['classNumber'] ?? 1,
       dayOfWeek: json['dayOfWeek'],
       subjectName: json['subjectName'],
       professorName: json['professorName'],
@@ -35,6 +38,7 @@ class TimetableEntry {
   Map<String, dynamic> toJson() {
     return {
       'grade': grade,
+      'classNumber': classNumber,
       'dayOfWeek': dayOfWeek,
       'subjectName': subjectName,
       'professorName': professorName,
