@@ -402,7 +402,8 @@ public class MemberService {
                     if (column > 0) {
                         csv.append(',');
                     }
-                    String value = formatter.formatCellValue(row.getCell(column), evaluator)
+                    var cell = row.getCell(column);
+                    String value = cell == null ? "" : formatter.formatCellValue(cell, evaluator)
                             .replace('\r', ' ').replace('\n', ' ');
                     csv.append(escapeCsvValue(value));
                 }
@@ -529,11 +530,11 @@ public class MemberService {
             memberRepository.saveAll(membersToSave);
 
             CsvImportResult result = new CsvImportResult(totalCount, membersToSave.size(), duplicateCount, errors);
-            log.info("CSV 일괄 학생 사전등록 완료 - 신규 {}명, 중복 {}명, 오류 {}건",
+            log.info("학생 명단 일괄 사전등록 완료 - 신규 {}명, 중복 {}명, 오류 {}건",
                     result.createdCount(), result.duplicateCount(), result.errorCount());
             return result;
         } catch (Exception e) {
-            throw new RuntimeException("CSV 파일 파싱 및 등록 중 오류가 발생했습니다: " + e.getMessage(), e);
+            throw new RuntimeException("학생 명단 파일 파싱 및 등록 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
     }
 

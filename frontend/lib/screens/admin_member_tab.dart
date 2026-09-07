@@ -405,7 +405,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                 title: const _RegistrationDialogHeader(
                   icon: Icons.group_add_rounded,
                   title: '학생 일괄 등록',
-                  subtitle: 'CSV 파일을 선택하거나 명단을 직접 붙여넣으세요.',
+                  subtitle: 'Excel·CSV 파일을 선택하거나 명단을 직접 붙여넣으세요.',
                 ),
                 content: SizedBox(
                   width: 450,
@@ -520,7 +520,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                         CrossAxisAlignment.stretch,
                                     children: [
                                       const Text(
-                                        '첫 줄에 학번과 이름 헤더를 포함해 주세요. 다른 열은 자동으로 제외됩니다.',
+                                        '헤더가 있으면 열 순서를 자동 인식합니다. 없으면 학번,이름,역할 순서로 입력해 주세요.',
                                         style: TextStyle(
                                           color: Colors.grey,
                                           fontSize: 11,

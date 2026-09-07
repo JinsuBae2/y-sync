@@ -155,7 +155,6 @@ class MemberAdminSecurityTest {
             var student = sheet.createRow(1);
             student.createCell(0).setCellValue("010-1234-5678");
             student.createCell(1).setCellValue("엑셀학생");
-            student.createCell(2).setCellValue("대구광역시");
             student.createCell(3).setCellValue("2305004");
             workbook.write(output);
             excelBytes = output.toByteArray();

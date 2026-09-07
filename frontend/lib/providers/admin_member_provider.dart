@@ -182,7 +182,7 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
           e.response?.data['message'] != null) {
         throw Exception(e.response?.data['message']);
       }
-      throw Exception('CSV 파일 업로드 중 오류가 발생했습니다.');
+      throw Exception('학생 명단 파일 업로드 중 오류가 발생했습니다.');
     }
   }
 
