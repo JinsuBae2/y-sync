@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +52,46 @@ public class PersonalTimetableService {
                 .startPeriod(startPeriod)
                 .endPeriod(endPeriod)
                 .build());
+    }
+
+    @Transactional
+    public List<PersonalTimetableEntry> createEntries(
+            Long memberId,
+            List<EntryDraft> drafts) {
+        if (drafts == null || drafts.isEmpty()) {
+            throw new IllegalArgumentException("추가할 수업을 선택해 주세요.");
+        }
+        if (drafts.size() > 50) {
+            throw new IllegalArgumentException("수업은 한 번에 50개까지 추가할 수 있습니다.");
+        }
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
+        Set<String> occupiedPeriods = new HashSet<>();
+        for (PersonalTimetableEntry entry : personalTimetableEntryRepository.findAllByMemberId(memberId)) {
+            addOccupiedPeriods(occupiedPeriods, entry.getDayOfWeek(), entry.getStartPeriod(), entry.getEndPeriod());
+        }
+
+        List<PersonalTimetableEntry> entries = drafts.stream().map(draft -> {
+            validate(draft.dayOfWeek(), draft.subjectName(), draft.startPeriod(), draft.endPeriod());
+            for (int period = draft.startPeriod(); period <= draft.endPeriod(); period++) {
+                if (!occupiedPeriods.add(draft.dayOfWeek() + ":" + period)) {
+                    throw new IllegalArgumentException(
+                            String.format("%s %d~%d교시에 이미 다른 수업이 있습니다.",
+                                    draft.dayOfWeek(), draft.startPeriod(), draft.endPeriod()));
+                }
+            }
+            return PersonalTimetableEntry.builder()
+                    .member(member)
+                    .dayOfWeek(draft.dayOfWeek())
+                    .subjectName(draft.subjectName().trim())
+                    .professorName(normalizeOptional(draft.professorName(), "교수명"))
+                    .classroom(normalizeOptional(draft.classroom(), "강의실"))
+                    .startPeriod(draft.startPeriod())
+                    .endPeriod(draft.endPeriod())
+                    .build();
+        }).toList();
+        return personalTimetableEntryRepository.saveAll(entries);
     }
 
     @Transactional
@@ -113,5 +155,20 @@ public class PersonalTimetableService {
             throw new IllegalArgumentException(fieldName + "은 100자 이하로 입력해 주세요.");
         }
         return normalized;
+    }
+
+    private void addOccupiedPeriods(Set<String> occupiedPeriods, DayOfWeek dayOfWeek, int startPeriod, int endPeriod) {
+        for (int period = startPeriod; period <= endPeriod; period++) {
+            occupiedPeriods.add(dayOfWeek + ":" + period);
+        }
+    }
+
+    public record EntryDraft(
+            DayOfWeek dayOfWeek,
+            String subjectName,
+            String professorName,
+            String classroom,
+            int startPeriod,
+            int endPeriod) {
     }
 }
