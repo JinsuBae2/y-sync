@@ -177,6 +177,7 @@ public class DataInitializer implements CommandLineRunner {
             List<TimetableEntry> timetables = new ArrayList<>();
             timetables.add(TimetableEntry.builder()
                     .grade(Grade.GRADE_1)
+                    .classNumber(1)
                     .dayOfWeek(java.time.DayOfWeek.MONDAY)
                     .subjectName("모바일 앱 개발")
                     .professorName("김철수 교수")
@@ -186,6 +187,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
             timetables.add(TimetableEntry.builder()
                     .grade(Grade.GRADE_1)
+                    .classNumber(1)
                     .dayOfWeek(java.time.DayOfWeek.MONDAY)
                     .subjectName("데이터베이스 실무")
                     .professorName("이영희 교수")
@@ -195,6 +197,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
             timetables.add(TimetableEntry.builder()
                     .grade(Grade.GRADE_1)
+                    .classNumber(1)
                     .dayOfWeek(java.time.DayOfWeek.TUESDAY)
                     .subjectName("서버 프레임워크")
                     .professorName("박민수 교수")
@@ -204,6 +207,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
             timetables.add(TimetableEntry.builder()
                     .grade(Grade.GRADE_2)
+                    .classNumber(1)
                     .dayOfWeek(java.time.DayOfWeek.MONDAY)
                     .subjectName("캡스톤 디자인")
                     .professorName("배진수 교수")

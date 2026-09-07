@@ -215,6 +215,8 @@ void main() {
     expect(find.text('학과 시간표'), findsOneWidget);
     expect(find.text('개인 시간표'), findsOneWidget);
     expect(find.text('1학년'), findsOneWidget);
+    expect(find.text('1반'), findsOneWidget);
+    expect(find.text('2반'), findsOneWidget);
     expect(find.text('모바일 프로그래밍'), findsOneWidget);
 
     await tester.tap(find.text('개인 시간표'));
@@ -224,7 +226,19 @@ void main() {
     expect(find.byTooltip('내 수업 추가'), findsOneWidget);
     await tester.tap(find.byTooltip('내 수업 추가'));
     await tester.pumpAndSettle();
+    expect(find.text('학과 시간표에서 선택'), findsOneWidget);
+    expect(find.text('직접 입력'), findsOneWidget);
+
+    await tester.tap(find.text('학과 시간표에서 선택'));
+    await tester.pumpAndSettle();
+    expect(find.text('학년·반 선택'), findsOneWidget);
+    await tester.tap(find.text('수업 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('1학년 1반 수업'), findsOneWidget);
+    await tester.tap(find.text('모바일 프로그래밍'));
+    await tester.pumpAndSettle();
     expect(find.text('내 수업 추가'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '모바일 프로그래밍'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

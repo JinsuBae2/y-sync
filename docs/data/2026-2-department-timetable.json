@@ -1,0 +1,47 @@
+[
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"MONDAY","subjectName":"파이썬응용","professorName":"조정현","classroom":"모바일소프트웨어실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"MONDAY","subjectName":"C기초","professorName":"이명섭","classroom":"데이터베이스실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"MONDAY","subjectName":"C기초","professorName":"이명섭","classroom":"데이터베이스실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"MONDAY","subjectName":"파이썬응용","professorName":"조정현","classroom":"모바일소프트웨어실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"MONDAY","subjectName":"VIBE코딩","professorName":"오형준","classroom":"모바일 인터넷 실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_2","classNumber":2,"dayOfWeek":"MONDAY","subjectName":"JSP","professorName":"김준형","classroom":"디지털컨텐츠실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_3","classNumber":1,"dayOfWeek":"MONDAY","subjectName":"iOS프로그래밍","professorName":"김원기","classroom":"디지털컨텐츠실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_3","classNumber":2,"dayOfWeek":"MONDAY","subjectName":"게임프로그래밍응용","professorName":"이승우","classroom":"시스템프로그래밍실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_3","classNumber":3,"dayOfWeek":"MONDAY","subjectName":"전공일본어회화(2)","professorName":"우에노 요시미","classroom":"리눅스실습실","startPeriod":2,"endPeriod":3},
+
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"TUESDAY","subjectName":"데이터베이스","professorName":"조정현","classroom":"모바일소프트웨어실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"TUESDAY","subjectName":"데이터베이스","professorName":"조정현","classroom":"모바일소프트웨어실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"TUESDAY","subjectName":"알고리즘과자료구조","professorName":"이명섭","classroom":"데이터베이스실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"TUESDAY","subjectName":"자바응용","professorName":"오형준","classroom":"모바일 인터넷 실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"TUESDAY","subjectName":"TOEIC(2)","professorName":"김민경","classroom":"데이터베이스실습실","startPeriod":8,"endPeriod":9},
+  {"grade":"GRADE_2","classNumber":2,"dayOfWeek":"TUESDAY","subjectName":"자바응용","professorName":"오형준","classroom":"모바일 인터넷 실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":2,"dayOfWeek":"TUESDAY","subjectName":"알고리즘과자료구조","professorName":"이명섭","classroom":"데이터베이스실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_3","classNumber":1,"dayOfWeek":"TUESDAY","subjectName":"캡스톤디자인(2)","professorName":"김준형","classroom":"디지털컨텐츠실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_3","classNumber":3,"dayOfWeek":"TUESDAY","subjectName":"프레젠테이션실무","professorName":"김준형","classroom":"리눅스실습실","startPeriod":2,"endPeriod":3},
+
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"WEDNESDAY","subjectName":"JSP","professorName":"김준형","classroom":"시스템프로그래밍실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":2,"dayOfWeek":"WEDNESDAY","subjectName":"VIBE코딩","professorName":"오형준","classroom":"모바일 인터넷 실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_3","classNumber":2,"dayOfWeek":"WEDNESDAY","subjectName":"IoT응용","professorName":"백태산","classroom":"디지털컨텐츠실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_3","classNumber":2,"dayOfWeek":"WEDNESDAY","subjectName":"알고리즘과자료구조","professorName":"류정필","classroom":"모바일 인터넷 실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_3","classNumber":3,"dayOfWeek":"WEDNESDAY","subjectName":"자바프로엠워크","professorName":"이복동","classroom":"리눅스실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_3","classNumber":3,"dayOfWeek":"WEDNESDAY","subjectName":"자바프레임워크프로젝트","professorName":"이복동","classroom":"리눅스실습실","startPeriod":5,"endPeriod":7},
+
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"THURSDAY","subjectName":"프롬프트엔지니어링","professorName":"김후불","classroom":"데이터베이스실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"THURSDAY","subjectName":"프롬프트엔지니어링","professorName":"김후불","classroom":"데이터베이스실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"THURSDAY","subjectName":"IoT기초","professorName":"백태산","classroom":"디지털컨텐츠실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":1,"dayOfWeek":"THURSDAY","subjectName":"AI이해","professorName":"김경민","classroom":"모바일 인터넷 실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_2","classNumber":2,"dayOfWeek":"THURSDAY","subjectName":"AI이해","professorName":"김경민","classroom":"모바일 인터넷 실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_2","classNumber":2,"dayOfWeek":"THURSDAY","subjectName":"IoT기초","professorName":"백태산","classroom":"디지털컨텐츠실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_3","classNumber":1,"dayOfWeek":"THURSDAY","subjectName":"AI프로젝트","professorName":"김경민","classroom":"모바일 인터넷 실습실","startPeriod":8,"endPeriod":9},
+
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"FRIDAY","subjectName":"자바스크립트","professorName":"이승우","classroom":"모바일 인터넷 실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"FRIDAY","subjectName":"클라우드&깃허브","professorName":"류정필","classroom":"모바일소프트웨어실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"FRIDAY","subjectName":"일본어","professorName":"우에노 요시미","classroom":"시스템프로그래밍실습실","startPeriod":8,"endPeriod":9},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"FRIDAY","subjectName":"클라우드&깃허브","professorName":"류정필","classroom":"모바일소프트웨어실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"FRIDAY","subjectName":"자바스크립트","professorName":"이승우","classroom":"모바일 인터넷 실습실","startPeriod":5,"endPeriod":7},
+  {"grade":"GRADE_3","classNumber":3,"dayOfWeek":"FRIDAY","subjectName":"JSP/Servlet","professorName":"김원기","classroom":"리눅스실습실","startPeriod":1,"endPeriod":3},
+  {"grade":"GRADE_3","classNumber":3,"dayOfWeek":"FRIDAY","subjectName":"웹서비스개발","professorName":"김원기","classroom":"리눅스실습실","startPeriod":5,"endPeriod":7},
+
+  {"grade":"GRADE_1","classNumber":1,"dayOfWeek":"SATURDAY","subjectName":"자동차구조입문","professorName":"임영찬","classroom":"사이버 강의","startPeriod":1,"endPeriod":2},
+  {"grade":"GRADE_1","classNumber":2,"dayOfWeek":"SATURDAY","subjectName":"자동차구조입문","professorName":"임영찬","classroom":"사이버 강의","startPeriod":3,"endPeriod":4}
+]

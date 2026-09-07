@@ -86,8 +86,10 @@ public class TimetableController {
 
     @Operation(summary = "학년별 학과 시간표 조회", description = "특정 학년의 시간표 목록을 조회합니다.")
     @GetMapping("/{grade}")
-    public ResponseEntity<List<TimetableEntry>> getTimetable(@PathVariable Grade grade) {
-        return ResponseEntity.ok(timetableService.getTimetable(grade));
+    public ResponseEntity<List<TimetableEntry>> getTimetable(
+            @PathVariable Grade grade,
+            @RequestParam(defaultValue = "1") int classNumber) {
+        return ResponseEntity.ok(timetableService.getTimetable(grade, classNumber));
     }
 
     @Operation(summary = "시간표 항목 추가 (관리자)", description = "관리자가 특정 학년의 시간표 항목을 추가합니다. 동일 교시 겹침 방지 검증을 거칩니다.")
@@ -96,6 +98,7 @@ public class TimetableController {
     public ResponseEntity<TimetableEntry> createTimetableEntry(@RequestBody TimetableRequest request) {
         TimetableEntry entry = timetableService.createTimetableEntry(
                 request.getGrade(),
+                request.getClassNumber(),
                 request.getDayOfWeek(),
                 request.getSubjectName(),
                 request.getProfessorName(),
@@ -104,6 +107,25 @@ public class TimetableController {
                 request.getEndPeriod()
         );
         return ResponseEntity.ok(entry);
+    }
+
+    @Operation(summary = "학과 시간표 전체 교체 (관리자)", description = "기존 학과 시간표를 검증된 목록으로 하나의 트랜잭션에서 교체합니다.")
+    @PutMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<TimetableEntry>> replaceTimetable(@RequestBody List<TimetableRequest> requests) {
+        List<TimetableEntry> entries = requests.stream()
+                .map(request -> TimetableEntry.builder()
+                        .grade(request.getGrade())
+                        .classNumber(request.getClassNumber())
+                        .dayOfWeek(request.getDayOfWeek())
+                        .subjectName(request.getSubjectName())
+                        .professorName(request.getProfessorName())
+                        .classroom(request.getClassroom())
+                        .startPeriod(request.getStartPeriod())
+                        .endPeriod(request.getEndPeriod())
+                        .build())
+                .toList();
+        return ResponseEntity.ok(timetableService.replaceAll(entries));
     }
 
     @Operation(summary = "시간표 항목 수정 (관리자)", description = "관리자가 기존 시간표 항목을 수정합니다. 본인을 제외한 겹침 검증을 수행합니다.")
@@ -115,6 +137,7 @@ public class TimetableController {
         TimetableEntry entry = timetableService.updateTimetableEntry(
                 id,
                 request.getGrade(),
+                request.getClassNumber(),
                 request.getDayOfWeek(),
                 request.getSubjectName(),
                 request.getProfessorName(),
@@ -136,6 +159,7 @@ public class TimetableController {
     @Data
     public static class TimetableRequest {
         private Grade grade;
+        private int classNumber = 1;
         private DayOfWeek dayOfWeek;
         private String subjectName;
         private String professorName;
