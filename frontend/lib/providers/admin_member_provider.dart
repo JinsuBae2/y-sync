@@ -3,6 +3,54 @@ import 'package:dio/dio.dart';
 import '../models/member.dart';
 import 'notice_provider.dart'; // dioProvider가 있는 곳
 
+class CsvImportError {
+  final int row;
+  final String loginId;
+  final String message;
+
+  const CsvImportError({
+    required this.row,
+    required this.loginId,
+    required this.message,
+  });
+
+  factory CsvImportError.fromJson(Map<String, dynamic> json) {
+    return CsvImportError(
+      row: json['row'] ?? 0,
+      loginId: json['loginId'] ?? '',
+      message: json['message'] ?? '알 수 없는 오류',
+    );
+  }
+}
+
+class CsvImportResult {
+  final int totalCount;
+  final int createdCount;
+  final int duplicateCount;
+  final List<CsvImportError> errors;
+
+  const CsvImportResult({
+    required this.totalCount,
+    required this.createdCount,
+    required this.duplicateCount,
+    required this.errors,
+  });
+
+  int get errorCount => errors.length;
+
+  factory CsvImportResult.fromJson(Map<String, dynamic> json) {
+    final rawErrors = json['errors'] as List<dynamic>? ?? const [];
+    return CsvImportResult(
+      totalCount: json['totalCount'] ?? 0,
+      createdCount: json['createdCount'] ?? 0,
+      duplicateCount: json['duplicateCount'] ?? 0,
+      errors: rawErrors
+          .map((item) => CsvImportError.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 class AdminMemberState {
   final List<Member> members;
   final int totalElements;
@@ -115,15 +163,19 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
   }
 
   // 💡 CSV 일괄 등록
-  Future<void> uploadCsv(List<int> bytes, String filename) async {
+  Future<CsvImportResult> uploadCsv(List<int> bytes, String filename) async {
     try {
       final dio = ref.read(dioProvider);
       final formData = FormData.fromMap({
         'file': MultipartFile.fromBytes(bytes, filename: filename),
       });
 
-      await dio.post('/admin/members/csv', data: formData);
+      final response = await dio.post('/admin/members/csv', data: formData);
+      final result = CsvImportResult.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
       await fetchMembers(); // 목록 갱신
+      return result;
     } catch (e) {
       if (e is DioException &&
           e.response?.data is Map &&

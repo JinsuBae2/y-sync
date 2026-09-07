@@ -55,14 +55,15 @@ public class AdminMemberController {
     }
 
     @PostMapping("/csv")
-    @Operation(summary = "학생 CSV 대량 일괄 등록", description = "학번,이름,역할이 적힌 CSV 파일을 업로드하여 학생들을 일괄 등록합니다.")
+    @Operation(summary = "학생 명단 대량 일괄 등록", description = "엑셀 또는 CSV 명단에서 학번과 이름 열을 찾아 학생들을 일괄 등록합니다.")
     public ResponseEntity<?> uploadCsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "파일이 비어있습니다."));
         }
         try {
-            memberService.createMembersByCsv(file.getInputStream(), currentRole(authentication));
-            return ResponseEntity.ok(Map.of("message", "CSV 일괄 사전 등록이 완료되었습니다."));
+            MemberService.CsvImportResult result = memberService.createMembersBySpreadsheet(
+                    file.getInputStream(), file.getOriginalFilename(), currentRole(authentication));
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("CSV 일괄 사전 등록 실패", e);
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

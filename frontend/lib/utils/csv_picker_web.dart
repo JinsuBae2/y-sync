@@ -5,7 +5,7 @@ import 'csv_picker.dart';
 Future<CsvPickerResult?> pickCsvFile() {
   final completer = Completer<CsvPickerResult?>();
   final uploadInput = html.FileUploadInputElement();
-  uploadInput.accept = '.csv';
+  uploadInput.accept = '.xlsx,.xls,.csv';
   uploadInput.click();
 
   uploadInput.onChange.listen((e) {

@@ -14,6 +14,155 @@ class AdminMemberTab extends ConsumerStatefulWidget {
   ConsumerState<AdminMemberTab> createState() => _AdminMemberTabState();
 }
 
+class _RegistrationDialogHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _RegistrationDialogHeader({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppDesignTokens.blue, Color(0xFF164687)],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppDesignTokens.blue.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppDesignTokens.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImportResultCard extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+
+  const _ImportResultCard({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              color: color,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppDesignTokens.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CsvUploadingIndicator extends StatelessWidget {
+  const _CsvUploadingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 38,
+            height: 38,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: AppDesignTokens.blue,
+            ),
+          ),
+          SizedBox(height: 18),
+          Text(
+            '학생 정보를 등록하고 있어요',
+            style: TextStyle(
+              color: AppDesignTokens.navy,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 6),
+          Text(
+            '파일 크기에 따라 잠시 시간이 걸릴 수 있습니다.',
+            style: TextStyle(color: AppDesignTokens.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
   final _searchController = TextEditingController();
   int _currentPage = 0;
@@ -92,19 +241,25 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
     final studentIdController = TextEditingController();
     final nameController = TextEditingController();
     String selectedRole = 'USER';
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
+              backgroundColor: AppDesignTokens.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(24),
               ),
-              title: const Text(
-                '학생 단건 등록',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+              title: const _RegistrationDialogHeader(
+                icon: Icons.person_add_alt_1_rounded,
+                title: '학생 등록',
+                subtitle: '가입 전에 사용할 학번과 이름을 등록해 주세요.',
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -114,8 +269,14 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: '학번',
-                      hintText: '숫자만 입력 (예: 2305009)',
+                      hintText: '예: 2305009',
                       prefixIcon: Icon(Icons.badge_outlined),
+                      filled: true,
+                      fillColor: AppDesignTokens.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -125,6 +286,12 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                       labelText: '이름',
                       hintText: '실명 입력',
                       prefixIcon: Icon(Icons.person_outline),
+                      filled: true,
+                      fillColor: AppDesignTokens.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -133,6 +300,12 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                     decoration: const InputDecoration(
                       labelText: '권한',
                       prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+                      filled: true,
+                      fillColor: AppDesignTokens.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                     items: const [
                       DropdownMenuItem(value: 'USER', child: Text('학생 (USER)')),
@@ -153,34 +326,53 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
                   child: const Text('취소', style: TextStyle(color: Colors.grey)),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    final studentId = studentIdController.text.trim();
-                    final name = nameController.text.trim();
-                    if (studentId.isEmpty || name.isEmpty) return;
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final studentId = studentIdController.text.trim();
+                          final name = nameController.text.trim();
+                          if (studentId.isEmpty || name.isEmpty) {
+                            _showErrorSnackBar('학번과 이름을 모두 입력해 주세요.');
+                            return;
+                          }
 
-                    try {
-                      await ref
-                          .read(adminMemberProvider.notifier)
-                          .createMember(studentId, name, selectedRole);
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        _showSuccessSnackBar('학생 사전 등록이 완료되었습니다.');
-                      }
-                    } catch (e) {
-                      _showErrorSnackBar(
-                        e.toString().replaceAll('Exception: ', ''),
-                      );
-                    }
-                  },
+                          setDialogState(() => isSubmitting = true);
+                          try {
+                            await ref
+                                .read(adminMemberProvider.notifier)
+                                .createMember(studentId, name, selectedRole);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              _showSuccessSnackBar('학생 사전 등록이 완료되었습니다.');
+                            }
+                          } catch (e) {
+                            _showErrorSnackBar(
+                              e.toString().replaceAll('Exception: ', ''),
+                            );
+                          } finally {
+                            if (context.mounted) {
+                              setDialogState(() => isSubmitting = false);
+                            }
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF164687),
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('등록'),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('학생 등록'),
                 ),
               ],
             );
@@ -197,6 +389,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -206,9 +399,13 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                title: const Text(
-                  '대량 학생 일괄 등록',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                backgroundColor: AppDesignTokens.surface,
+                titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                contentPadding: const EdgeInsets.fromLTRB(24, 18, 24, 8),
+                title: const _RegistrationDialogHeader(
+                  icon: Icons.group_add_rounded,
+                  title: '학생 일괄 등록',
+                  subtitle: 'CSV 파일을 선택하거나 명단을 직접 붙여넣으세요.',
                 ),
                 content: SizedBox(
                   width: 450,
@@ -220,21 +417,19 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                         labelColor: Color(0xFF164687),
                         unselectedLabelColor: Colors.grey,
                         tabs: [
-                          Tab(text: 'CSV 파일 업로드'),
+                          Tab(text: '명단 파일 업로드'),
                           Tab(text: '직접 붙여넣기'),
                         ],
                       ),
                       const SizedBox(height: 16),
                       Expanded(
-                        child: TabBarView(
-                          children: [
-                            // 탭 1: 파일 업로드
-                            Center(
-                              child: isUploading
-                                  ? const CircularProgressIndicator(
-                                      color: Color(0xFF164687),
-                                    )
-                                  : Column(
+                        child: isUploading
+                            ? const _CsvUploadingIndicator()
+                            : TabBarView(
+                                children: [
+                                  // 탭 1: 파일 업로드
+                                  Center(
+                                    child: Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
@@ -245,7 +440,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                         ),
                                         const SizedBox(height: 16),
                                         const Text(
-                                          '엑셀에서 CSV 형식으로 저장한\n파일을 선택해주세요.',
+                                          '학교에서 받은 Excel 또는 CSV\n명단 파일을 선택해 주세요.',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             color: Colors.grey,
@@ -254,7 +449,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                         ),
                                         const SizedBox(height: 8),
                                         const Text(
-                                          '형식: 학번,이름,역할(선택)',
+                                          '지원 형식: XLSX, XLS, CSV',
                                           style: TextStyle(
                                             color: Colors.blueGrey,
                                             fontSize: 11,
@@ -267,7 +462,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                             Icons.search_rounded,
                                             size: 18,
                                           ),
-                                          label: const Text('CSV 파일 선택'),
+                                          label: const Text('명단 파일 선택'),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(
                                               0xFF164687,
@@ -286,7 +481,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                                 setDialogState(
                                                   () => isUploading = true,
                                                 );
-                                                await ref
+                                                final importResult = await ref
                                                     .read(
                                                       adminMemberProvider
                                                           .notifier,
@@ -297,8 +492,8 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                                     );
                                                 if (context.mounted) {
                                                   Navigator.pop(context);
-                                                  _showSuccessSnackBar(
-                                                    'CSV 파일 내 학생들이 성공적으로 등록되었습니다.',
+                                                  _showCsvImportResult(
+                                                    importResult,
                                                   );
                                                 }
                                               }
@@ -318,43 +513,45 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                                         ),
                                       ],
                                     ),
-                            ),
-                            // 탭 2: 직접 붙여넣기
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                const Text(
-                                  '줄바꿈으로 구분하고 쉼표(,)로 학번과 이름을 나누어 입력해주세요.',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 11,
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: TextField(
-                                    controller: textController,
-                                    maxLines: null,
-                                    keyboardType: TextInputType.multiline,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 13,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText:
-                                          '예시:\n2305001,홍길동,USER\n2305002,김철수,ADMIN',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey.shade400,
+                                  // 탭 2: 직접 붙여넣기
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      const Text(
+                                        '첫 줄에 학번과 이름 헤더를 포함해 주세요. 다른 열은 자동으로 제외됩니다.',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 11,
+                                        ),
                                       ),
-                                      border: const OutlineInputBorder(),
-                                      contentPadding: const EdgeInsets.all(12),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: textController,
+                                          maxLines: null,
+                                          keyboardType: TextInputType.multiline,
+                                          style: const TextStyle(
+                                            fontFamily: 'monospace',
+                                            fontSize: 13,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                '예시:\n2305001,홍길동,USER\n2305002,김철수,ADMIN',
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey.shade400,
+                                            ),
+                                            border: const OutlineInputBorder(),
+                                            contentPadding:
+                                                const EdgeInsets.all(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                ],
+                              ),
                       ),
                     ],
                   ),
@@ -377,14 +574,12 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                             setDialogState(() => isUploading = true);
                             try {
                               final bytes = utf8.encode(text);
-                              await ref
+                              final importResult = await ref
                                   .read(adminMemberProvider.notifier)
                                   .uploadCsv(bytes, 'import.csv');
                               if (context.mounted) {
                                 Navigator.pop(context);
-                                _showSuccessSnackBar(
-                                  '입력하신 학생들이 성공적으로 등록되었습니다.',
-                                );
+                                _showCsvImportResult(importResult);
                               }
                             } catch (e) {
                               _showErrorSnackBar(
@@ -398,7 +593,16 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                       backgroundColor: const Color(0xFF164687),
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('일괄 등록'),
+                    child: isUploading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('일괄 등록'),
                   ),
                 ],
               ),
@@ -406,6 +610,114 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
           },
         );
       },
+    );
+  }
+
+  void _showCsvImportResult(CsvImportResult result) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppDesignTokens.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+        title: _RegistrationDialogHeader(
+          icon: result.errorCount == 0
+              ? Icons.check_circle_rounded
+              : Icons.fact_check_rounded,
+          title: '등록 결과',
+          subtitle: '총 ${result.totalCount}개 행의 처리가 완료되었습니다.',
+        ),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _ImportResultCard(
+                      label: '신규 등록',
+                      count: result.createdCount,
+                      color: const Color(0xFF1F9D68),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ImportResultCard(
+                      label: '중복 제외',
+                      count: result.duplicateCount,
+                      color: AppDesignTokens.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ImportResultCard(
+                      label: '오류',
+                      count: result.errorCount,
+                      color: AppDesignTokens.coral,
+                    ),
+                  ),
+                ],
+              ),
+              if (result.errors.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                const Text(
+                  '확인이 필요한 행',
+                  style: TextStyle(
+                    color: AppDesignTokens.navy,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 190),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF5F4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppDesignTokens.coral.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.all(12),
+                      itemCount: result.errors.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (_, index) {
+                        final error = result.errors[index];
+                        final id = error.loginId.isEmpty
+                            ? ''
+                            : ' · ${error.loginId}';
+                        return Text(
+                          '${error.row}행$id  ${error.message}',
+                          style: const TextStyle(
+                            color: Color(0xFF8B2D28),
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
     );
   }
 

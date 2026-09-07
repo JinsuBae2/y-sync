@@ -11,9 +11,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,11 +74,104 @@ class MemberAdminSecurityTest {
         ByteArrayInputStream csv = new ByteArrayInputStream(
                 "loginId,name,role\n2305001,관리대상,SUPER_ADMIN\n".getBytes(StandardCharsets.UTF_8));
 
+        MemberService.CsvImportResult result = memberService.createMembersByCsv(csv, MemberRole.ADMIN);
+
+        assertThat(result.createdCount()).isZero();
+        assertThat(result.errorCount()).isEqualTo(1);
+        assertThat(result.errors().getFirst().message()).contains("SUPER_ADMIN");
+        verify(memberRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void csv_등록은_신규_중복_오류를_구분한다() {
+        ByteArrayInputStream csv = new ByteArrayInputStream(("학번,이름,역할\n"
+                + "2305001,신규학생,USER\n"
+                + "2305002,기존학생,USER\n"
+                + "2305001,파일중복,USER\n"
+                + "not-number,오류학생,USER\n").getBytes(StandardCharsets.UTF_8));
+        Member existing = Member.builder()
+                .loginId("2305002")
+                .password("encoded-password")
+                .name("기존학생")
+                .role(MemberRole.USER)
+                .provider(AuthProvider.LOCAL)
+                .authType(AuthType.PASSWORD)
+                .isActivated(true)
+                .build();
+        when(memberRepository.findAllByLoginIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of(existing));
+
+        MemberService.CsvImportResult result = memberService.createMembersByCsv(csv, MemberRole.ADMIN);
+
+        assertThat(result.totalCount()).isEqualTo(4);
+        assertThat(result.createdCount()).isEqualTo(1);
+        assertThat(result.duplicateCount()).isEqualTo(2);
+        assertThat(result.errorCount()).isEqualTo(1);
+        assertThat(result.errors().getFirst().row()).isEqualTo(5);
+        verify(memberRepository).saveAll(org.mockito.ArgumentMatchers.anyCollection());
+    }
+
+    @Test
+    void csv_헤더_순서가_달라도_필요한_열만_자동으로_찾는다() {
+        ByteArrayInputStream csv = new ByteArrayInputStream(("이름,전화번호,주소,학번\n"
+                + "홍길동,010-1234-5678,대구광역시,2305003\n").getBytes(StandardCharsets.UTF_8));
+        when(memberRepository.findAllByLoginIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of());
+
+        MemberService.CsvImportResult result = memberService.createMembersByCsv(csv, MemberRole.ADMIN);
+
+        assertThat(result.createdCount()).isEqualTo(1);
+        assertThat(result.errorCount()).isZero();
+        verify(memberRepository).saveAll(org.mockito.ArgumentMatchers.argThat(members -> {
+            Member saved = ((List<Member>) members).getFirst();
+            return saved.getLoginId().equals("2305003")
+                    && saved.getName().equals("홍길동")
+                    && saved.getRole() == MemberRole.USER;
+        }));
+    }
+
+    @Test
+    void csv_필수_헤더가_없으면_등록을_중단한다() {
+        ByteArrayInputStream csv = new ByteArrayInputStream(
+                "이름,전화번호,주소\n홍길동,010-1234-5678,대구광역시\n".getBytes(StandardCharsets.UTF_8));
+
         assertThatThrownBy(() -> memberService.createMembersByCsv(csv, MemberRole.ADMIN))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("SUPER_ADMIN");
+                .hasMessageContaining("학번과 이름 열");
 
-        verify(memberRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        verify(memberRepository, never()).saveAll(org.mockito.ArgumentMatchers.anyCollection());
+    }
+
+    @Test
+    void excel_명단도_불필요한_열을_제외하고_등록한다() throws Exception {
+        byte[] excelBytes;
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("학생 명단");
+            var header = sheet.createRow(0);
+            header.createCell(0).setCellValue("전화번호");
+            header.createCell(1).setCellValue("이름");
+            header.createCell(2).setCellValue("주소");
+            header.createCell(3).setCellValue("학번");
+            var student = sheet.createRow(1);
+            student.createCell(0).setCellValue("010-1234-5678");
+            student.createCell(1).setCellValue("엑셀학생");
+            student.createCell(2).setCellValue("대구광역시");
+            student.createCell(3).setCellValue("2305004");
+            workbook.write(output);
+            excelBytes = output.toByteArray();
+        }
+        when(memberRepository.findAllByLoginIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of());
+
+        MemberService.CsvImportResult result = memberService.createMembersBySpreadsheet(
+                new ByteArrayInputStream(excelBytes), "students.xlsx", MemberRole.ADMIN);
+
+        assertThat(result.createdCount()).isEqualTo(1);
+        assertThat(result.errorCount()).isZero();
+        verify(memberRepository).saveAll(org.mockito.ArgumentMatchers.argThat(members -> {
+            Member saved = ((List<Member>) members).getFirst();
+            return saved.getLoginId().equals("2305004") && saved.getName().equals("엑셀학생");
+        }));
     }
 
     @Test
