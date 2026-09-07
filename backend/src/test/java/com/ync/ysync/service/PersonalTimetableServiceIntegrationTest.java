@@ -12,6 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,6 +59,26 @@ class PersonalTimetableServiceIntegrationTest {
         assertThrows(IllegalArgumentException.class, () ->
                 personalTimetableService.deleteEntry(entry.getId(), otherMember.getId()));
         assertEquals(1, personalTimetableService.getEntries(owner.getId()).size());
+    }
+
+    @Test
+    void createsSelectedClassesTogetherAndRollsBackAllWhenOneOverlaps() {
+        Member member = saveMember("personal-timetable-bulk");
+        List<PersonalTimetableService.EntryDraft> drafts = List.of(
+                new PersonalTimetableService.EntryDraft(
+                        DayOfWeek.MONDAY, "파이썬응용", "조교수", "모소", 1, 3),
+                new PersonalTimetableService.EntryDraft(
+                        DayOfWeek.TUESDAY, "데이터베이스", "조교수", "모소", 5, 7));
+
+        assertEquals(2, personalTimetableService.createEntries(member.getId(), drafts).size());
+        assertThrows(IllegalArgumentException.class, () -> personalTimetableService.createEntries(
+                member.getId(),
+                List.of(
+                        new PersonalTimetableService.EntryDraft(
+                                DayOfWeek.WEDNESDAY, "JSP", "김교수", "시프", 1, 3),
+                        new PersonalTimetableService.EntryDraft(
+                                DayOfWeek.WEDNESDAY, "VIBE코딩", "오교수", "모인", 3, 5))));
+        assertEquals(2, personalTimetableService.getEntries(member.getId()).size());
     }
 
     private Member saveMember(String loginId) {

@@ -166,6 +166,28 @@ class TimetableNotifier {
     );
   }
 
+  Future<void> createPersonalEntries(List<TimetableEntry> entries) async {
+    await _runPersonalRequest(
+      () => ref
+          .read(dioProvider)
+          .post(
+            '/timetable/personal/bulk',
+            data: entries
+                .map(
+                  (entry) => {
+                    'dayOfWeek': entry.dayOfWeek,
+                    'subjectName': entry.subjectName,
+                    'professorName': entry.professorName,
+                    'classroom': entry.classroom,
+                    'startPeriod': entry.startPeriod,
+                    'endPeriod': entry.endPeriod,
+                  },
+                )
+                .toList(),
+          ),
+    );
+  }
+
   Future<void> updatePersonalEntry({
     required int id,
     required String dayOfWeek,

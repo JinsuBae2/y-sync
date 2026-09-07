@@ -59,6 +59,25 @@ public class TimetableController {
         return ResponseEntity.ok(PersonalTimetableResponse.from(entry));
     }
 
+    @Operation(summary = "개인 시간표 일괄 추가", description = "선택한 수업을 개인 시간표에 하나의 트랜잭션으로 추가합니다.")
+    @PostMapping("/personal/bulk")
+    public ResponseEntity<List<PersonalTimetableResponse>> createPersonalTimetableEntries(
+            @RequestBody List<@Valid PersonalTimetableRequest> requests) {
+        List<PersonalTimetableService.EntryDraft> drafts = requests.stream()
+                .map(request -> new PersonalTimetableService.EntryDraft(
+                        request.getDayOfWeek(),
+                        request.getSubjectName(),
+                        request.getProfessorName(),
+                        request.getClassroom(),
+                        request.getStartPeriod(),
+                        request.getEndPeriod()))
+                .toList();
+        return ResponseEntity.ok(personalTimetableService.createEntries(requiredMemberId(), drafts)
+                .stream()
+                .map(PersonalTimetableResponse::from)
+                .toList());
+    }
+
     @Operation(summary = "개인 시간표 수정", description = "로그인한 사용자가 소유한 개인 시간표 수업을 수정합니다.")
     @PutMapping("/personal/{id}")
     public ResponseEntity<PersonalTimetableResponse> updatePersonalTimetableEntry(

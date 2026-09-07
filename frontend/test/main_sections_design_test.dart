@@ -168,6 +168,16 @@ void main() {
                 startPeriod: 1,
                 endPeriod: 2,
               ),
+              TimetableEntry(
+                id: 3,
+                grade: 'GRADE_1',
+                dayOfWeek: 'TUESDAY',
+                subjectName: '데이터베이스',
+                professorName: '이교수',
+                classroom: '데이터베이스실습실',
+                startPeriod: 3,
+                endPeriod: 4,
+              ),
             ],
           ),
           personalTimetableEntriesProvider.overrideWith(
@@ -217,7 +227,20 @@ void main() {
     expect(find.text('1학년'), findsOneWidget);
     expect(find.text('1반'), findsOneWidget);
     expect(find.text('2반'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('timetable-day-0')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-timetable-day-list')),
+      findsOneWidget,
+    );
     expect(find.text('모바일 프로그래밍'), findsOneWidget);
+    expect(find.text('공학관 301호 · 김교수 교수'), findsOneWidget);
+
+    await tester.tap(find.text('주간'));
+    await tester.pumpAndSettle();
+    expect(find.text('9:00'), findsOneWidget);
+    expect(find.textContaining('am'), findsNothing);
+    expect(find.textContaining('pm'), findsNothing);
 
     await tester.tap(find.text('개인 시간표'));
     await tester.pumpAndSettle();
@@ -235,10 +258,10 @@ void main() {
     await tester.tap(find.text('수업 보기'));
     await tester.pumpAndSettle();
     expect(find.text('1학년 1반 수업'), findsOneWidget);
-    await tester.tap(find.text('모바일 프로그래밍'));
+    await tester.tap(find.byKey(const ValueKey('department-course-1')));
+    await tester.tap(find.byKey(const ValueKey('department-course-3')));
     await tester.pumpAndSettle();
-    expect(find.text('내 수업 추가'), findsOneWidget);
-    expect(find.widgetWithText(TextField, '모바일 프로그래밍'), findsOneWidget);
+    expect(find.text('선택한 수업 2개 추가'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
