@@ -10,6 +10,7 @@ import '../services/push_notification_service.dart';
 import '../screens/login_screen.dart';
 import '../utils/platform_file_multipart.dart';
 import 'server_availability_provider.dart';
+import 'session_provider.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -42,6 +43,7 @@ final dioProvider = Provider<Dio>((ref) {
         if (e.response?.statusCode == 401) {
           // 💡 401 Unauthorized 발생 시 좀비 토큰일 수 있으므로 로컬 세션(토큰) 삭제 및 강제 로그인 창 이동
           final storage = ref.read(secureStorageProvider);
+          ref.read(sessionMemberIdProvider.notifier).clear();
           await storage.delete(key: 'jwt_token');
 
           // 순환 참조(Circular Dependency) 방지를 위해 authProvider 대신 전역 네비게이터를 사용합니다.

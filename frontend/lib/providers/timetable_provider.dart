@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/timetable_entry.dart';
 import 'notice_provider.dart';
+import 'session_provider.dart';
 
 // 💡 시간표 조회용 학년 분류 상태 관리 (GRADE_1, GRADE_2, GRADE_3)
 class SelectedTimetableGradeNotifier extends Notifier<String> {
@@ -50,6 +51,8 @@ final timetableEntriesProvider = FutureProvider<List<TimetableEntry>>((
 final personalTimetableEntriesProvider = FutureProvider<List<TimetableEntry>>((
   ref,
 ) async {
+  final memberId = ref.watch(sessionMemberIdProvider);
+  if (memberId == null) return const [];
   final dio = ref.watch(dioProvider);
   final response = await dio.get('/timetable/personal');
   final List<dynamic> data = response.data as List<dynamic>;

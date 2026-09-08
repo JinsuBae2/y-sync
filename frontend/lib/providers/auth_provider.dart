@@ -2,8 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
 import 'notice_provider.dart';
-import 'mypage_provider.dart';
-import 'community_provider.dart';
+import 'session_provider.dart';
 
 import '../services/push_notification_service.dart'; // 💡 FCM 추가
 
@@ -34,7 +33,10 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       final storage = ref.read(secureStorageProvider);
       final token = await storage.read(key: 'jwt_token');
 
-      if (token == null) return null;
+      if (token == null) {
+        ref.read(sessionMemberIdProvider.notifier).clear();
+        return null;
+      }
 
       final dio = ref.read(dioProvider);
       final response = await dio.get('/members/me');
@@ -42,11 +44,14 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       // 💡 로그인 상태가 확인되면 FCM 토큰을 서버로 전송
       await _sendFcmToken(dio);
 
-      return Member.fromJson(response.data);
+      final member = Member.fromJson(response.data);
+      ref.read(sessionMemberIdProvider.notifier).activate(member.id);
+      return member;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) {
         // 토큰 만료 등
         final storage = ref.read(secureStorageProvider);
+        ref.read(sessionMemberIdProvider.notifier).clear();
         await storage.delete(key: 'jwt_token');
         return null;
       }
@@ -55,6 +60,8 @@ class AuthNotifier extends AsyncNotifier<Member?> {
   }
 
   Future<void> login(String loginId, String password) async {
+    ref.read(sessionMemberIdProvider.notifier).clear();
+    state = const AsyncValue.loading();
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.post(
@@ -71,6 +78,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       final member = await _checkLoginStatus();
       state = AsyncValue.data(member);
     } catch (e) {
+      state = const AsyncValue.data(null);
       rethrow;
     }
   }
@@ -79,6 +87,8 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     String accessToken,
     String provider,
   ) async {
+    ref.read(sessionMemberIdProvider.notifier).clear();
+    state = const AsyncValue.loading();
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.post(
@@ -96,11 +106,14 @@ class AuthNotifier extends AsyncNotifier<Member?> {
         state = AsyncValue.data(member);
         return null; // 바로 로그인 성공
       } else if (response.statusCode == 202) {
+        state = const AsyncValue.data(null);
         // 미가입자 -> 추가 정보 필요
         return response.data; // socialId, provider 포함
       }
+      state = const AsyncValue.data(null);
       return null;
     } catch (e) {
+      state = const AsyncValue.data(null);
       if (e is DioException &&
           e.response?.data is Map &&
           e.response?.data['message'] != null) {
@@ -117,6 +130,8 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     String provider, {
     String? password,
   }) async {
+    ref.read(sessionMemberIdProvider.notifier).clear();
+    state = const AsyncValue.loading();
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.post(
@@ -138,6 +153,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       final member = await _checkLoginStatus();
       state = AsyncValue.data(member);
     } catch (e) {
+      state = const AsyncValue.data(null);
       if (e is DioException &&
           e.response?.statusCode == 400 &&
           e.response?.data['message'] == 'REQUIRE_PASSWORD') {
@@ -271,6 +287,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
   }
 
   Future<void> logout() async {
+    ref.read(sessionMemberIdProvider.notifier).clear();
     state = const AsyncValue.loading();
     try {
       final dio = ref.read(dioProvider);
@@ -287,12 +304,6 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       final storage = ref.read(secureStorageProvider);
       await storage.delete(key: 'jwt_token');
       state = const AsyncValue.data(null);
-    } finally {
-      // 💡 [로그아웃 캐시 찌꺼기 제거] 로그아웃 후 다른 사용자로 재로그인 시
-      // 이전 사용자의 캐시된 데이터가 노출되는 현상을 막기 위해 전역 상태들을 강제 무효화합니다.
-      ref.invalidate(myPageProvider);
-      ref.invalidate(noticesProvider);
-      ref.invalidate(communityPostsProvider);
     }
   }
 }
