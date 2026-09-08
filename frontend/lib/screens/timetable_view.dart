@@ -15,6 +15,12 @@ class TimetableView extends ConsumerStatefulWidget {
 }
 
 class _TimetableViewState extends ConsumerState<TimetableView> {
+  static const _gridDayStyle = TextStyle(
+    color: AppDesignTokens.navy,
+    fontSize: 13,
+    letterSpacing: -0.2,
+    fontWeight: FontWeight.w800,
+  );
   final List<String> _gradeOptions = ['GRADE_1', 'GRADE_2', 'GRADE_3'];
   final List<String> _gradeLabels = ['1학년', '2학년', '3학년'];
   bool _isPersonal = false;
@@ -120,7 +126,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppDesignTokens.divider),
               ),
               child: Row(
@@ -129,11 +135,11 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                   return Expanded(
                     child: Material(
                       color: isSelected
-                          ? AppDesignTokens.surface
+                          ? AppDesignTokens.paleBlue
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(9),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(9),
                         onTap: () {
                           if (idx < 2 && selectedClass > 2) {
                             ref
@@ -147,10 +153,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                         child: Container(
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            border: isSelected
-                                ? Border.all(color: AppDesignTokens.divider)
-                                : null,
+                            borderRadius: BorderRadius.circular(9),
                           ),
                           child: Text(
                             _gradeLabels[idx],
@@ -159,6 +162,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                                   ? AppDesignTokens.navy
                                   : AppDesignTokens.muted,
                               fontSize: 13,
+                              letterSpacing: -0.2,
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w600,
@@ -174,21 +178,47 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
           if (!_isPersonal)
             Container(
               key: const ValueKey('department-class-selector'),
-              height: 40,
+              height: 42,
               margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppDesignTokens.divider),
+              ),
               child: Row(
                 children: List.generate(selectedGrade == 'GRADE_3' ? 3 : 2, (
                   index,
                 ) {
                   final classNumber = index + 1;
-                  return Padding(
-                    padding: EdgeInsets.only(right: index == 2 ? 0 : 8),
-                    child: ChoiceChip(
-                      label: Text('$classNumber반'),
-                      selected: selectedClass == classNumber,
-                      onSelected: (_) => ref
-                          .read(selectedTimetableClassProvider.notifier)
-                          .updateClass(classNumber),
+                  final isSelected = selectedClass == classNumber;
+                  return Expanded(
+                    child: Material(
+                      color: isSelected
+                          ? AppDesignTokens.paleBlue
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(9),
+                        onTap: () => ref
+                            .read(selectedTimetableClassProvider.notifier)
+                            .updateClass(classNumber),
+                        child: Center(
+                          child: Text(
+                            '$classNumber반',
+                            style: TextStyle(
+                              color: isSelected
+                                  ? AppDesignTokens.navy
+                                  : AppDesignTokens.muted,
+                              fontSize: 13,
+                              letterSpacing: -0.2,
+                              fontWeight: isSelected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   );
                 }),
@@ -288,18 +318,23 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                     use24HourFormat: true,
                     style: TimePlannerStyle(
                       cellWidth: isMobile
-                          ? 88
+                          ? 96
                           : (constraints.maxWidth - 60) ~/ 6,
-                      cellHeight: 70,
+                      cellHeight: 76,
+                      horizontalTaskPadding: 4,
                       dividerColor: AppDesignTokens.divider,
+                      backgroundColor: AppDesignTokens.surface,
+                      interstitialOddColor: AppDesignTokens.background,
+                      interstitialEvenColor: AppDesignTokens.surface,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     headers: const [
-                      TimePlannerTitle(title: '월'),
-                      TimePlannerTitle(title: '화'),
-                      TimePlannerTitle(title: '수'),
-                      TimePlannerTitle(title: '목'),
-                      TimePlannerTitle(title: '금'),
-                      TimePlannerTitle(title: '토'),
+                      TimePlannerTitle(title: '월', titleStyle: _gridDayStyle),
+                      TimePlannerTitle(title: '화', titleStyle: _gridDayStyle),
+                      TimePlannerTitle(title: '수', titleStyle: _gridDayStyle),
+                      TimePlannerTitle(title: '목', titleStyle: _gridDayStyle),
+                      TimePlannerTitle(title: '금', titleStyle: _gridDayStyle),
+                      TimePlannerTitle(title: '토', titleStyle: _gridDayStyle),
                     ],
                     tasks: tasks,
                   ),
@@ -337,71 +372,116 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Column(
         children: [
-          SegmentedButton<bool>(
+          Container(
             key: const ValueKey('timetable-view-mode'),
-            segments: const [
-              ButtonSegment(
-                value: false,
-                label: Text('요일별'),
-                icon: Icon(Icons.view_agenda_outlined),
-              ),
-              ButtonSegment(
-                value: true,
-                label: Text('주간'),
-                icon: Icon(Icons.grid_view_outlined),
-              ),
-            ],
-            selected: {_showWeeklyGrid},
-            onSelectionChanged: (selection) =>
-                setState(() => _showWeeklyGrid = selection.first),
-            showSelectedIcon: false,
+            width: double.infinity,
+            height: 42,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppDesignTokens.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppDesignTokens.divider),
+            ),
+            child: Row(
+              children: [
+                _buildTimetableViewOption(
+                  label: '요일별',
+                  icon: Icons.view_agenda_outlined,
+                  selected: !_showWeeklyGrid,
+                  onTap: () => setState(() => _showWeeklyGrid = false),
+                ),
+                _buildTimetableViewOption(
+                  label: '주간',
+                  icon: Icons.grid_view_outlined,
+                  selected: _showWeeklyGrid,
+                  onTap: () => setState(() => _showWeeklyGrid = true),
+                ),
+              ],
+            ),
           ),
           if (!_showWeeklyGrid) ...[
             const SizedBox(height: 10),
-            Row(
-              children: List.generate(dayLabels.length, (index) {
-                final selected = index == _selectedDayIndex;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index == dayLabels.length - 1 ? 0 : 6,
-                    ),
-                    child: InkWell(
-                      key: ValueKey('timetable-day-$index'),
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => setState(() => _selectedDayIndex = index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        height: 38,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppDesignTokens.blue
-                              : AppDesignTokens.surface,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? AppDesignTokens.blue
-                                : AppDesignTokens.divider,
-                          ),
-                        ),
-                        child: Text(
-                          dayLabels[index],
-                          style: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : AppDesignTokens.muted,
-                            fontWeight: FontWeight.w800,
+            Container(
+              height: 44,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppDesignTokens.divider),
+              ),
+              child: Row(
+                children: List.generate(dayLabels.length, (index) {
+                  final selected = index == _selectedDayIndex;
+                  return Expanded(
+                    child: Material(
+                      color: selected
+                          ? AppDesignTokens.blue
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                      child: InkWell(
+                        key: ValueKey('timetable-day-$index'),
+                        borderRadius: BorderRadius.circular(9),
+                        onTap: () => setState(() => _selectedDayIndex = index),
+                        child: Center(
+                          child: Text(
+                            dayLabels[index],
+                            style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : AppDesignTokens.muted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildTimetableViewOption({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Material(
+        color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+        borderRadius: BorderRadius.circular(9),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(9),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected
+                      ? AppDesignTokens.navy
+                      : AppDesignTokens.muted,
+                  fontSize: 13,
+                  letterSpacing: -0.2,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -445,18 +525,19 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
       itemBuilder: (context, index) {
         final entry = dayEntries[index];
         final isCurrent = _isCurrentClass(entry);
+        final accentColor = _getCourseBorder(entry.subjectName);
         return Material(
           color: AppDesignTokens.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: InkWell(
             onTap: _isPersonal || isAdmin
                 ? () => _showAddEditEntryDialog(entry: entry)
                 : null,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             child: Container(
-              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isCurrent
                       ? AppDesignTokens.blue
@@ -465,64 +546,95 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppDesignTokens.navy.withValues(alpha: 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: AppDesignTokens.navy.withValues(alpha: 0.035),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 82,
-                    child: Text(
-                      '${_periodStart(entry.startPeriod)}\n${_periodEnd(entry.endPeriod)}',
-                      style: const TextStyle(
-                        color: AppDesignTokens.blue,
-                        fontSize: 14,
-                        height: 1.5,
-                        fontWeight: FontWeight.w800,
-                      ),
+              clipBehavior: Clip.antiAlias,
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      key: ValueKey('timetable-course-accent-${entry.id}'),
+                      width: 5,
+                      color: isCurrent ? AppDesignTokens.blue : accentColor,
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                entry.subjectName,
-                                style: const TextStyle(
-                                  color: AppDesignTokens.navy,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppDesignTokens.paleBlue,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.schedule_rounded,
+                                        size: 14,
+                                        color: AppDesignTokens.blue,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${_periodStart(entry.startPeriod)} - ${_periodEnd(entry.endPeriod)}',
+                                        style: const TextStyle(
+                                          color: AppDesignTokens.blue,
+                                          fontSize: 12,
+                                          letterSpacing: -0.15,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const Spacer(),
+                                if (isCurrent) const _CurrentClassBadge(),
+                              ],
+                            ),
+                            const SizedBox(height: 13),
+                            Text(
+                              entry.subjectName,
+                              style: const TextStyle(
+                                color: AppDesignTokens.navy,
+                                fontSize: 17,
+                                height: 1.25,
+                                letterSpacing: -0.35,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                            if (isCurrent) const _CurrentClassBadge(),
+                            const SizedBox(height: 11),
+                            if (entry.classroom.isNotEmpty)
+                              _TimetableMeta(
+                                icon: Icons.location_on_outlined,
+                                text: entry.classroom,
+                              ),
+                            if (entry.classroom.isNotEmpty &&
+                                entry.professorName.isNotEmpty)
+                              const SizedBox(height: 6),
+                            if (entry.professorName.isNotEmpty)
+                              _TimetableMeta(
+                                icon: Icons.person_outline_rounded,
+                                text: '${entry.professorName} 교수',
+                              ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          [
-                            if (entry.classroom.isNotEmpty) entry.classroom,
-                            if (entry.professorName.isNotEmpty)
-                              '${entry.professorName} 교수',
-                          ].join(' · '),
-                          style: const TextStyle(
-                            color: AppDesignTokens.muted,
-                            fontSize: 13,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -539,9 +651,11 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
     return !now.isBefore(start) && now.isBefore(end);
   }
 
-  String _periodStart(int period) => '${8 + period}:00';
+  String _periodStart(int period) =>
+      '${(8 + period).toString().padLeft(2, '0')}:00';
 
-  String _periodEnd(int period) => '${9 + period}:00';
+  String _periodEnd(int period) =>
+      '${(9 + period).toString().padLeft(2, '0')}:00';
 
   Widget _buildModeOption({
     required String label,
@@ -1213,6 +1327,37 @@ class _CurrentClassBadge extends StatelessWidget {
           fontWeight: FontWeight.w800,
         ),
       ),
+    );
+  }
+}
+
+class _TimetableMeta extends StatelessWidget {
+  const _TimetableMeta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: AppDesignTokens.subtle),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppDesignTokens.muted,
+              fontSize: 12.5,
+              height: 1.3,
+              letterSpacing: -0.15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
