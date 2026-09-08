@@ -252,6 +252,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(_post.title), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('community-post-content-card')),
+      findsOneWidget,
+    );
     expect(find.byTooltip('게시글 신고'), findsOneWidget);
     expect(find.text(_comment.content), findsOneWidget);
     expect(find.text('댓글을 입력하세요'), findsOneWidget);

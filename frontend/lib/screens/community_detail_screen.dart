@@ -126,12 +126,31 @@ class CommunityDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 24),
                       const Divider(height: 1, color: AppDesignTokens.divider),
                       const SizedBox(height: 24),
-                      LinkifyText(
-                        text: post.content,
-                        style: const TextStyle(
-                          color: AppDesignTokens.navy,
-                          fontSize: 15,
-                          height: 1.7,
+                      Container(
+                        key: const ValueKey('community-post-content-card'),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppDesignTokens.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppDesignTokens.divider),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppDesignTokens.navy.withValues(
+                                alpha: 0.05,
+                              ),
+                              blurRadius: 16,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: LinkifyText(
+                          text: post.content,
+                          style: const TextStyle(
+                            color: AppDesignTokens.navy,
+                            fontSize: 15,
+                            height: 1.7,
+                          ),
                         ),
                       ),
                       if (post.attachments.isNotEmpty) ...[

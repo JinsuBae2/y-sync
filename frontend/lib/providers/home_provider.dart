@@ -5,6 +5,8 @@ import '../models/community_post.dart';
 import '../models/notice.dart';
 import 'notice_provider.dart';
 
+final homeNowProvider = Provider<DateTime>((ref) => DateTime.now());
+
 final homeNoticesProvider = FutureProvider<List<Notice>>((ref) async {
   final dio = ref.watch(dioProvider);
   final response = await dio.get(

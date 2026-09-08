@@ -4,7 +4,7 @@ import 'csv_picker.dart';
 Future<CsvPickerResult?> pickCsvFile() async {
   FilePickerResult? result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
-    allowedExtensions: ['csv'],
+    allowedExtensions: ['xlsx', 'xls', 'csv'],
     withData: true,
   );
   if (result != null && result.files.single.bytes != null) {

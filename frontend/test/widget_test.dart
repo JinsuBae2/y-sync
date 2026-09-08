@@ -2,12 +2,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y_sync/main.dart';
+import 'package:y_sync/providers/server_availability_provider.dart';
 
 void main() {
   testWidgets('로그인하지 않은 사용자는 로그인 화면으로 이동한다', (tester) async {
     FlutterSecureStorage.setMockInitialValues({});
 
-    await tester.pumpWidget(const ProviderScope(child: YSyncApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          serverHealthCheckProvider.overrideWithValue(() async => true),
+        ],
+        child: const YSyncApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.bySemanticsLabel('Y-Sync 천마 로고'), findsOneWidget);

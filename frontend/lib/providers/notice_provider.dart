@@ -5,34 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/notice.dart';
+import '../config/api_config.dart';
 import '../services/push_notification_service.dart';
 import '../screens/login_screen.dart';
 import '../utils/platform_file_multipart.dart';
+import 'server_availability_provider.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Secure storage instance
 final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
-
-const String _rawApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'https://168-107-29-144.sslip.io/api/v1',
-);
-
-// 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
-const String apiBaseUrl = _rawApiBaseUrl == ''
-    ? 'https://168-107-29-144.sslip.io/api/v1'
-    : _rawApiBaseUrl;
-
-const String _rawImageBaseUrl = String.fromEnvironment(
-  'IMAGE_BASE_URL',
-  defaultValue: 'https://168-107-29-144.sslip.io',
-);
-
-// 💡 빌드 옵션이 빈 문자열("")로 주입되었을 경우에도 오라클 공인 IP로 폴백되도록 보장합니다.
-const String imageBaseUrl = _rawImageBaseUrl == ''
-    ? 'https://168-107-29-144.sslip.io'
-    : _rawImageBaseUrl;
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(baseUrl: apiBaseUrl));
@@ -50,9 +32,13 @@ final dioProvider = Provider<Dio>((ref) {
         return handler.next(options);
       },
       onResponse: (response, handler) {
+        ref.read(serverAvailabilityProvider.notifier).markAvailable();
         return handler.next(response);
       },
       onError: (DioException e, handler) async {
+        if (isServerUnavailableError(e)) {
+          ref.read(serverAvailabilityProvider.notifier).markUnavailable();
+        }
         if (e.response?.statusCode == 401) {
           // 💡 401 Unauthorized 발생 시 좀비 토큰일 수 있으므로 로컬 세션(토큰) 삭제 및 강제 로그인 창 이동
           final storage = ref.read(secureStorageProvider);

@@ -16,6 +16,7 @@ import 'package:y_sync/providers/notification_provider.dart';
 import 'package:y_sync/providers/scrap_provider.dart';
 import 'package:y_sync/providers/timetable_provider.dart';
 import 'package:y_sync/screens/community_list_screen.dart';
+import 'package:y_sync/screens/academic_calendar_view.dart';
 import 'package:y_sync/screens/profile_screen.dart';
 import 'package:y_sync/screens/schedule_tab_screen.dart';
 
@@ -167,6 +168,16 @@ void main() {
                 startPeriod: 1,
                 endPeriod: 2,
               ),
+              TimetableEntry(
+                id: 3,
+                grade: 'GRADE_1',
+                dayOfWeek: 'TUESDAY',
+                subjectName: '데이터베이스',
+                professorName: '이교수',
+                classroom: '데이터베이스실습실',
+                startPeriod: 3,
+                endPeriod: 4,
+              ),
             ],
           ),
           personalTimetableEntriesProvider.overrideWith(
@@ -200,6 +211,10 @@ void main() {
     );
     final accentDecoration = accent.decoration! as BoxDecoration;
     expect(accentDecoration.color, const Color(0xFFFF5733));
+    final eventList = tester.widget<ListView>(
+      find.byKey(const ValueKey('calendar-event-list')),
+    );
+    expect(eventList.padding, const EdgeInsets.fromLTRB(20, 12, 20, 116));
     final lastDay = DateTime(today.year, today.month + 1, 0).day.toString();
     final lastDateBottom = tester.getBottomLeft(find.text(lastDay).last).dy;
     final eventHeaderTop = tester
@@ -214,7 +229,24 @@ void main() {
     expect(find.text('학과 시간표'), findsOneWidget);
     expect(find.text('개인 시간표'), findsOneWidget);
     expect(find.text('1학년'), findsOneWidget);
+    expect(find.text('1반'), findsOneWidget);
+    expect(find.text('2반'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('timetable-day-0')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-timetable-day-list')),
+      findsOneWidget,
+    );
     expect(find.text('모바일 프로그래밍'), findsOneWidget);
+    expect(find.text('09:00 - 11:00'), findsOneWidget);
+    expect(find.text('공학관 301호'), findsOneWidget);
+    expect(find.text('김교수 교수'), findsOneWidget);
+
+    await tester.tap(find.text('주간'));
+    await tester.pumpAndSettle();
+    expect(find.text('9:00'), findsOneWidget);
+    expect(find.textContaining('am'), findsNothing);
+    expect(find.textContaining('pm'), findsNothing);
 
     await tester.tap(find.text('개인 시간표'));
     await tester.pumpAndSettle();
@@ -223,7 +255,95 @@ void main() {
     expect(find.byTooltip('내 수업 추가'), findsOneWidget);
     await tester.tap(find.byTooltip('내 수업 추가'));
     await tester.pumpAndSettle();
-    expect(find.text('내 수업 추가'), findsOneWidget);
+    expect(find.text('학과 시간표에서 선택'), findsOneWidget);
+    expect(find.text('직접 입력'), findsOneWidget);
+
+    await tester.tap(find.text('학과 시간표에서 선택'));
+    await tester.pumpAndSettle();
+    expect(find.text('학년·반 선택'), findsOneWidget);
+    await tester.tap(find.text('수업 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('1학년 1반 수업'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('department-course-1')));
+    await tester.tap(find.byKey(const ValueKey('department-course-3')));
+    await tester.pumpAndSettle();
+    expect(find.text('선택한 수업 2개 추가'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('데스크톱 일정 달력과 목록 너비를 분할선 드래그로 조절한다', (tester) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          calendarEventsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AcademicCalendarView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final panelFinder = find.byKey(const ValueKey('calendar-panel'));
+    final handleFinder = find.byKey(const ValueKey('calendar-resize-handle'));
+    final initialWidth = tester.getSize(panelFinder).width;
+
+    expect(tester.getSize(handleFinder).width, 24);
+    await tester.drag(handleFinder, const Offset(120, 0));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(panelFinder).width, greaterThan(initialWidth + 80));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('모바일 일정 달력과 목록을 한 화면에서 세로 스크롤한다', (tester) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          calendarEventsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AcademicCalendarView()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final pageFinder = find.byKey(
+      const ValueKey('mobile-calendar-page-scroll'),
+    );
+    final eventHeaderFinder = find.textContaining('일 일정');
+    final initialHeaderTop = tester.getTopLeft(eventHeaderFinder).dy;
+
+    expect(pageFinder, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-calendar-resize-handle')),
+      findsNothing,
+    );
+    final scrollableFinder = find.descendant(
+      of: pageFinder,
+      matching: find.byType(Scrollable),
+    );
+    final scrollable = tester
+        .stateList<ScrollableState>(scrollableFinder)
+        .firstWhere(
+          (state) =>
+              state.position.axis == Axis.vertical &&
+              state.position.maxScrollExtent > 0,
+        );
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(eventHeaderFinder).dy, lessThan(initialHeaderTop));
     expect(tester.takeException(), isNull);
   });
 

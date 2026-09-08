@@ -9,6 +9,7 @@ import 'screens/login_screen.dart';
 import 'screens/main_tab_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart'; // 💡 FCM 추가
+import 'widgets/server_availability_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,11 +43,10 @@ class YSyncApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('ko', 'KR'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('ko', 'KR'), Locale('en', 'US')],
       locale: const Locale('ko', 'KR'),
+      builder: (context, child) =>
+          ServerAvailabilityGate(child: child ?? const SizedBox.shrink()),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF164687), // 브랜드 컬러 #164687
