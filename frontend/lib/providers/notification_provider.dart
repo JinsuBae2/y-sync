@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification.dart';
 import 'notice_provider.dart'; // dioProvider
+import 'session_provider.dart';
 
 class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
   @override
   Future<List<AppNotification>> build() async {
+    final memberId = ref.watch(sessionMemberIdProvider);
+    if (memberId == null) return const [];
     return _fetchNotifications();
   }
 

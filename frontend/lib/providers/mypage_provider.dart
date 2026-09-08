@@ -4,6 +4,7 @@ import '../models/my_comment.dart';
 import '../models/member.dart';
 import '../models/notice.dart'; // 💡 추가
 import 'notice_provider.dart';
+import 'session_provider.dart';
 
 // 💡 마이페이지의 전반적인 상태(프로필, 내 글, 내 댓글, 내 공지사항)를 통합 관리하는 Notifier입니다.
 class MyPageNotifier
@@ -26,6 +27,10 @@ class MyPageNotifier
     })
   >
   build() async {
+    final memberId = ref.watch(sessionMemberIdProvider);
+    if (memberId == null) {
+      throw StateError('로그인이 필요합니다.');
+    }
     final dio = ref.watch(dioProvider);
 
     // 💡 기본 활동 내역 요청
