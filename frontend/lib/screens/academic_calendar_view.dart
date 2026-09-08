@@ -29,8 +29,6 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   double _horizontalRatio = 0.55; // PC/Web 가로 분할 비율 (55%가 캘린더)
   bool _isDividerHovered = false;
   bool _isDividerDragging = false;
-  double? _mobileCalendarHeight;
-  bool _isMobileDividerDragging = false;
   final CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -179,8 +177,43 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     required List<CalendarEvent> selectedDayEvents,
     required bool isAdmin,
     required ThemeData theme,
+    bool scrollWithPage = false,
   }) {
     final selectedDate = _selectedDay ?? _focusedDay;
+    final eventList = selectedDayEvents.isEmpty
+        ? const SizedBox(
+            height: 120,
+            child: Center(
+              child: Text(
+                '등록된 일정이 없습니다.',
+                style: TextStyle(color: AppDesignTokens.muted, fontSize: 14),
+              ),
+            ),
+          )
+        : ListView.builder(
+            key: const ValueKey('calendar-event-list'),
+            shrinkWrap: scrollWithPage,
+            physics: scrollWithPage
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              MediaQuery.sizeOf(context).width < 900 ? 116 : 24,
+            ),
+            itemCount: selectedDayEvents.length,
+            itemBuilder: (context, index) {
+              final event = selectedDayEvents[index];
+              final isNoticeLink = event.type == 'NOTICE';
+
+              return _buildEventCard(
+                event: event,
+                isNoticeLink: isNoticeLink,
+                isAdmin: isAdmin,
+              );
+            },
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -210,136 +243,141 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
           ),
         ),
         const Divider(height: 1, color: AppDesignTokens.divider),
-        Expanded(
-          child: selectedDayEvents.isEmpty
-              ? const Center(
-                  child: Text(
-                    '등록된 일정이 없습니다.',
-                    style: TextStyle(
-                      color: AppDesignTokens.muted,
-                      fontSize: 14,
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  itemCount: selectedDayEvents.length,
-                  itemBuilder: (context, index) {
-                    final event = selectedDayEvents[index];
-                    final isNoticeLink = event.type == 'NOTICE';
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: AppDesignTokens.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppDesignTokens.divider),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
-                        leading: Container(
-                          key: ValueKey('calendar-event-accent-${event.id}'),
-                          width: 4,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: _calendarEventColor(event.color),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        title: Text(
-                          event.title,
-                          style: const TextStyle(
-                            color: AppDesignTokens.navy,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (event.description != null &&
-                                event.description!.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 4,
-                                  bottom: 4,
-                                ),
-                                child: Text(
-                                  event.description!,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppDesignTokens.muted,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            Text(
-                              '기간: ${event.startDate} ~ ${event.endDate}',
-                              style: const TextStyle(
-                                color: AppDesignTokens.subtle,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: isNoticeLink
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppDesignTokens.paleBlue,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  '공지 연결',
-                                  style: TextStyle(
-                                    color: AppDesignTokens.blue,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              )
-                            : (isAdmin
-                                  ? Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          tooltip: '일정 수정',
-                                          icon: const Icon(
-                                            Icons.edit_outlined,
-                                            size: 20,
-                                            color: AppDesignTokens.blue,
-                                          ),
-                                          onPressed: () =>
-                                              _showAddEditEventDialog(
-                                                event: event,
-                                              ),
-                                        ),
-                                        IconButton(
-                                          tooltip: '일정 삭제',
-                                          icon: const Icon(
-                                            Icons.delete_outline,
-                                            size: 20,
-                                            color: AppDesignTokens.coral,
-                                          ),
-                                          onPressed: () =>
-                                              _confirmDelete(event.id),
-                                        ),
-                                      ],
-                                    )
-                                  : null),
-                        onTap: isNoticeLink && event.noticeId != null
-                            ? () => _navigateToNoticeDetail(event.noticeId!)
-                            : null,
-                      ),
-                    );
-                  },
-                ),
-        ),
+        if (scrollWithPage) eventList else Expanded(child: eventList),
       ],
+    );
+  }
+
+  Widget _buildEventCard({
+    required CalendarEvent event,
+    required bool isNoticeLink,
+    required bool isAdmin,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppDesignTokens.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppDesignTokens.divider),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+        leading: Container(
+          key: ValueKey('calendar-event-accent-${event.id}'),
+          width: 4,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _calendarEventColor(event.color),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        title: Text(
+          event.title,
+          style: const TextStyle(
+            color: AppDesignTokens.navy,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.description != null && event.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Text(
+                  event.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppDesignTokens.muted,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            Text(
+              '기간: ${event.startDate} ~ ${event.endDate}',
+              style: const TextStyle(
+                color: AppDesignTokens.subtle,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        trailing: isNoticeLink
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppDesignTokens.paleBlue,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  '공지 연결',
+                  style: TextStyle(
+                    color: AppDesignTokens.blue,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              )
+            : (isAdmin
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: '일정 수정',
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            size: 20,
+                            color: AppDesignTokens.blue,
+                          ),
+                          onPressed: () =>
+                              _showAddEditEventDialog(event: event),
+                        ),
+                        IconButton(
+                          tooltip: '일정 삭제',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: AppDesignTokens.coral,
+                          ),
+                          onPressed: () => _confirmDelete(event.id),
+                        ),
+                      ],
+                    )
+                  : null),
+        onTap: isNoticeLink && event.noticeId != null
+            ? () => _navigateToNoticeDetail(event.noticeId!)
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildMobileCalendarPage({
+    required List<CalendarEvent> allEvents,
+    required List<CalendarEvent> selectedDayEvents,
+    required bool isAdmin,
+    required ThemeData theme,
+  }) {
+    return SingleChildScrollView(
+      key: const ValueKey('mobile-calendar-page-scroll'),
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildCalendarCard(
+            rowHeight: 42,
+            daysOfWeekHeight: 26,
+            allEvents: allEvents,
+            theme: theme,
+          ),
+          _buildEventList(
+            selectedDayEvents: selectedDayEvents,
+            isAdmin: isAdmin,
+            theme: theme,
+            scrollWithPage: true,
+          ),
+        ],
+      ),
     );
   }
 
@@ -452,96 +490,11 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
                   ],
                 );
               } else {
-                const dividerHeight = 28.0;
-                const minimumListHeight = 150.0;
-                final minimumCalendarHeight = constraints.maxHeight < 520
-                    ? 250.0
-                    : 300.0;
-                final availableMaximum =
-                    constraints.maxHeight - dividerHeight - minimumListHeight;
-                final maximumCalendarHeight =
-                    availableMaximum < minimumCalendarHeight
-                    ? minimumCalendarHeight
-                    : availableMaximum;
-                final calendarHeight =
-                    (_mobileCalendarHeight ?? constraints.maxHeight * 0.48)
-                        .clamp(minimumCalendarHeight, maximumCalendarHeight)
-                        .toDouble();
-                final mobileRowHeight = ((calendarHeight - 96) / 6)
-                    .clamp(30.0, 58.0)
-                    .toDouble();
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      key: const ValueKey('mobile-calendar-panel'),
-                      height: calendarHeight,
-                      child: SingleChildScrollView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: _buildCalendarCard(
-                          rowHeight: mobileRowHeight,
-                          daysOfWeekHeight: 24.0,
-                          allEvents: allEvents,
-                          theme: theme,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      key: const ValueKey('mobile-calendar-resize-handle'),
-                      behavior: HitTestBehavior.opaque,
-                      onDoubleTap: () {
-                        setState(() => _mobileCalendarHeight = null);
-                      },
-                      onVerticalDragStart: (_) {
-                        setState(() {
-                          _mobileCalendarHeight = calendarHeight;
-                          _isMobileDividerDragging = true;
-                        });
-                      },
-                      onVerticalDragUpdate: (details) {
-                        setState(() {
-                          _mobileCalendarHeight =
-                              ((_mobileCalendarHeight ?? calendarHeight) +
-                                      details.delta.dy)
-                                  .clamp(
-                                    minimumCalendarHeight,
-                                    maximumCalendarHeight,
-                                  )
-                                  .toDouble();
-                        });
-                      },
-                      onVerticalDragEnd: (_) {
-                        setState(() => _isMobileDividerDragging = false);
-                      },
-                      onVerticalDragCancel: () {
-                        setState(() => _isMobileDividerDragging = false);
-                      },
-                      child: SizedBox(
-                        height: dividerHeight,
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 120),
-                            width: _isMobileDividerDragging ? 72 : 52,
-                            height: _isMobileDividerDragging ? 5 : 4,
-                            decoration: BoxDecoration(
-                              color: _isMobileDividerDragging
-                                  ? AppDesignTokens.blue
-                                  : AppDesignTokens.divider,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildEventList(
-                        selectedDayEvents: selectedDayEvents,
-                        isAdmin: isAdmin,
-                        theme: theme,
-                      ),
-                    ),
-                  ],
+                return _buildMobileCalendarPage(
+                  allEvents: allEvents,
+                  selectedDayEvents: selectedDayEvents,
+                  isAdmin: isAdmin,
+                  theme: theme,
                 );
               }
             },

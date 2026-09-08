@@ -211,6 +211,10 @@ void main() {
     );
     final accentDecoration = accent.decoration! as BoxDecoration;
     expect(accentDecoration.color, const Color(0xFFFF5733));
+    final eventList = tester.widget<ListView>(
+      find.byKey(const ValueKey('calendar-event-list')),
+    );
+    expect(eventList.padding, const EdgeInsets.fromLTRB(20, 12, 20, 116));
     final lastDay = DateTime(today.year, today.month + 1, 0).day.toString();
     final lastDateBottom = tester.getBottomLeft(find.text(lastDay).last).dy;
     final eventHeaderTop = tester
@@ -234,7 +238,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('모바일 프로그래밍'), findsOneWidget);
-    expect(find.text('공학관 301호 · 김교수 교수'), findsOneWidget);
+    expect(find.text('09:00 - 11:00'), findsOneWidget);
+    expect(find.text('공학관 301호'), findsOneWidget);
+    expect(find.text('김교수 교수'), findsOneWidget);
 
     await tester.tap(find.text('주간'));
     await tester.pumpAndSettle();
@@ -294,8 +300,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('모바일 일정 달력과 목록 높이를 분할선 터치 드래그로 조절한다', (tester) async {
-    _setMobileViewport(tester);
+  testWidgets('모바일 일정 달력과 목록을 한 화면에서 세로 스크롤한다', (tester) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -308,17 +317,33 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final panelFinder = find.byKey(const ValueKey('mobile-calendar-panel'));
-    final handleFinder = find.byKey(
-      const ValueKey('mobile-calendar-resize-handle'),
+    final pageFinder = find.byKey(
+      const ValueKey('mobile-calendar-page-scroll'),
     );
-    final initialHeight = tester.getSize(panelFinder).height;
+    final eventHeaderFinder = find.textContaining('일 일정');
+    final initialHeaderTop = tester.getTopLeft(eventHeaderFinder).dy;
 
-    expect(tester.getSize(handleFinder).height, 28);
-    await tester.drag(handleFinder, const Offset(0, 100));
+    expect(pageFinder, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('mobile-calendar-resize-handle')),
+      findsNothing,
+    );
+    final scrollableFinder = find.descendant(
+      of: pageFinder,
+      matching: find.byType(Scrollable),
+    );
+    final scrollable = tester
+        .stateList<ScrollableState>(scrollableFinder)
+        .firstWhere(
+          (state) =>
+              state.position.axis == Axis.vertical &&
+              state.position.maxScrollExtent > 0,
+        );
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
     await tester.pumpAndSettle();
 
-    expect(tester.getSize(panelFinder).height, greaterThan(initialHeight + 70));
+    expect(tester.getTopLeft(eventHeaderFinder).dy, lessThan(initialHeaderTop));
     expect(tester.takeException(), isNull);
   });
 
