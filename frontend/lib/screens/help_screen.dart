@@ -43,87 +43,234 @@ class HelpScreen extends StatelessWidget {
     ),
   ];
 
+  static const _categoryIcons = {
+    '시간표': Icons.calendar_month_outlined,
+    '알림·스크랩': Icons.notifications_none_rounded,
+    '계정': Icons.lock_outline_rounded,
+    '의견 보내기': Icons.chat_bubble_outline_rounded,
+  };
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppDesignTokens.background,
-    appBar: AppBar(title: const Text('도움말 및 의견 보내기')),
+    appBar: AppBar(
+      title: const Text('도움말'),
+      backgroundColor: AppDesignTokens.background,
+      surfaceTintColor: Colors.transparent,
+    ),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            const Text(
-              '무엇이 궁금하신가요?',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: AppDesignTokens.navy,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('💡', style: TextStyle(fontSize: 28)),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Y-Sync 사용이 궁금한가요?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '자주 묻는 질문에서 기능별 사용법을 빠르게 확인하세요.',
+                          style: TextStyle(
+                            color: Color(0xFFD7E2F4),
+                            fontSize: 13,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 28),
             const Text(
-              '자주 묻는 질문에서 Y-Sync 사용법을 확인하세요.',
-              style: TextStyle(color: AppDesignTokens.muted),
-            ),
-            const SizedBox(height: 24),
-            for (final category in ['시간표', '알림·스크랩', '계정', '의견 보내기']) ...[
-              Text(
-                category,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppDesignTokens.navy,
-                ),
+              '자주 묻는 질문',
+              style: TextStyle(
+                color: AppDesignTokens.navy,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
-              const SizedBox(height: 8),
-              Card(
-                elevation: 0,
-                margin: EdgeInsets.zero,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '항목을 누르면 답변을 확인할 수 있어요.',
+              style: TextStyle(color: AppDesignTokens.muted, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            for (final category in ['시간표', '알림·스크랩', '계정', '의견 보내기']) ...[
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppDesignTokens.paleBlue,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      _categoryIcons[category],
+                      size: 18,
+                      color: AppDesignTokens.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    category,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignTokens.navy,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppDesignTokens.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppDesignTokens.divider),
+                ),
                 child: Column(
                   children: [
-                    for (final question in _questions.where(
-                      (q) => q.$1 == category,
-                    ))
-                      ExpansionTile(
-                        title: Text(question.$2),
-                        childrenPadding: const EdgeInsets.fromLTRB(
-                          16,
-                          0,
-                          16,
-                          16,
-                        ),
+                    for (final indexed
+                        in _questions.where((q) => q.$1 == category).indexed)
+                      Column(
                         children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              question.$3,
-                              style: const TextStyle(
-                                height: 1.6,
-                                color: AppDesignTokens.muted,
-                              ),
+                          if (indexed.$1 > 0)
+                            const Divider(
+                              height: 1,
+                              color: AppDesignTokens.divider,
                             ),
+                          ExpansionTile(
+                            tilePadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                            iconColor: AppDesignTokens.blue,
+                            collapsedIconColor: AppDesignTokens.subtle,
+                            title: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Q${indexed.$1 + 1}',
+                                  style: const TextStyle(
+                                    color: AppDesignTokens.blue,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    indexed.$2.$2,
+                                    style: const TextStyle(
+                                      color: AppDesignTokens.navy,
+                                      fontSize: 14,
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            childrenPadding: const EdgeInsets.fromLTRB(
+                              16,
+                              0,
+                              16,
+                              16,
+                            ),
+                            children: [
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: AppDesignTokens.background,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    indexed.$2.$3,
+                                    style: const TextStyle(
+                                      height: 1.6,
+                                      fontSize: 13,
+                                      color: AppDesignTokens.muted,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 26),
             ],
-            const Text(
-              '해결되지 않았거나 좋은 아이디어가 있나요?',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppDesignTokens.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppDesignTokens.divider),
               ),
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-              label: const Text('오류 신고·개선 제안 보내기'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '원하는 답변을 찾지 못했나요?',
+                    style: TextStyle(
+                      color: AppDesignTokens.navy,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '발견한 오류나 개선 아이디어를 관리자에게 보내주세요.',
+                    style: TextStyle(
+                      color: AppDesignTokens.muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FeedbackScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.send_outlined, size: 18),
+                      label: const Text('오류 신고·개선 제안 보내기'),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
           ],
         ),
       ),

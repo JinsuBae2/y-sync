@@ -210,7 +210,7 @@ class _ProfileContent extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 28),
-          const _GroupTitle(title: '도움말'),
+          const _GroupTitle(title: '도움말 💡'),
           const SizedBox(height: 10),
           _MenuGroup(
             children: [

@@ -17,6 +17,9 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: HelpScreen())),
     );
+    expect(find.text('💡'), findsOneWidget);
+    expect(find.text('자주 묻는 질문'), findsOneWidget);
+    expect(find.text('Q1'), findsWidgets);
     await tester.tap(find.text('학과 시간표와 개인 시간표는 어떻게 다른가요?'));
     await tester.pumpAndSettle();
     expect(find.textContaining('나만의 시간표입니다.'), findsOneWidget);
@@ -59,6 +62,9 @@ void main() {
         child: const MaterialApp(home: FeedbackScreen()),
       ),
     );
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('오류 신고'), findsOneWidget);
+    expect(find.text('개선 제안'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).at(0), '시간표 오류');
     await tester.enterText(find.byType(TextFormField).at(1), '오류 재현 내용');
     FocusManager.instance.primaryFocus?.unfocus();
@@ -131,9 +137,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('사용자 의견함'), findsOneWidget);
+    expect(find.text('미확인'), findsWidgets);
     await tester.tap(find.text('시간표 제보'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('확인 처리'));
+    final reviewButton = find.byKey(const ValueKey('admin-feedback-review-1'));
+    await tester.ensureVisible(reviewButton);
+    await tester.tap(reviewButton);
     await tester.pumpAndSettle();
     expect(reviewed, isTrue);
     expect(find.text('등록된 의견이 없습니다.'), findsOneWidget);
