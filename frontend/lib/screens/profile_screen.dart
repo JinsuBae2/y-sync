@@ -210,7 +210,7 @@ class _ProfileContent extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 28),
-          const _GroupTitle(title: '도움말 💡'),
+          const _GroupTitle(title: '도움말'),
           const SizedBox(height: 10),
           _MenuGroup(
             children: [
@@ -575,7 +575,9 @@ class _ProfileMenuItem extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 13, 10, 13),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: color),
+              title == '도움말 및 의견 보내기'
+                  ? const Text('💡', style: TextStyle(fontSize: 22))
+                  : Icon(icon, size: 22, color: color),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

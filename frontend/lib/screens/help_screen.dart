@@ -56,6 +56,7 @@ class HelpScreen extends StatelessWidget {
     appBar: AppBar(
       title: const Text('도움말'),
       backgroundColor: AppDesignTokens.background,
+      foregroundColor: AppDesignTokens.navy,
       surfaceTintColor: Colors.transparent,
     ),
     body: Center(

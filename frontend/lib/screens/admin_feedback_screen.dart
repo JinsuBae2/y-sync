@@ -6,6 +6,7 @@ import '../providers/feedback_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/session_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/selection_highlight.dart';
 
 final _feedbackImageProvider = FutureProvider.autoDispose
     .family<Uint8List?, int>((ref, id) async {
@@ -424,7 +425,7 @@ class _AdminFilterOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(
     child: Material(
-      color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
@@ -438,12 +439,17 @@ class _AdminFilterOption extends StatelessWidget {
               color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
             ),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? AppDesignTokens.navy : AppDesignTokens.muted,
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            SelectionHighlight(
+              selected: selected,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected
+                      ? AppDesignTokens.navy
+                      : AppDesignTokens.muted,
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
               ),
             ),
           ],

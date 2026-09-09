@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../theme/app_design_tokens.dart';
+import 'selection_highlight.dart';
 
 class ContentFilterBar extends StatelessWidget {
   const ContentFilterBar({
@@ -114,9 +115,7 @@ class _FilterOption extends StatelessWidget {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected
-                ? AppDesignTokens.paleBlue.withValues(alpha: isGlass ? 0.5 : 1)
-                : isGlass
+            color: isGlass
                 ? Colors.white.withValues(alpha: 0.22)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
@@ -133,14 +132,17 @@ class _FilterOption extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          child: SelectionHighlight(
+            selected: selected,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              ),
             ),
           ),
         ),

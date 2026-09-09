@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/feedback_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/selection_highlight.dart';
 import '../widgets/selected_attachment_list.dart';
 
 class FeedbackScreen extends ConsumerStatefulWidget {
@@ -92,6 +93,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
     appBar: AppBar(
       title: const Text('의견 보내기'),
       backgroundColor: AppDesignTokens.background,
+      foregroundColor: AppDesignTokens.navy,
       surfaceTintColor: Colors.transparent,
     ),
     body: Center(
@@ -226,7 +228,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                               labelText: '제목',
                               hintText: '핵심 내용을 한 문장으로 적어주세요',
                               filled: true,
-                              fillColor: AppDesignTokens.background,
+                              fillColor: AppDesignTokens.paleBlue,
                             ),
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
@@ -247,7 +249,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                                   : '어떤 점이 달라지면 더 편리할지 알려주세요.',
                               alignLabelWithHint: true,
                               filled: true,
-                              fillColor: AppDesignTokens.background,
+                              fillColor: AppDesignTokens.paleBlue,
                             ),
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
@@ -264,7 +266,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                               hintText: '예: 개인 시간표 (선택)',
                               prefixIcon: Icon(Icons.smartphone_outlined),
                               filled: true,
-                              fillColor: AppDesignTokens.background,
+                              fillColor: AppDesignTokens.paleBlue,
                             ),
                           ),
                         ],
@@ -463,7 +465,7 @@ class _CategoryOption extends StatelessWidget {
     width: width,
     height: 52,
     child: Material(
-      color: selected ? AppDesignTokens.paleBlue : AppDesignTokens.background,
+      color: AppDesignTokens.surface,
       borderRadius: BorderRadius.circular(11),
       child: InkWell(
         onTap: onTap,
@@ -486,15 +488,18 @@ class _CategoryOption extends StatelessWidget {
               ),
               const SizedBox(width: 7),
               Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: selected
-                        ? AppDesignTokens.navy
-                        : AppDesignTokens.muted,
-                    fontSize: 13,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                child: SelectionHighlight(
+                  selected: selected,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: selected
+                          ? AppDesignTokens.navy
+                          : AppDesignTokens.muted,
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
                   ),
                 ),
               ),

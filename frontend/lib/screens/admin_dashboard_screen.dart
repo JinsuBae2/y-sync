@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_design_tokens.dart';
+import '../widgets/selection_highlight.dart';
 import '../widgets/brand_logo.dart';
 import 'admin_approval_tab.dart';
 import 'admin_member_tab.dart';
@@ -98,7 +99,7 @@ class _MobileAdminShell extends StatelessWidget {
       bottom: TabBar(
         controller: tabController,
         indicatorColor: AppDesignTokens.blue,
-        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorSize: TabBarIndicatorSize.label,
         labelColor: AppDesignTokens.navy,
         unselectedLabelColor: AppDesignTokens.muted,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
@@ -293,7 +294,7 @@ class _SidebarDestination extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
     child: Material(
-      color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -308,14 +309,17 @@ class _SidebarDestination extends StatelessWidget {
                 color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
               ),
               const SizedBox(width: 12),
-              Text(
-                destination.label,
-                style: TextStyle(
-                  color: selected
-                      ? AppDesignTokens.navy
-                      : AppDesignTokens.muted,
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              SelectionHighlight(
+                selected: selected,
+                child: Text(
+                  destination.label,
+                  style: TextStyle(
+                    color: selected
+                        ? AppDesignTokens.navy
+                        : AppDesignTokens.muted,
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
               ),
             ],
