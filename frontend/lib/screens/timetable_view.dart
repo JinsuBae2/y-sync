@@ -5,6 +5,7 @@ import '../models/timetable_entry.dart';
 import '../providers/timetable_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/selection_highlight.dart';
 
 // 💡 학과 공용 시간표와 학생 개인 시간표를 전환해 보여주는 뷰입니다.
 class TimetableView extends ConsumerStatefulWidget {
@@ -419,7 +420,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
   }) {
     return Expanded(
       child: Material(
-        color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
           onTap: onTap,
@@ -433,15 +434,18 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
               ),
               const SizedBox(width: 7),
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected
-                      ? AppDesignTokens.navy
-                      : AppDesignTokens.muted,
-                  fontSize: 13,
-                  letterSpacing: -0.2,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              SelectionHighlight(
+                selected: selected,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? AppDesignTokens.navy
+                        : AppDesignTokens.muted,
+                    fontSize: 13,
+                    letterSpacing: -0.2,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -609,19 +613,15 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
         child: Container(
           constraints: const BoxConstraints(minHeight: 40),
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            border: selected
-                ? const Border(
-                    bottom: BorderSide(color: AppDesignTokens.blue, width: 2),
-                  )
-                : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? AppDesignTokens.navy : AppDesignTokens.muted,
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          child: SelectionHighlight(
+            selected: selected,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? AppDesignTokens.navy : AppDesignTokens.muted,
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -1267,7 +1267,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
@@ -1275,12 +1275,17 @@ class _FilterChip extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 42, minHeight: 38),
           child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? AppDesignTokens.navy : AppDesignTokens.muted,
-                fontSize: 12.5,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            child: SelectionHighlight(
+              selected: selected,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected
+                      ? AppDesignTokens.navy
+                      : AppDesignTokens.muted,
+                  fontSize: 12.5,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
               ),
             ),
           ),

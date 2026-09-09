@@ -78,7 +78,7 @@ class _ScheduleTabScreenState extends State<ScheduleTabScreen>
                   child: TabBar(
                     controller: _tabController,
                     dividerColor: Colors.transparent,
-                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorSize: TabBarIndicatorSize.label,
                     indicator: BoxDecoration(
                       color: AppDesignTokens.surface,
                       borderRadius: BorderRadius.circular(6),
