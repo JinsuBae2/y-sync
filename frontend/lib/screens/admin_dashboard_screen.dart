@@ -5,6 +5,7 @@ import '../widgets/brand_logo.dart';
 import 'admin_approval_tab.dart';
 import 'admin_member_tab.dart';
 import 'admin_post_management_screen.dart';
+import 'admin_feedback_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -31,6 +32,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           icon: Icons.verified_user_outlined,
         ),
         (label: '콘텐츠 관리', description: '게시글과 신고', icon: Icons.article_outlined),
+        (
+          label: '사용자 의견',
+          description: '오류 신고와 개선 제안',
+          icon: Icons.feedback_outlined,
+        ),
       ];
 
   @override
@@ -100,6 +106,7 @@ class _MobileAdminShell extends StatelessWidget {
           Tab(text: '회원'),
           Tab(text: '권한 승인'),
           Tab(text: '콘텐츠'),
+          Tab(text: '의견'),
         ],
       ),
     ),
@@ -109,6 +116,7 @@ class _MobileAdminShell extends StatelessWidget {
         AdminMemberTab(),
         AdminApprovalTab(),
         AdminPostManagementScreen(isTabMode: true),
+        AdminFeedbackScreen(),
       ],
     ),
   );
@@ -251,6 +259,7 @@ class _DesktopAdminShell extends StatelessWidget {
                     AdminMemberTab(isDesktop: true),
                     AdminApprovalTab(isDesktop: true),
                     AdminPostManagementScreen(isTabMode: true),
+                    AdminFeedbackScreen(),
                   ],
                 ),
               ),
