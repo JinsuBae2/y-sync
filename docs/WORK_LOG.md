@@ -11,7 +11,7 @@
 | **Who** | 배진수(기능 제안·검토) |
 | **When** | 2026-09-09, Asia/Seoul |
 | **Where** | `feat/help-feedback` 브랜치, Flutter 내정보·관리자 화면, Spring Boot 의견 API |
-| **Status** | 구현·로컬 검증 완료, `main` 대상 PR 준비 |
+| **Status** | 구현·로컬 검증 완료, `main` 대상 PR #87 게시 |
 
 ### **작업 개요**
 
@@ -33,6 +33,7 @@
 - Flutter `flutter test`: 전체 48개 통과
 - `flutter build web --release`: 성공
 - `git diff --check`: 통과
+- PR #87: `feat/help-feedback` → `main`
 
 ### **후속 작업**
 
