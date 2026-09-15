@@ -138,6 +138,12 @@ void main() {
     expect(find.text(_notice.title), findsOneWidget);
     expect(find.text('첨부 2'), findsOneWidget);
     expect(find.byIcon(Icons.attach_file_rounded), findsOneWidget);
+    final noticeCard = tester.widget<Material>(
+      find.byKey(const ValueKey('notice-card-1')),
+    );
+    final noticeShape = noticeCard.shape! as RoundedRectangleBorder;
+    expect(noticeShape.borderRadius, BorderRadius.circular(8));
+    expect(noticeShape.side.color, const Color(0xFFE1E6EE));
     expect(tester.takeException(), isNull);
   });
 

@@ -74,7 +74,7 @@ class HelpScreen extends StatelessWidget {
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('💡', style: TextStyle(fontSize: 28)),
+                  Icon(Icons.help_outline, size: 28, color: Colors.white),
                   SizedBox(width: 14),
                   Expanded(
                     child: Column(

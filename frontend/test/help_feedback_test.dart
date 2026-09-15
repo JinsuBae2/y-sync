@@ -17,7 +17,8 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: HelpScreen())),
     );
-    expect(find.text('💡'), findsOneWidget);
+    expect(find.byIcon(Icons.help_outline), findsOneWidget);
+    expect(find.text('💡'), findsNothing);
     expect(find.text('자주 묻는 질문'), findsOneWidget);
     expect(find.text('Q1'), findsWidgets);
     await tester.tap(find.text('학과 시간표와 개인 시간표는 어떻게 다른가요?'));

@@ -196,12 +196,7 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             physics: scrollWithPage
                 ? const NeverScrollableScrollPhysics()
                 : const BouncingScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              20,
-              12,
-              20,
-              MediaQuery.sizeOf(context).width < 900 ? 116 : 24,
-            ),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
             itemCount: selectedDayEvents.length,
             itemBuilder: (context, index) {
               final event = selectedDayEvents[index];
@@ -502,20 +497,15 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         },
       ),
       floatingActionButton: isAdmin
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
+          ? FloatingActionButton(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: FloatingActionButton(
-                backgroundColor: AppDesignTokens.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onPressed: () => _showAddEditEventDialog(),
-                tooltip: '학사 일정 추가',
-                child: const Icon(Icons.add),
-              ),
+              onPressed: () => _showAddEditEventDialog(),
+              tooltip: '학사 일정 추가',
+              child: const Icon(Icons.add),
             )
           : null,
     );
