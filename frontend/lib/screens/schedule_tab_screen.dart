@@ -72,19 +72,19 @@ class _ScheduleTabScreenState extends State<ScheduleTabScreen>
                   margin: AppDesignTokens.contentPadding,
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: AppDesignTokens.paleBlue,
+                    color: AppDesignTokens.surface,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppDesignTokens.divider),
                   ),
                   child: TabBar(
                     controller: _tabController,
                     dividerColor: Colors.transparent,
-                    indicatorSize: TabBarIndicatorSize.label,
+                    indicatorSize: TabBarIndicatorSize.tab,
                     indicator: BoxDecoration(
-                      color: AppDesignTokens.surface,
+                      color: const Color(0xFF164687),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppDesignTokens.divider),
                     ),
-                    labelColor: AppDesignTokens.navy,
+                    labelColor: Colors.white,
                     unselectedLabelColor: AppDesignTokens.muted,
                     labelStyle: const TextStyle(
                       fontSize: 14,

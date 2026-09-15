@@ -164,7 +164,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
         }
 
         return Scaffold(
-          extendBody: true,
+          extendBody: false,
           body: PageView(
             controller: pageController,
             onPageChanged: (index) {

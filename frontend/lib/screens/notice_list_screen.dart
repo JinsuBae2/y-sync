@@ -71,27 +71,22 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
         ],
       ),
       floatingActionButton: isAdmin
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
+          ? FloatingActionButton(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: FloatingActionButton(
-                backgroundColor: AppDesignTokens.blue,
-                foregroundColor: Colors.white,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                tooltip: '공지 작성',
-                onPressed: () async {
-                  final created = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
-                  );
-                  if (created == true) ref.invalidate(noticesProvider);
-                },
-                child: const Icon(Icons.edit_outlined),
-              ),
+              tooltip: '공지 작성',
+              onPressed: () async {
+                final created = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
+                );
+                if (created == true) ref.invalidate(noticesProvider);
+              },
+              child: const Icon(Icons.edit_outlined),
             )
           : null,
       body: Align(
@@ -179,10 +174,9 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
           color: AppDesignTokens.blue,
           onRefresh: () async => ref.invalidate(noticesProvider),
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             itemCount: filteredNotices.length,
-            separatorBuilder: (_, _) =>
-                const Divider(height: 1, color: AppDesignTokens.divider),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) => NoticeCard(
               notice: filteredNotices[index],
               onOpen: () async {
@@ -308,13 +302,19 @@ class NoticeCard extends ConsumerWidget {
     final isImportant = notice.noticeType == 'NOTICE';
 
     return Material(
+      key: ValueKey('notice-card-${notice.id}'),
       color: notice.isPinned
-          ? AppDesignTokens.paleBlue.withValues(alpha: 0.42)
-          : Colors.transparent,
+          ? AppDesignTokens.paleBlue.withValues(alpha: 0.58)
+          : AppDesignTokens.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppDesignTokens.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          padding: const EdgeInsets.fromLTRB(16, 16, 12, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

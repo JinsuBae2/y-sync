@@ -214,7 +214,7 @@ void main() {
     final eventList = tester.widget<ListView>(
       find.byKey(const ValueKey('calendar-event-list')),
     );
-    expect(eventList.padding, const EdgeInsets.fromLTRB(20, 12, 20, 116));
+    expect(eventList.padding, const EdgeInsets.fromLTRB(20, 12, 20, 24));
     final lastDay = DateTime(today.year, today.month + 1, 0).day.toString();
     final lastDateBottom = tester.getBottomLeft(find.text(lastDay).last).dy;
     final eventHeaderTop = tester
@@ -225,6 +225,11 @@ void main() {
 
     await tester.tap(find.text('시간표'));
     await tester.pumpAndSettle();
+
+    final scheduleTabs = tester.widget<TabBar>(find.byType(TabBar).first);
+    final scheduleIndicator = scheduleTabs.indicator! as BoxDecoration;
+    expect(scheduleIndicator.color, const Color(0xFF164687));
+    expect(scheduleTabs.labelColor, Colors.white);
 
     expect(find.text('학과 시간표'), findsOneWidget);
     expect(find.text('개인 시간표'), findsOneWidget);
@@ -270,6 +275,80 @@ void main() {
     expect(find.text('선택한 수업 2개 추가'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final width in [320.0, 375.0, 390.0]) {
+    testWidgets('폭 ${width.toInt()}px 시간표는 옵션부터 마지막 수업까지 한 번에 스크롤한다', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authProvider.overrideWith(_TestAuthNotifier.new),
+            calendarEventsProvider.overrideWith((ref) async => []),
+            timetableEntriesProvider.overrideWith(
+              (ref) async => List.generate(
+                6,
+                (index) => TimetableEntry(
+                  id: index + 10,
+                  grade: 'GRADE_1',
+                  dayOfWeek: 'MONDAY',
+                  subjectName: '모바일 수업 ${index + 1}',
+                  professorName: '김교수',
+                  classroom: '공학관 ${index + 1}01호',
+                  startPeriod: index + 1,
+                  endPeriod: index + 1,
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ScheduleTabScreen(),
+              bottomNavigationBar: SizedBox(
+                key: ValueKey('test-bottom-navigation'),
+                height: 76,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('시간표'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('timetable-day-0')));
+      await tester.pumpAndSettle();
+
+      final page = find.byKey(const ValueKey('mobile-timetable-page-scroll'));
+      expect(page, findsOneWidget);
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(of: page, matching: find.byType(Scrollable)).first,
+      );
+      expect(scrollable.position.maxScrollExtent, greaterThan(0));
+
+      final initialOptionsTop = tester.getTopLeft(find.text('학과 시간표')).dy;
+      scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getTopLeft(find.text('학과 시간표')).dy,
+        lessThan(initialOptionsTop),
+      );
+      final lastCard = tester.getRect(
+        find.byKey(const ValueKey('timetable-entry-15')),
+      );
+      final navigation = tester.getRect(
+        find.byKey(const ValueKey('test-bottom-navigation')),
+      );
+      expect(lastCard.bottom, lessThanOrEqualTo(navigation.top));
+      expect(navigation.top - lastCard.bottom, lessThanOrEqualTo(24));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('데스크톱 일정 달력과 목록 너비를 분할선 드래그로 조절한다', (tester) async {
     tester.view.physicalSize = const Size(1200, 800);
@@ -369,6 +448,8 @@ void main() {
 
     expect(find.text('설정'), findsOneWidget);
     expect(find.text('로그아웃'), findsOneWidget);
+    expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
+    expect(find.text('💡'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

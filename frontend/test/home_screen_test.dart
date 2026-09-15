@@ -132,7 +132,7 @@ void main() {
     expect(find.text('09:00–12:00 · 공학관 301호'), findsOneWidget);
     expect(find.text('다가오는 학사일정'), findsOneWidget);
     final listView = tester.widget<ListView>(find.byType(ListView));
-    expect(listView.padding, const EdgeInsets.fromLTRB(20, 22, 20, 116));
+    expect(listView.padding, const EdgeInsets.fromLTRB(20, 22, 20, 36));
     expect(tester.takeException(), isNull);
 
     await tester.drag(find.byType(ListView), const Offset(0, -700));
