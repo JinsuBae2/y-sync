@@ -96,7 +96,6 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
       _buildTopControls(
         selectedGrade: selectedGrade,
         selectedClass: selectedClass,
-        isMobile: isMobile,
       ),
       if (isMobile) _buildMobileViewControls(),
     ];
@@ -284,7 +283,6 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
   Widget _buildTopControls({
     required String selectedGrade,
     required int selectedClass,
-    required bool isMobile,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
@@ -307,54 +305,57 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
           ),
           if (!_isPersonal) ...[
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                runSpacing: 6,
-                children: [
-                  ...List.generate(_gradeOptions.length, (index) {
-                    final selected = selectedGrade == _gradeOptions[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: _FilterChip(
-                        label: _gradeLabels[index],
-                        selected: selected,
-                        onTap: () {
-                          if (index < 2 && selectedClass > 2) {
-                            ref
-                                .read(selectedTimetableClassProvider.notifier)
-                                .updateClass(1);
-                          }
-                          ref
-                              .read(selectedTimetableGradeProvider.notifier)
-                              .updateGrade(_gradeOptions[index]);
-                        },
-                      ),
-                    );
-                  }),
-                  Container(
-                    key: const ValueKey('department-class-selector'),
-                    child: Row(
-                      children: List.generate(
-                        selectedGrade == 'GRADE_3' ? 3 : 2,
-                        (index) {
-                          final classNumber = index + 1;
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 6),
-                            child: _FilterChip(
-                              label: '$classNumber반',
-                              selected: selectedClass == classNumber,
-                              onTap: () => ref
-                                  .read(selectedTimetableClassProvider.notifier)
-                                  .updateClass(classNumber),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimetableDropdown<String>(
+                    key: const ValueKey('timetable-grade-dropdown'),
+                    value: selectedGrade,
+                    items: List.generate(_gradeOptions.length, (index) {
+                      final grade = _gradeOptions[index];
+                      return DropdownMenuItem(
+                        key: ValueKey('timetable-grade-option-$grade'),
+                        value: grade,
+                        child: Text(_gradeLabels[index]),
+                      );
+                    }),
+                    onChanged: (grade) {
+                      if (grade == null) return;
+                      if (grade != 'GRADE_3' && selectedClass > 2) {
+                        ref
+                            .read(selectedTimetableClassProvider.notifier)
+                            .updateClass(1);
+                      }
+                      ref
+                          .read(selectedTimetableGradeProvider.notifier)
+                          .updateGrade(grade);
+                    },
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _TimetableDropdown<int>(
+                    key: const ValueKey('timetable-class-dropdown'),
+                    value: selectedClass,
+                    items: List.generate(selectedGrade == 'GRADE_3' ? 3 : 2, (
+                      index,
+                    ) {
+                      final classNumber = index + 1;
+                      return DropdownMenuItem(
+                        key: ValueKey('timetable-class-option-$classNumber'),
+                        value: classNumber,
+                        child: Text('$classNumber반'),
+                      );
+                    }),
+                    onChanged: (classNumber) {
+                      if (classNumber == null) return;
+                      ref
+                          .read(selectedTimetableClassProvider.notifier)
+                          .updateClass(classNumber);
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ],
@@ -1288,42 +1289,47 @@ class _CurrentClassBadge extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
+class _TimetableDropdown<T> extends StatelessWidget {
+  const _TimetableDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.onChanged,
   });
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppDesignTokens.surface,
         borderRadius: BorderRadius.circular(10),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 42, minHeight: 38),
-          child: Center(
-            child: SelectionHighlight(
-              selected: selected,
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: selected
-                      ? AppDesignTokens.navy
-                      : AppDesignTokens.muted,
-                  fontSize: 12.5,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                ),
-              ),
-            ),
+        border: Border.all(
+          color: const Color(0xFF164687).withValues(alpha: 0.4),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Color(0xFF164687),
           ),
+          dropdownColor: AppDesignTokens.surface,
+          borderRadius: BorderRadius.circular(10),
+          style: const TextStyle(
+            color: AppDesignTokens.navy,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+          items: items,
+          onChanged: onChanged,
         ),
       ),
     );

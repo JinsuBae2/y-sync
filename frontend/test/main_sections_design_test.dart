@@ -233,9 +233,76 @@ void main() {
 
     expect(find.text('학과 시간표'), findsOneWidget);
     expect(find.text('개인 시간표'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('timetable-grade-dropdown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('timetable-class-dropdown')),
+      findsOneWidget,
+    );
     expect(find.text('1학년'), findsOneWidget);
     expect(find.text('1반'), findsOneWidget);
-    expect(find.text('2반'), findsOneWidget);
+    expect(find.text('2반'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('timetable-grade-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-grade-option-GRADE_3')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<DropdownButton<String>>(
+            find.descendant(
+              of: find.byKey(const ValueKey('timetable-grade-dropdown')),
+              matching: find.byType(DropdownButton<String>),
+            ),
+          )
+          .value,
+      'GRADE_3',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('timetable-class-dropdown')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('timetable-class-option-3')),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-class-option-3')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('timetable-grade-dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('timetable-grade-option-GRADE_1')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<DropdownButton<int>>(
+            find.descendant(
+              of: find.byKey(const ValueKey('timetable-class-dropdown')),
+              matching: find.byType(DropdownButton<int>),
+            ),
+          )
+          .value,
+      1,
+    );
+    await tester.tap(find.byKey(const ValueKey('timetable-class-dropdown')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('timetable-class-option-3')),
+      findsNothing,
+    );
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const ValueKey('timetable-day-0')));
     await tester.pumpAndSettle();
     expect(
