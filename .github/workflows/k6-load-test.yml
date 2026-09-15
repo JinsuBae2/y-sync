@@ -1,0 +1,68 @@
+name: k6 Public Read Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: '운영 API 주소 (예: https://api.example.com)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k6-public-read-load-test
+  cancel-in-progress: false
+
+jobs:
+  k6:
+    name: Public GET staged load test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BASE_URL: ${{ inputs.base_url }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate target URL
+        run: |
+          if [[ -z "${BASE_URL//[[:space:]]/}" ]]; then
+            echo 'base_url must not be empty.' >&2
+            exit 1
+          fi
+          if [[ "$BASE_URL" != https://* ]]; then
+            echo 'base_url must use https:// for an operational test.' >&2
+            exit 1
+          fi
+          if [[ "$BASE_URL" == *localhost* ]] \
+            || [[ "$BASE_URL" =~ ^https://(127\.[0-9]+\.[0-9]+\.[0-9]+|0\.0\.0\.0|\[::1\])(:|/|$) ]]; then
+            echo 'base_url must target the remote operational server, not localhost.' >&2
+            exit 1
+          fi
+
+      - name: Run staged k6 test
+        id: k6
+        continue-on-error: true
+        run: |
+          set +e
+          docker run --rm \
+            --env BASE_URL \
+            --volume "$GITHUB_WORKSPACE:/work:ro" \
+            grafana/k6:0.54.0 run /work/loadtest/k6/public-read.js \
+            2>&1 | tee k6-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo '## k6 public GET load test'
+            echo ''
+            cat k6-output.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Fail workflow when k6 thresholds fail
+        if: steps.k6.outcome == 'failure'
+        run: |
+          echo 'k6 completed, but one or more thresholds failed.' >&2
+          exit 1
