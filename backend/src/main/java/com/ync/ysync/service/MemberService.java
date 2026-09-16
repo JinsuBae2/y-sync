@@ -159,6 +159,11 @@ public class MemberService {
      */
     @Transactional
     public Member signup(String loginId, String password, String name) {
+        // 💡 비밀번호 정책은 인증 상태를 확인하기 전에 검사합니다. 정책 위반 같은 단순 입력 오류로
+        //    이메일 인증 결과가 소모되지 않아야 사용자가 같은 인증으로 다시 시도할 수 있습니다.
+        //    기존에는 이 검사가 비밀번호 재설정에만 있어 회원가입에서는 한 글자 비밀번호도 허용됐습니다.
+        validatePassword(password);
+
         // 1. 이메일 인증 통과 여부 검증
         VerifiedInfo verifiedInfo = verifiedStudents.get(loginId);
         if (verifiedInfo == null || verifiedInfo.getExpiredAt().isBefore(LocalDateTime.now())
