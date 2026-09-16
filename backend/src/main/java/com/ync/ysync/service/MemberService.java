@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
@@ -50,14 +51,38 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
+    // 💡 인증번호는 한 번 발급된 뒤 5분간 고정되므로, 시도 횟수를 제한하지 않으면 6자리(10^6)를
+    //    무차별 대입할 수 있습니다. 아래 상수로 challenge당 시도 횟수와 재발급 간격을 제한합니다.
+    private static final int MAX_VERIFICATION_ATTEMPTS = 5;
+    private static final int VERIFICATION_TTL_MINUTES = 5;
+    private static final int RESEND_COOLDOWN_SECONDS = 60;
+    private static final int SIGNUP_GRANT_TTL_MINUTES = 10;
+
     // 💡 인증 코드 및 가입 허가 정보를 담을 인메모리 스토리지
     private final ConcurrentHashMap<String, VerificationInfo> verificationCodes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, VerifiedInfo> verifiedStudents = new ConcurrentHashMap<>();
+    // 💡 재발급 가능 시각. challenge가 시도 초과로 삭제돼도 남아야 "5회 실패 → 즉시 재발급 → 5회 더"
+    //    방식의 우회를 막을 수 있으므로 별도로 보관합니다. 키가 학번이라 크기는 회원 수로 제한됩니다.
+    private final ConcurrentHashMap<String, LocalDateTime> verificationResendAvailableAt = new ConcurrentHashMap<>();
     private final SecureRandom secureRandom = new SecureRandom();
 
     private enum VerificationPurpose {
         SIGNUP,
         PASSWORD_RESET
+    }
+
+    /**
+     * 💡 `verifyCode`의 판정 결과입니다. `ConcurrentHashMap.compute`의 remapping function 안에서
+     * 예외를 던지면 매핑 갱신이 취소되어 시도 횟수 증가가 사라지므로, 판정만 이 값으로 돌려받고
+     * 예외는 `compute` 종료 후 바깥에서 던집니다.
+     */
+    private enum VerifyOutcome {
+        NOT_FOUND,
+        EXPIRED,
+        PURPOSE_MISMATCH,
+        CODE_MISMATCH,
+        ATTEMPTS_EXHAUSTED,
+        SUCCESS
     }
 
     @Getter
@@ -67,6 +92,12 @@ public class MemberService {
         private final LocalDateTime expiredAt;
         private final String email;
         private final VerificationPurpose purpose;
+        private final int attemptCount;
+
+        /** 💡 불변으로 유지합니다. 제자리 변경은 맵 수준 원자성 밖에서 공유 상태를 건드리게 됩니다. */
+        private VerificationInfo withFailedAttempt() {
+            return new VerificationInfo(code, expiredAt, email, purpose, attemptCount + 1);
+        }
     }
 
     @Getter
@@ -109,49 +140,97 @@ public class MemberService {
                     throw new IllegalArgumentException("이미 다른 계정에 등록된 이메일입니다.");
                 });
 
-        // 2. 6자리 인증번호 생성
-        String code = generateVerificationCode();
-        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(5); // 5분 유효
-
-        verificationCodes.put(loginId,
-                new VerificationInfo(code, expiredAt, toEmail, VerificationPurpose.SIGNUP));
+        // 2. 6자리 인증번호 발급 (재발급 간격 제한 포함)
+        String code = issueVerificationCode(loginId, toEmail, VerificationPurpose.SIGNUP);
 
         // 3. 이메일 발송
         emailService.sendVerificationCode(toEmail, code);
     }
 
     /**
+     * 💡 인증번호를 발급하고 저장합니다.
+     *
+     * 재발급은 {@link #RESEND_COOLDOWN_SECONDS}초 간격으로 제한합니다. 이 제한이 없으면
+     * "시도 횟수를 소진한 뒤 즉시 재발급"을 반복해 시도 제한을 그대로 우회할 수 있고,
+     * 메일 발송 할당량도 무제한으로 소모됩니다. 새 코드를 넣으면 기존 challenge는 폐기됩니다.
+     */
+    private String issueVerificationCode(String loginId, String toEmail, VerificationPurpose purpose) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime availableAt = verificationResendAvailableAt.get(loginId);
+        if (availableAt != null && now.isBefore(availableAt)) {
+            throw new IllegalArgumentException("인증번호는 잠시 후에 다시 요청할 수 있습니다.");
+        }
+
+        String code = generateVerificationCode();
+        verificationCodes.put(loginId, new VerificationInfo(
+                code, now.plusMinutes(VERIFICATION_TTL_MINUTES), toEmail, purpose, 0));
+        verificationResendAvailableAt.put(loginId, now.plusSeconds(RESEND_COOLDOWN_SECONDS));
+        return code;
+    }
+
+    /**
      * 인증번호 검증
      */
     public boolean verifySignupCode(String loginId, String code) {
-        verifyCode(loginId, code, VerificationPurpose.SIGNUP);
+        VerificationInfo consumed = verifyCode(loginId, code, VerificationPurpose.SIGNUP);
+        // 가입은 인증과 최종 제출이 분리된 흐름이므로 통과 기록을 남깁니다.
+        verifiedStudents.put(loginId, new VerifiedInfo(
+                LocalDateTime.now().plusMinutes(SIGNUP_GRANT_TTL_MINUTES),
+                consumed.getEmail(), VerificationPurpose.SIGNUP));
         return true;
     }
 
-    private void verifyCode(String loginId, String code, VerificationPurpose purpose) {
-        VerificationInfo info = verificationCodes.get(loginId);
-        if (info == null) {
-            throw new IllegalArgumentException("인증 요청 기록이 없거나 만료되었습니다.");
-        }
+    /**
+     * 💡 인증번호를 원자적으로 검증하고 소비합니다. 성공 시 소비된 challenge를 반환합니다.
+     *
+     * 조회·검증·시도 횟수 증가·삭제를 {@code compute} 한 번으로 묶습니다. 이전 구현은
+     * `get → 검증 → remove` 구조라 같은 코드로 거의 동시에 들어온 두 요청이 모두 통과할 수
+     * 있었고, 비밀번호 재설정에서는 서로 다른 비밀번호가 경쟁할 수 있었습니다.
+     *
+     * 반환값을 쓰는 이유: 호출자가 인증된 이메일을 중간 저장소를 거치지 않고 바로 받을 수 있어,
+     * 비밀번호 재설정이 `verifiedStudents`에 의존하지 않게 됩니다.
+     */
+    private VerificationInfo verifyCode(String loginId, String code, VerificationPurpose purpose) {
+        AtomicReference<VerifyOutcome> outcome = new AtomicReference<>();
+        AtomicReference<VerificationInfo> consumed = new AtomicReference<>();
 
-        if (info.getExpiredAt().isBefore(LocalDateTime.now())) {
-            verificationCodes.remove(loginId);
-            throw new IllegalArgumentException("인증 시간이 만료되었습니다. 다시 시도해주세요.");
-        }
+        verificationCodes.compute(loginId, (key, info) -> {
+            if (info == null) {
+                outcome.set(VerifyOutcome.NOT_FOUND);
+                return null;
+            }
+            if (info.getExpiredAt().isBefore(LocalDateTime.now())) {
+                outcome.set(VerifyOutcome.EXPIRED);
+                return null;
+            }
+            // 목적 불일치는 사용자의 추측이 아니라 호출 오류이므로 시도 횟수를 소모하지 않습니다.
+            if (info.getPurpose() != purpose) {
+                outcome.set(VerifyOutcome.PURPOSE_MISMATCH);
+                return info;
+            }
+            if (!info.getCode().equals(code)) {
+                VerificationInfo attempted = info.withFailedAttempt();
+                if (attempted.getAttemptCount() >= MAX_VERIFICATION_ATTEMPTS) {
+                    outcome.set(VerifyOutcome.ATTEMPTS_EXHAUSTED);
+                    return null; // challenge 폐기. 계정은 잠그지 않습니다.
+                }
+                outcome.set(VerifyOutcome.CODE_MISMATCH);
+                return attempted;
+            }
+            outcome.set(VerifyOutcome.SUCCESS);
+            consumed.set(info);
+            return null; // 성공 시 소비하여 재사용을 막습니다.
+        });
 
-        if (!info.getCode().equals(code)) {
-            throw new IllegalArgumentException("인증 번호가 일치하지 않습니다.");
+        switch (outcome.get()) {
+            case NOT_FOUND -> throw new IllegalArgumentException("인증 요청 기록이 없거나 만료되었습니다.");
+            case EXPIRED -> throw new IllegalArgumentException("인증 시간이 만료되었습니다. 다시 시도해주세요.");
+            case PURPOSE_MISMATCH -> throw new IllegalArgumentException("인증 목적이 올바르지 않습니다. 인증번호를 다시 요청해 주세요.");
+            case CODE_MISMATCH -> throw new IllegalArgumentException("인증 번호가 일치하지 않습니다.");
+            case ATTEMPTS_EXHAUSTED -> throw new IllegalArgumentException("인증 시도 횟수를 초과했습니다. 인증번호를 다시 요청해 주세요.");
+            case SUCCESS -> log.info("인증 성공 - 학번: {}, 목적: {}", loginId, purpose);
         }
-
-        if (info.getPurpose() != purpose) {
-            throw new IllegalArgumentException("인증 목적이 올바르지 않습니다. 인증번호를 다시 요청해 주세요.");
-        }
-
-        // 인증 통과 기록 저장 (10분간 유효)
-        verifiedStudents.put(loginId,
-                new VerifiedInfo(LocalDateTime.now().plusMinutes(10), info.getEmail(), purpose));
-        verificationCodes.remove(loginId);
-        log.info("인증 성공 - 학번: {}, 목적: {}", loginId, purpose);
+        return consumed.get();
     }
 
     /**
@@ -221,30 +300,28 @@ public class MemberService {
             throw new IllegalArgumentException("등록된 이메일이 없습니다. 계정 재등록 초기화를 이용해 주세요.");
         }
 
-        String code = generateVerificationCode();
-        verificationCodes.put(member.getLoginId(),
-                new VerificationInfo(code, LocalDateTime.now().plusMinutes(5), member.getEmail(),
-                        VerificationPurpose.PASSWORD_RESET));
+        String code = issueVerificationCode(
+                member.getLoginId(), member.getEmail(), VerificationPurpose.PASSWORD_RESET);
         emailService.sendPasswordResetCode(member.getEmail(), code);
     }
 
     @Transactional
     public void confirmPasswordReset(String loginId, String code, String newPassword) {
         validatePassword(newPassword);
-        verifyCode(loginId, code, VerificationPurpose.PASSWORD_RESET);
 
-        VerifiedInfo verifiedInfo = verifiedStudents.get(loginId);
+        // 💡 인증번호 검증과 비밀번호 변경이 같은 요청에 있으므로 중간 저장소가 필요 없습니다.
+        //    소비된 challenge가 인증된 이메일을 들고 있어 회원 이메일과 바로 대조합니다.
+        VerificationInfo consumed = verifyCode(loginId, code, VerificationPurpose.PASSWORD_RESET);
+
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("등록된 계정을 찾을 수 없습니다."));
-        if (verifiedInfo == null || !verifiedInfo.getEmail().equals(member.getEmail())) {
-            verifiedStudents.remove(loginId);
+        if (!consumed.getEmail().equals(member.getEmail())) {
             throw new IllegalArgumentException("인증 정보가 일치하지 않습니다. 다시 시도해 주세요.");
         }
 
         member.setPassword(passwordEncoder.encode(newPassword));
         member.setAuthVersion(member.getAuthVersion() + 1);
         member.setFcmToken(null);
-        verifiedStudents.remove(loginId);
         memberRepository.save(member);
         log.info("비밀번호 재설정 완료 - 학번: {}", loginId);
     }
@@ -661,6 +738,8 @@ public class MemberService {
         member.setFcmToken(null);
         verificationCodes.remove(member.getLoginId());
         verifiedStudents.remove(member.getLoginId());
+        // 💡 관리자가 계정을 초기화한 직후에는 사용자가 바로 재인증할 수 있어야 하므로 쿨다운도 해제합니다.
+        verificationResendAvailableAt.remove(member.getLoginId());
         memberRepository.save(member);
         log.info("관리자 회원 계정 재등록 초기화 완료 - ID: {}, 학번: {} (가입 대기 상태로 전환)", id, member.getLoginId());
     }
