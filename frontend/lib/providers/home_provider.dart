@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/calendar_event.dart';
 import '../models/community_post.dart';
 import '../models/notice.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 
 final homeNowProvider = Provider<DateTime>((ref) => DateTime.now());
 

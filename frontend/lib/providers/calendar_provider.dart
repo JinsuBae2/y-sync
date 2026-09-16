@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/calendar_event.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 
 // 💡 캘린더 화면에서 현재 선택된 연월(DateTime)을 관리하는 Notifier입니다.
 class SelectedMonthNotifier extends Notifier<DateTime> {

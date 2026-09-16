@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-09-16 - 프론트 공통 API provider 분리
+
+- 공지 provider에 있던 Dio·토큰 저장소·인터셉터를 `api_client_provider.dart`로 이동했습니다.
+- 관련 provider·화면·테스트의 import를 변경하고, 댓글 수 갱신에 필요한 공지 의존성은 유지했습니다.
+- 기존 인증·401 처리 동작을 유지하는 리팩터링입니다. 401 처리 개선과 스와이프 문제 해결은 별도입니다.
+- 검증: 관련 테스트 4개 및 전체 Flutter 테스트 53개 통과, 웹 릴리스 빌드 성공. 분석 오류 없음(기존 경고 3건·정보 27건).
+- 브랜치: `refactor/frontend-api-client-swipe-diagnostics`. 기존 iOS·Gradle 로컬 변경과 보안 검토 문서는 제외했습니다.
+
+---
+
 ## 2026-09-16 - 인증 API 요청 수 제한, Tomcat 패치, ddl-auto 전환 준비
 
 | 항목 | 내용 |

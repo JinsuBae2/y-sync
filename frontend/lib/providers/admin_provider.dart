@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/admin_request.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 
 // 💡 관리자 신청 및 승인 프로세스를 관리하는 Provider입니다.
 class AdminNotifier extends AsyncNotifier<List<AdminRequest>> {

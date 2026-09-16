@@ -1,64 +1,11 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/notice.dart';
-import '../config/api_config.dart';
-import '../services/push_notification_service.dart';
-import '../screens/login_screen.dart';
 import '../utils/platform_file_multipart.dart';
-import 'server_availability_provider.dart';
-import 'session_provider.dart';
-
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-// Secure storage instance
-final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
-
-final dioProvider = Provider<Dio>((ref) {
-  final dio = Dio(BaseOptions(baseUrl: apiBaseUrl));
-
-  dio.interceptors.add(
-    InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        // 💡 매 요청마다 SecureStorage에서 JWT 토큰을 읽어와 Authorization 헤더에 추가합니다.
-        final storage = ref.read(secureStorageProvider);
-        final token = await storage.read(key: 'jwt_token');
-
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
-      onResponse: (response, handler) {
-        ref.read(serverAvailabilityProvider.notifier).markAvailable();
-        return handler.next(response);
-      },
-      onError: (DioException e, handler) async {
-        if (isServerUnavailableError(e)) {
-          ref.read(serverAvailabilityProvider.notifier).markUnavailable();
-        }
-        if (e.response?.statusCode == 401) {
-          // 💡 401 Unauthorized 발생 시 좀비 토큰일 수 있으므로 로컬 세션(토큰) 삭제 및 강제 로그인 창 이동
-          final storage = ref.read(secureStorageProvider);
-          ref.read(sessionMemberIdProvider.notifier).clear();
-          await storage.delete(key: 'jwt_token');
-
-          // 순환 참조(Circular Dependency) 방지를 위해 authProvider 대신 전역 네비게이터를 사용합니다.
-          PushNotificationService.navigatorKey.currentState?.pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
-          );
-        }
-        return handler.next(e);
-      },
-    ),
-  );
-
-  return dio;
-});
+import 'api_client_provider.dart';
 
 // 💡 현재 검색어를 관리하는 Provider입니다. (Riverpod 3.x 호환 Notifier 사용)
 class SearchKeywordNotifier extends Notifier<String> {

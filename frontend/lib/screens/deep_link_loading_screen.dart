@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notice.dart';
 import '../models/community_post.dart';
-import '../providers/notice_provider.dart'; // contains dioProvider
+import '../providers/api_client_provider.dart';
 import '../screens/notice_detail_screen.dart';
 import '../screens/community_detail_screen.dart';
 

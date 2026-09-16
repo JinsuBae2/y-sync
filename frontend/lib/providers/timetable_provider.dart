@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/timetable_entry.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 import 'session_provider.dart';
 
 // 💡 시간표 조회용 학년 분류 상태 관리 (GRADE_1, GRADE_2, GRADE_3)

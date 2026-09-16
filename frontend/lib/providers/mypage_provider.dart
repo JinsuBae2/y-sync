@@ -3,7 +3,7 @@ import '../models/community_post.dart';
 import '../models/my_comment.dart';
 import '../models/member.dart';
 import '../models/notice.dart'; // 💡 추가
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 import 'session_provider.dart';
 
 // 💡 마이페이지의 전반적인 상태(프로필, 내 글, 내 댓글, 내 공지사항)를 통합 관리하는 Notifier입니다.

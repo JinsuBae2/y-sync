@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:y_sync/providers/notice_provider.dart';
+import 'package:y_sync/providers/api_client_provider.dart';
 import 'package:y_sync/providers/notification_provider.dart';
 import 'package:y_sync/providers/scrap_provider.dart';
 import 'package:y_sync/providers/session_provider.dart';

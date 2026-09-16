@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/scrap.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 import 'session_provider.dart';
 
 // 💡 내 스크랩 목록을 서버에서 가져옵니다.

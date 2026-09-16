@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
-import 'notice_provider.dart'; // dioProvider가 있는 곳
+import 'api_client_provider.dart';
 
 class CsvImportError {
   final int row;
