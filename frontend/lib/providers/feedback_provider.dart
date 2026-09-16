@@ -3,7 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/platform_file_multipart.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 import 'session_provider.dart';
 
 const feedbackCategories = {

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 import 'session_provider.dart';
 
 import '../services/push_notification_service.dart'; // 💡 FCM 추가

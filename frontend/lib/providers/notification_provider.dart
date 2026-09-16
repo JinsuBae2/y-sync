@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification.dart';
-import 'notice_provider.dart'; // dioProvider
+import 'api_client_provider.dart';
 import 'session_provider.dart';
 
 class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/mypage_provider.dart';
-import '../providers/notice_provider.dart';
+import '../providers/api_client_provider.dart';
 import '../theme/app_design_tokens.dart';
 
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
