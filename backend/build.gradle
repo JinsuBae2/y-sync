@@ -9,6 +9,10 @@ group = 'com.ync'
 version = '0.0.1-SNAPSHOT'
 description = 'Y-Sync Backend'
 
+// 💡 Spring Boot 4.1.1이 관리하는 tomcat-embed-core 11.0.24에 알려진 취약점이 있어 11.0.25로 올립니다.
+//    Boot 패치 버전이 11.0.25 이상을 관리하게 되면 이 고정은 제거합니다.
+ext['tomcat.version'] = '11.0.25'
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
