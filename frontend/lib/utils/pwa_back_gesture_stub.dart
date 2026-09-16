@@ -1,0 +1,1 @@
+void setDetailBackGestureActive(bool active) {}
