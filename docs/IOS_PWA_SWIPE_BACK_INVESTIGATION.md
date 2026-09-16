@@ -132,3 +132,15 @@ flutter build web --release --dart-define=SWIPE_DIAGNOSTICS=true
 - Flutter 분석: 오류 없음. 기존 경고 3개·정보 27개 유지.
 - 실제 iPhone PWA에서 진단 모드를 켜고 회색 화면을 재현한 기록은 아직 없다.
 - 진단 플래그를 켠 웹 릴리스 빌드 성공. 출력물의 진단 스크립트 포함 및 Flutter 부트스트랩 이전 로딩 순서를 확인했다.
+
+## 실기기 기록 분석 및 수정 후보
+
+두 진단 파일에서 브라우저 history_pop 이후 Flutter route_pop으로 복귀하는 경로와, history_pop 없이 Flutter gesture_start → route_pop으로 복귀하는 경로가 모두 관찰됐다. 두 번째 기록의 반복 복귀 중 페이지 재시작은 없었다. 전체 페이지 재시작 기록은 일반 터치 직후여서 진단 파일 다운로드에 따른 이탈 가능성도 있으며, 이를 회색 화면 원인으로 단정하지 않는다.
+
+로컬 Flutter 엔진의 `SingleEntryBrowserHistory.onPopState`는 브라우저 popstate를 받아 Flutter `popRoute`를 호출한다. 즉 목록 API 외에 브라우저 전환과 Flutter 자체 전환이라는 두 경로가 존재한다.
+
+수정 후보: iOS의 설치형 PWA에서 공통 공지·커뮤니티 상세 라우트가 최상단일 때만 왼쪽 20px의 단일 touchstart에 preventDefault를 적용한다. 이벤트 전파를 막지 않아 Flutter의 포인터·스와이프 처리를 유지한다. 목록·다이얼로그·Safari 일반 탭·Android는 적용하지 않으며, 다중 터치도 제외한다. 라우트 이름과 URL은 변경하지 않는다.
+
+근거 참고: https://bugs.webkit.org/show_bug.cgi?id=240892 (iOS touchstart 기본 동작 차단 관련 보고). 브라우저 버전별 실기기 효과까지 보장하는 근거는 아니다.
+
+이 변경은 두 제스처 경로의 경합을 줄이는 검증 대상 수정안이다. 로컬 테스트는 적용 조건과 Flutter 복귀 유지 여부를 확인하며, **아이폰에서 회색 화면 해결 여부는 배포 후 확인해야 한다.** 진단 모드는 유지하여 비교할 수 있다.
