@@ -252,8 +252,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return;
     }
 
-    if (password.length < 4) {
-      _showWarningSnackBar('비밀번호는 최소 4자 이상이어야 합니다.');
+    // 💡 서버의 비밀번호 정책(MemberService.validatePassword)과 동일한 기준으로 먼저 안내합니다.
+    //    기준이 어긋나면 사용자가 입력을 마친 뒤에야 서버 오류를 보게 되므로 함께 유지해야 합니다.
+    if (password.length < 8 || password.length > 64) {
+      _showWarningSnackBar('비밀번호는 8자 이상 64자 이하로 입력해주세요.');
+      return;
+    }
+
+    if (!RegExp(r'[A-Za-z]').hasMatch(password) ||
+        !RegExp(r'\d').hasMatch(password) ||
+        !RegExp(r'[^A-Za-z0-9]').hasMatch(password)) {
+      _showWarningSnackBar('비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
     }
 
