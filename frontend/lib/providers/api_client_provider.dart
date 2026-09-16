@@ -8,6 +8,7 @@ import '../screens/login_screen.dart';
 import '../services/push_notification_service.dart';
 import 'server_availability_provider.dart';
 import 'session_provider.dart';
+import '../utils/swipe_diagnostics.dart';
 
 // Secure storage instance
 final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
@@ -18,6 +19,8 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
+        final category = swipeListCategory(options.path);
+        if (category != null) recordSwipeEvent('request_start', category);
         // 💡 매 요청마다 SecureStorage에서 JWT 토큰을 읽어와 Authorization 헤더에 추가합니다.
         final storage = ref.read(secureStorageProvider);
         final token = await storage.read(key: 'jwt_token');
@@ -28,10 +31,14 @@ final dioProvider = Provider<Dio>((ref) {
         return handler.next(options);
       },
       onResponse: (response, handler) {
+        final category = swipeListCategory(response.requestOptions.path);
+        if (category != null) recordSwipeEvent('request_end', category);
         ref.read(serverAvailabilityProvider.notifier).markAvailable();
         return handler.next(response);
       },
       onError: (DioException e, handler) async {
+        final category = swipeListCategory(e.requestOptions.path);
+        if (category != null) recordSwipeEvent('request_error', category);
         if (isServerUnavailableError(e)) {
           ref.read(serverAvailabilityProvider.notifier).markUnavailable();
         }

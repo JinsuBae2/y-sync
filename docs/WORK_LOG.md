@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-09-16 - iPhone PWA 스와이프 복귀 진단 모드
+
+- 회색 화면의 원인은 아직 미확정입니다. 동작 수정 대신 페이지 재시작·브라우저 이벤트·Flutter 라우트·목록 요청을 구분하는 선택적 진단 모드를 추가했습니다.
+- 기본 비활성, 최근 150개 이벤트만 기기 sessionStorage에 보관합니다. 서버 전송·토큰·본문·검색어 기록은 없습니다.
+- `SWIPE_DIAGNOSTICS=true` 빌드 또는 `swipeDebug=1` 쿼리로 활성화하고 진단 저장 버튼으로 JSON을 저장합니다. 일반 배포에서는 진단 빌드 플래그를 사용하지 않습니다.
+- 검증: Flutter 전체 55개, JavaScript 진단 테스트 6개 통과. 진단 웹 릴리스 빌드 성공, 분석 오류 없음(기존 경고 3건·정보 27건).
+- 후속: 실제 iPhone PWA에서 기록 수집 필요. 회색 화면 해결이나 실기기 재현 완료를 의미하지 않습니다.
+- 상세: `docs/IOS_PWA_SWIPE_BACK_INVESTIGATION.md`.
+
+---
+
 ## 2026-09-16 - 프론트 공통 API provider 분리
 
 - 공지 provider에 있던 Dio·토큰 저장소·인터셉터를 `api_client_provider.dart`로 이동했습니다.

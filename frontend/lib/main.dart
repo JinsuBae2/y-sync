@@ -10,9 +10,13 @@ import 'screens/main_tab_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart'; // 💡 FCM 추가
 import 'widgets/server_availability_gate.dart';
+import 'utils/swipe_diagnostics.dart';
+
+final _swipeDiagnosticsObserver = SwipeDiagnosticsObserver();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  initializeSwipeDiagnostics();
 
   // 💡 Firebase 환경 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -35,6 +39,7 @@ class YSyncApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
+      navigatorObservers: [_swipeDiagnosticsObserver],
       navigatorKey:
           PushNotificationService.navigatorKey, // 💡 전역 라우팅을 위한 네비게이터 키 등록
       title: 'Y-Sync',
