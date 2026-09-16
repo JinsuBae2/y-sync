@@ -12,6 +12,21 @@
 
 커뮤니티, 학사일정, 시간표 조회는 현재 `anyRequest().authenticated()`에 의해 인증이 필요하므로 제외했습니다. 공지 상세 조회는 조회수 변경 가능성이 있어 제외했습니다. 계정·JWT·임의 로그인은 사용하지 않습니다.
 
+### 현재 비로그인 공개 범위
+
+부하테스트 대상 선정 시 참고할 전체 공개 범위입니다. `SecurityConfig`의 `permitAll` 매처 기준입니다.
+
+| 경로 | 비고 |
+|---|---|
+| `GET /api/v1/notices` | 목록·검색(`keyword` 파라미터), 페이징 |
+| `GET /api/v1/notices/search` | 레거시 검색, 페이징 없음 |
+| `GET /api/v1/notices/{id}` | 상세. 호출 시 조회수가 증가하므로 부하테스트에서 제외 |
+| `GET /api/v1/hello` | 상태 확인 |
+| `/uploads/**`, `/s3-uploads/**` | 첨부 파일 |
+| `/api/v1/auth/**` | 인증 API (GET 외 포함) |
+
+`GET /api/v1/notices/{id}/comments`는 2026-09-16부터 인증이 필요합니다. 댓글 응답에 작성자 실명과 회원 ID가 포함되기 때문입니다. 공개 범위를 넓히는 변경은 `NoticePublicAccessSecurityTest`가 막습니다.
+
 ## 부하 단계와 측정값
 
 순차적으로 다음 단계가 실행됩니다.
