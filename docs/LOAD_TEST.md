@@ -39,6 +39,15 @@
 
 운영 URL은 workflow input으로만 주입되며 저장소 코드에 하드코딩하지 않습니다. 이번 1차 테스트가 안정적이어도 75/100 VU는 별도 실행에서 판단합니다.
 
+### 실행 안전장치
+
+- workflow는 `workflow_dispatch`로만 실행되며 push·PR 이벤트에는 연결되지 않습니다.
+- 동일 workflow 실행은 `concurrency`로 직렬화되어 동시에 여러 부하를 만들지 않습니다.
+- Job은 최대 15분 후 자동 중단됩니다.
+- `base_url`이 비어 있거나 HTTPS가 아니면 실행 전에 실패합니다.
+- `localhost`, `127.0.0.0/8`, `0.0.0.0`, `::1` 대상은 실행 전에 차단합니다.
+- GitHub Actions 권한은 `contents: read`만 사용합니다.
+
 ## 운영 서버 리소스 확인
 
 추가 인프라(Prometheus/Grafana)는 설치하지 않습니다. 부하테스트 실행과 동시에 Oracle 서버 SSH 세션에서 다음 명령을 단계별로 기록합니다.
