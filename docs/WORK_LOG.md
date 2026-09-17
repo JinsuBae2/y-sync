@@ -11,7 +11,7 @@
 | **Who** | 배진수(요청·검토) |
 | **When** | 2026-09-17, Asia/Seoul |
 | **Where** | `fix/pwa-gesture-diagnostics`, 설치형 iOS PWA |
-| **Status** | 로컬 구현·검증 완료, PR 준비, 미배포 |
+| **Status** | 로컬 구현·검증 완료, [PR #102](https://github.com/JinsuBae2/y-sync/pull/102), 미배포 |
 
 ### 작업 개요(What·Why)
 
