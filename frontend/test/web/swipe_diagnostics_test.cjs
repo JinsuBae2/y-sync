@@ -9,6 +9,7 @@ function boot(storage = new Map(), search = '', guard) {
   const elements = [];
   const context = {
     URLSearchParams, Date, Math, JSON,
+    innerWidth: 390,
     ysyncPwaBackGesture: guard,
     location: { search },
     sessionStorage: {
@@ -100,7 +101,7 @@ test('each event retains executing component revisions after the ring wraps', ()
   for (let i = 0; i < 155; i++) x.api.record('guard_touch', 'prevented');
   const events = JSON.parse(x.api.export());
   assert.equal(events.length, 150);
-  assert.equal(events[0].diagnosticVersion, 'diag_v2');
+  assert.equal(events[0].diagnosticVersion, 'diag_v3');
   assert.equal(events[0].guardVersion, 'guard_v3');
   assert.equal(events[0].guardEnabled, true);
   assert.equal(events[0].flutterVersion, 'flutter_v2');
@@ -113,4 +114,63 @@ test('missing and older bridges are unknown, not misreported as current', () => 
   assert.equal(e.guardVersion, 'unknown');
   assert.equal(e.guardEnabled, null);
   assert.equal(e.flutterVersion, 'unknown');
+});
+
+test('records start position and direction without recording move samples', () => {
+  const x = boot(new Map(), '?swipeDebug=1');
+  const point = (clientX, clientY) => ({ identifier: 4, clientX, clientY });
+  x.listeners.touchstart({ touches: [point(28, 300)] });
+  x.listeners.touchmove({ touches: [point(90, 301)] });
+  x.listeners.touchend({ changedTouches: [point(160, 304)] });
+  const events = JSON.parse(x.api.export());
+  const start = events.find(e => e.event === 'touch_start');
+  const end = events.at(-1);
+  assert.equal(start.touch.startX, 28);
+  assert.equal(start.touch.viewportWidth, 390);
+  assert.equal(end.touch.startX, 28);
+  assert.equal(end.touch.deltaX, 132);
+  assert.equal(end.touch.deltaY, 4);
+  assert.equal(end.touch.direction, 'right');
+  assert.equal(end.touch.positionSource, 'changed_touch');
+  assert.equal(events.length, 3);
+});
+test('cancel uses last observed position and does not invent a final position', () => {
+  const x = boot(new Map(), '?swipeDebug=1');
+  const point = (clientX, clientY) => ({ identifier: 7, clientX, clientY });
+  x.listeners.touchstart({ touches: [point(380, 200)] });
+  x.listeners.touchmove({ touches: [point(290, 220)] });
+  x.listeners.touchcancel({ changedTouches: [] });
+  const end = JSON.parse(x.api.export()).at(-1);
+  assert.equal(end.touch.direction, 'left');
+  assert.equal(end.touch.deltaX, -90);
+  assert.equal(end.touch.positionSource, 'last_observed');
+});
+test('multi-touch and stopped recording cannot reuse a previous single touch', () => {
+  const x = boot(new Map(), '?swipeDebug=1');
+  const p = { identifier: 1, clientX: 5, clientY: 50 };
+  x.listeners.touchstart({ touches: [p] });
+  x.listeners.touchstart({ touches: [p, { ...p, identifier: 2 }] });
+  x.listeners.touchend({ changedTouches: [p] });
+  assert.equal(JSON.parse(x.api.export()).at(-1).touch, undefined);
+  x.listeners.touchstart({ touches: [p] });
+  x.api.stop();
+  x.api.enable();
+  x.listeners.touchend({ changedTouches: [p] });
+  assert.equal(JSON.parse(x.api.export()).at(-1).touch, undefined);
+});
+
+test('vertical drags and taps are not labelled as horizontal swipes', () => {
+  for (const [endX, endY, expected] of [[102, 220, 'down'], [99, 20, 'up'], [103, 102, 'stationary']]) {
+    const x = boot(new Map(), '?swipeDebug=1');
+    x.listeners.touchstart({ touches: [{ identifier: 1, clientX: 100, clientY: 100 }] });
+    x.listeners.touchend({ changedTouches: [{ identifier: 1, clientX: endX, clientY: endY }] });
+    assert.equal(JSON.parse(x.api.export()).at(-1).touch.direction, expected);
+  }
+});
+test('invalid coordinates and public metadata cannot enter position records', () => {
+  const x = boot(new Map(), '?swipeDebug=1');
+  x.listeners.touchstart({ touches: [{ identifier: 1, clientX: NaN, clientY: 0 }] });
+  assert.equal(JSON.parse(x.api.export()).at(-1).touch, undefined);
+  x.api.record('touch_end', '', { secret: 'PRIVATE' });
+  assert.ok(!x.api.export().includes('PRIVATE'));
 });
