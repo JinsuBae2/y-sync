@@ -171,3 +171,18 @@ PR #101 운영 배포 성공 후 수집한 다섯 번째 기록에서도 상세 
 해석 순서: 실행 표식 → guardEnabled → 해당 터치의 guard_touch 결과 → history_pop 순서로 비교한다. guard_touch가 없다는 사실만으로 WebKit 버그라고 단정하지 않는다. 기존 진단 저장 버튼을 사용하며 추가 활성화 절차는 없다.
 
 검증: Flutter 57개·JavaScript 13개 테스트 통과, 분석 오류 없음(기존 경고 3개·정보 27개), 진단 활성 웹 빌드 성공. 실기기 재현 기록은 배포 후 확인한다.
+
+
+## 2026-09-17 시작 위치·이동 방향 진단
+
+여섯 번째 기록은 최신 진단과 차단 활성 상태에서 prevented 후 Flutter 복귀 3회, outside_edge 후 history_pop 복귀 1회를 보였다. 회색 화면 시점 자체는 기록되지 않아 브라우저 복귀와의 대응은 아직 추정이다.
+
+진단 버전 `diag_v3`부터 `touch_start.touch`에 `startX`, `startY`, `viewportWidth`를, 종료·취소 이벤트에는 추가로 `deltaX`, `deltaY`, `direction`, `positionSource`를 기록한다. 좌표는 CSS px 단위의 반올림 정수다. `viewportWidth - startX`로 오른쪽 끝과의 거리도 확인할 수 있다.
+
+- `direction`: 관찰된 변위의 큰 축 기준 right/left/up/down. 두 축 모두 8px 미만이면 stationary.
+- `positionSource=changed_touch`: 종료·취소 이벤트의 해당 터치 좌표를 사용했다.
+- `positionSource=last_observed`: 최종 좌표가 없어 마지막으로 전달받은 좌표를 사용했다. 실제 최종 방향이나 이동 거리로 단정하지 않는다.
+- 다중 터치는 추적하지 않고, 진단 종료 시 추적 상태도 초기화한다. touchmove는 마지막 좌표만 메모리에 유지하며 이동 경로 전체를 기록하지 않는다.
+- 차단 범위·이벤트 전파·화면 이동은 유지한다. 기존 진단 저장 버튼과 최대 150개 기기 내 기록을 그대로 사용한다.
+
+검증: JavaScript 18개, Flutter 57개 통과. 분석 오류 없음(기존 경고 3개·정보 27개), 진단 활성 웹 빌드 성공. 배포 후 재현 기록으로 위치와 방향을 확인한 뒤 차단 영역 조정 여부를 결정한다.
