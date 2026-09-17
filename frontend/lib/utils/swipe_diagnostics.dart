@@ -8,7 +8,7 @@ void initializeSwipeDiagnostics() {
   if (const bool.fromEnvironment('SWIPE_DIAGNOSTICS')) {
     platform.enableSwipeDiagnostics();
   }
-  recordSwipeEvent('flutter_start', 'flutter_v2');
+  recordSwipeEvent('flutter_start', 'flutter_v3');
 }
 
 void recordSwipeEvent(String event, [String detail = '']) {

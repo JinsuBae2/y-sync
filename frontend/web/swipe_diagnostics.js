@@ -13,7 +13,7 @@
     'notice', 'community', 'other', 'left_edge', 'visible', 'hidden',
     'cached', 'fresh', 'navigate', 'reload', 'back_forward', 'unknown',
     'prevented', 'not_prevented', 'not_cancelable', 'outside_edge', 'multi_touch',
-    'flutter_v2',
+    'flutter_v2', 'flutter_v3',
   ]);
   let flutterVersion = 'unknown';
   let activeTouch;
@@ -26,17 +26,20 @@
   const read = key => { try { return sessionStorage.getItem(key); } catch (_) { return null; } };
   const write = (key, value) => { try { sessionStorage.setItem(key, value); } catch (_) {} };
   const remove = key => { try { sessionStorage.removeItem(key); } catch (_) {} };
+  const edgeWidth = () => window.ysyncPwaBackGesture?.edgeWidth === 32 ? 32 : 20;
   function record(event, detail = '', touch) {
     if (event === 'flutter_start') {
-      flutterVersion = detail === 'flutter_v2' ? detail : 'unknown';
+      flutterVersion = ['flutter_v2', 'flutter_v3'].includes(detail) ? detail : 'unknown';
     }
     if (!enabled || !eventsAllowed.has(event)) return;
     events.push({ at: new Date().toISOString(), run, event,
       detail: detailsAllowed.has(detail) ? detail : '',
-      diagnosticVersion: 'diag_v3',
-      guardVersion: window.ysyncPwaBackGesture?.version === 'guard_v3' ? 'guard_v3' : 'unknown',
+      diagnosticVersion: 'diag_v4',
+      guardVersion: ['guard_v3', 'guard_v4'].includes(window.ysyncPwaBackGesture?.version)
+        ? window.ysyncPwaBackGesture.version : 'unknown',
       guardEnabled: typeof window.ysyncPwaBackGesture?.enabled === 'boolean'
         ? window.ysyncPwaBackGesture.enabled : null,
+      edgeWidth: edgeWidth(),
       flutterVersion, ...(touch ? { touch } : {}) });
     events = events.slice(-150);
     write(logKey, JSON.stringify(events));
@@ -104,7 +107,7 @@
           identifier: point.identifier, startX: x, startY: y, lastX: x, lastY: y,
           viewportWidth: coordinate(window.innerWidth),
         } : undefined;
-        record('touch_start', e.touches[0]?.clientX >= 0 && e.touches[0]?.clientX <= 20
+        record('touch_start', e.touches[0]?.clientX >= 0 && e.touches[0]?.clientX <= edgeWidth()
           ? 'left_edge' : 'other', activeTouch ? {
             startX: x, startY: y, viewportWidth: activeTouch.viewportWidth,
           } : undefined);
