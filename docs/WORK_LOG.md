@@ -11,7 +11,7 @@
 | **Who** | 배진수(요청·검토) |
 | **When** | 2026-09-17, Asia/Seoul |
 | **Where** | `fix/pwa-back-gesture-edge-width`, 설치형 iOS PWA 공통 상세 이동 |
-| **Status** | 로컬 구현·검증 완료, PR 준비, 미배포 |
+| **Status** | 로컬 구현·검증 완료, [PR #104](https://github.com/JinsuBae2/y-sync/pull/104), 미배포 |
 
 ### 작업 개요(What·Why)
 
