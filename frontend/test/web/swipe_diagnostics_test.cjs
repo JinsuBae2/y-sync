@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = () => fs.readFileSync(path.join(__dirname, '../../web/swipe_diagnostics.js'), 'utf8');
-function boot(storage = new Map(), search = '') {
+function boot(storage = new Map(), search = '', guard) {
   const listeners = {};
   const elements = [];
   const context = {
     URLSearchParams, Date, Math, JSON,
+    ysyncPwaBackGesture: guard,
     location: { search },
     sessionStorage: {
       getItem: k => storage.get(k) ?? null,
@@ -91,4 +92,25 @@ test('left edge diagnostics match the guarded 20px region', () => {
   }
   const starts = JSON.parse(x.api.export()).filter(e => e.event === 'touch_start');
   assert.deepEqual(starts.map(e => e.detail), ['left_edge', 'left_edge', 'other', 'other', 'other']);
+});
+
+test('each event retains executing component revisions after the ring wraps', () => {
+  const x = boot(new Map(), '?swipeDebug=1', { version: 'guard_v3', enabled: true });
+  x.api.record('flutter_start', 'flutter_v2');
+  for (let i = 0; i < 155; i++) x.api.record('guard_touch', 'prevented');
+  const events = JSON.parse(x.api.export());
+  assert.equal(events.length, 150);
+  assert.equal(events[0].diagnosticVersion, 'diag_v2');
+  assert.equal(events[0].guardVersion, 'guard_v3');
+  assert.equal(events[0].guardEnabled, true);
+  assert.equal(events[0].flutterVersion, 'flutter_v2');
+  assert.equal(events[0].detail, 'prevented');
+});
+test('missing and older bridges are unknown, not misreported as current', () => {
+  const x = boot(new Map(), '?swipeDebug=1');
+  x.api.record('flutter_start');
+  const e = JSON.parse(x.api.export()).at(-1);
+  assert.equal(e.guardVersion, 'unknown');
+  assert.equal(e.guardEnabled, null);
+  assert.equal(e.flutterVersion, 'unknown');
 });

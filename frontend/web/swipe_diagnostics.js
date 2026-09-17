@@ -7,12 +7,15 @@
     'page_start', 'page_show', 'page_hide', 'visibility', 'history_pop',
     'touch_start', 'touch_end', 'touch_cancel', 'flutter_start',
     'route_push', 'route_pop', 'route_replace', 'gesture_start', 'gesture_stop',
-    'request_start', 'request_end', 'request_error',
+    'request_start', 'request_end', 'request_error', 'guard_touch',
   ]);
   const detailsAllowed = new Set([
     'notice', 'community', 'other', 'left_edge', 'visible', 'hidden',
     'cached', 'fresh', 'navigate', 'reload', 'back_forward', 'unknown',
+    'prevented', 'not_prevented', 'not_cancelable', 'outside_edge', 'multi_touch',
+    'flutter_v2',
   ]);
+  let flutterVersion = 'unknown';
   let enabled = false;
   let installed = false;
   let panel;
@@ -21,9 +24,17 @@
   const write = (key, value) => { try { sessionStorage.setItem(key, value); } catch (_) {} };
   const remove = key => { try { sessionStorage.removeItem(key); } catch (_) {} };
   function record(event, detail = '') {
+    if (event === 'flutter_start') {
+      flutterVersion = detail === 'flutter_v2' ? detail : 'unknown';
+    }
     if (!enabled || !eventsAllowed.has(event)) return;
     events.push({ at: new Date().toISOString(), run, event,
-      detail: detailsAllowed.has(detail) ? detail : '' });
+      detail: detailsAllowed.has(detail) ? detail : '',
+      diagnosticVersion: 'diag_v2',
+      guardVersion: window.ysyncPwaBackGesture?.version === 'guard_v3' ? 'guard_v3' : 'unknown',
+      guardEnabled: typeof window.ysyncPwaBackGesture?.enabled === 'boolean'
+        ? window.ysyncPwaBackGesture.enabled : null,
+      flutterVersion });
     events = events.slice(-150);
     write(logKey, JSON.stringify(events));
   }
