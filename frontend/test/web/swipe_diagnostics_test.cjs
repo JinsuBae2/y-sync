@@ -101,7 +101,7 @@ test('each event retains executing component revisions after the ring wraps', ()
   for (let i = 0; i < 155; i++) x.api.record('guard_touch', 'prevented');
   const events = JSON.parse(x.api.export());
   assert.equal(events.length, 150);
-  assert.equal(events[0].diagnosticVersion, 'diag_v3');
+  assert.equal(events[0].diagnosticVersion, 'diag_v4');
   assert.equal(events[0].guardVersion, 'guard_v3');
   assert.equal(events[0].guardEnabled, true);
   assert.equal(events[0].flutterVersion, 'flutter_v2');
@@ -173,4 +173,18 @@ test('invalid coordinates and public metadata cannot enter position records', ()
   assert.equal(JSON.parse(x.api.export()).at(-1).touch, undefined);
   x.api.record('touch_end', '', { secret: 'PRIVATE' });
   assert.ok(!x.api.export().includes('PRIVATE'));
+});
+
+test('diagnostics use the active expanded guard boundary and preserve version markers', () => {
+  const x = boot(new Map(), '?swipeDebug=1', { version: 'guard_v4', enabled: true, edgeWidth: 32 });
+  x.api.record('flutter_start', 'flutter_v3');
+  for (const clientX of [21, 22, 32, 33]) {
+    x.listeners.touchstart({ touches: [{ clientX, clientY: 100, identifier: 1 }] });
+  }
+  const events = JSON.parse(x.api.export());
+  assert.deepEqual(events.filter(e => e.event === 'touch_start').map(e => e.detail),
+    ['left_edge', 'left_edge', 'left_edge', 'other']);
+  assert.equal(events.at(-1).edgeWidth, 32);
+  assert.equal(events.at(-1).guardVersion, 'guard_v4');
+  assert.equal(events.at(-1).flutterVersion, 'flutter_v3');
 });

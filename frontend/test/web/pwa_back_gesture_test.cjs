@@ -34,7 +34,10 @@ test('iOS PWA claims the left edge on lists as well as details', () => {
   assert.equal(x.fire(5), true);
   assert.equal(x.fire(0), true);
   assert.equal(x.fire(20), true);
-  assert.equal(x.fire(21), false);
+  assert.equal(x.fire(21), true);
+  assert.equal(x.fire(22), true);
+  assert.equal(x.fire(32), true);
+  assert.equal(x.fire(33), false);
   assert.equal(x.fire(-1), false);
   assert.equal(x.fire(100), false);
   assert.equal(x.fire(5, 2), false);

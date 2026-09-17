@@ -4,7 +4,8 @@
     // Keep the old bridge callable while cached Flutter bundles are replaced.
     setDetailActive: () => {},
     enabled: false,
-    version: 'guard_v3',
+    version: 'guard_v4',
+    edgeWidth: 32,
   };
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
     (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
@@ -16,7 +17,7 @@
     let outcome;
     if (event.touches.length !== 1) {
       outcome = 'multi_touch';
-    } else if (!(event.touches[0].clientX >= 0 && event.touches[0].clientX <= 20)) {
+    } else if (!(event.touches[0].clientX >= 0 && event.touches[0].clientX <= window.ysyncPwaBackGesture.edgeWidth)) {
       outcome = 'outside_edge';
     } else if (!event.cancelable) {
       outcome = 'not_cancelable';
