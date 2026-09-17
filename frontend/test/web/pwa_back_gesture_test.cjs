@@ -23,20 +23,26 @@ function setup(standalone = true, agent = 'iPhone') {
     return prevented;
   } };
 }
-test('only an active detail route in iOS PWA claims the left edge', () => {
+test('iOS PWA claims the left edge on lists as well as details', () => {
   const x = setup();
-  assert.equal(x.fire(5), false);
+  assert.equal(x.ctx.ysyncPwaBackGesture.enabled, true);
+  assert.equal(x.fire(5), true);
   x.ctx.ysyncPwaBackGesture.setDetailActive(true);
   assert.equal(x.fire(5), true);
+  assert.equal(x.fire(0), true);
+  assert.equal(x.fire(20), true);
+  assert.equal(x.fire(21), false);
+  assert.equal(x.fire(-1), false);
   assert.equal(x.fire(100), false);
   assert.equal(x.fire(5, 2), false);
   assert.equal(x.fire(5, 1, false), false);
   x.ctx.ysyncPwaBackGesture.setDetailActive(false);
-  assert.equal(x.fire(5), false);
+  assert.equal(x.fire(5), true);
 });
 test('Safari tabs and Android keep browser navigation', () => {
   for (const args of [[false, 'iPhone'], [true, 'Android']]) {
     const x = setup(...args);
+    assert.equal(x.ctx.ysyncPwaBackGesture.enabled, false);
     x.ctx.ysyncPwaBackGesture.setDetailActive(true);
     assert.equal(x.fire(5), false);
   }

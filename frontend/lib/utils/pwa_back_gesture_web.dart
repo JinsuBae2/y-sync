@@ -1,12 +1,13 @@
 import 'dart:js_interop';
 
-@JS('ysyncPwaBackGesture.setDetailActive')
-external void _setDetailActive(JSBoolean active);
+@JS('ysyncPwaBackGesture.enabled')
+external JSBoolean? get _enabled;
 
-void setDetailBackGestureActive(bool active) {
+bool isIosStandalonePwa() {
   try {
-    _setDetailActive(active.toJS);
+    return _enabled?.toDart ?? false;
   } catch (_) {
     // Older cached HTML may not have loaded the bridge yet.
+    return false;
   }
 }
