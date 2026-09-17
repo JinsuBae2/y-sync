@@ -5,7 +5,9 @@ const vm = require('node:vm');
 const path = require('node:path');
 function setup(standalone = true, agent = 'iPhone') {
   let listener;
+  const records = [];
   const ctx = {
+    ysyncSwipeDiagnostics: { record: (...args) => records.push(args) },
     navigator: { standalone, userAgent: agent, maxTouchPoints: 1 },
     document: { addEventListener: (name, fn, options) => {
       assert.equal(name, 'touchstart');
@@ -16,10 +18,11 @@ function setup(standalone = true, agent = 'iPhone') {
   };
   ctx.window = ctx;
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../web/pwa_back_gesture.js'), 'utf8'), ctx);
-  return { ctx, fire(x, count = 1, cancelable = true) {
+  return { ctx, records, fire(x, count = 1, cancelable = true, accepts = true) {
     let prevented = false;
     listener?.({ touches: Array.from({ length: count }, () => ({ clientX: x })),
-      cancelable, preventDefault: () => { prevented = true; } });
+      cancelable, get defaultPrevented() { return prevented; },
+      preventDefault: () => { prevented = accepts; } });
     return prevented;
   } };
 }
@@ -46,4 +49,25 @@ test('Safari tabs and Android keep browser navigation', () => {
     x.ctx.ysyncPwaBackGesture.setDetailActive(true);
     assert.equal(x.fire(5), false);
   }
+});
+
+test('reports whether prevention ran, was accepted, or could not run', () => {
+  const x = setup();
+  x.fire(5);
+  x.fire(5, 1, false);
+  x.fire(5, 1, true, false);
+  x.fire(50);
+  x.fire(5, 2);
+  assert.deepEqual(x.records, [
+    ['guard_touch', 'prevented'], ['guard_touch', 'not_cancelable'],
+    ['guard_touch', 'not_prevented'], ['guard_touch', 'outside_edge'],
+    ['guard_touch', 'multi_touch'],
+  ]);
+});
+test('missing or broken diagnostics never interrupts prevention', () => {
+  const x = setup();
+  delete x.ctx.ysyncSwipeDiagnostics;
+  assert.equal(x.fire(5), true);
+  x.ctx.ysyncSwipeDiagnostics = { record() { throw Error('unavailable'); } };
+  assert.equal(x.fire(5), true);
 });

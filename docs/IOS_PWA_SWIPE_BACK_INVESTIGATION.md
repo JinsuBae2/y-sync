@@ -153,3 +153,21 @@ flutter build web --release --dart-define=SWIPE_DIAGNOSTICS=true
 이에 설치형 iOS PWA 전체의 왼쪽 20px에 기본 제스처 차단을 적용하고, 메인 탭에 PopScope 안전망을 추가했다. Flutter의 PageView 탭 이동과 상세 스와이프는 유지한다. 진단 기준 역시 20px로 맞추고 JavaScript 테스트를 CI에 포함했다. 상세 전용 observer·라우트 표식은 더 이상 필요하지 않아 제거했다.
 
 검증: Flutter 57개·JavaScript 9개 테스트 통과, 진단 활성 웹 릴리스 빌드 성공, 분석 오류 없음(기존 경고 3개·정보 27개). 루트 안전망은 Flutter에 전달된 뒤로가기 요청만 처리한다. **실기기 회색 화면 해결 및 브라우저 차원의 모든 이탈 방지는 아직 검증되지 않았다.**
+
+
+## 2026-09-17 차단 핸들러 진단 보완
+
+PR #101 운영 배포 성공 후 수집한 다섯 번째 기록에서도 상세 복귀 시 history_pop이 관찰됐다. 기록 중 페이지 재시작은 없었고, 공지·커뮤니티 복귀 후 목록 요청은 각각 약 84ms·59ms였다. 기존 기록만으로는 기기에 로드된 스크립트 버전이나 preventDefault 실행 여부를 알 수 없어 동작 변경 대신 진단을 보완했다.
+
+- `guard_touch`: 차단 핸들러가 실제 실행된 터치에 남긴다.
+  - `prevented`: preventDefault 호출 후 defaultPrevented=true. WebKit 화면 전환 차단 성공을 보장하지 않는다.
+  - `not_prevented`: 호출했지만 defaultPrevented=false.
+  - `not_cancelable`: 왼쪽 20px 단일 터치지만 cancelable=false라 호출하지 않음.
+  - `outside_edge` / `multi_touch`: 기존 차단 대상 밖이어서 호출하지 않음.
+- 매 이벤트의 `diagnosticVersion=diag_v2`, `guardVersion=guard_v3`, `flutterVersion=flutter_v2`는 각 진단 구현의 고정 세대 표식이다. Git SHA 또는 전체 앱 빌드 번호가 아니다. Flutter 시작 이전에는 flutterVersion이 unknown이다.
+- `guardEnabled`: 실제 JS가 판단한 설치형 iOS PWA 여부. 브리지가 없으면 null, 버전 표식이 없거나 알 수 없는 값이면 unknown으로 남긴다. 이전 기록에 필드가 없는 경우도 최신 버전으로 추정하지 않는다.
+- 이벤트별 표식이므로 150개 순환 기록에서 시작 이벤트가 밀려나도 버전을 확인할 수 있다. 서버 전송 없이 기기에 보관하며, 진단 API가 없거나 실패해도 터치 처리에 영향이 없도록 보호했다.
+
+해석 순서: 실행 표식 → guardEnabled → 해당 터치의 guard_touch 결과 → history_pop 순서로 비교한다. guard_touch가 없다는 사실만으로 WebKit 버그라고 단정하지 않는다. 기존 진단 저장 버튼을 사용하며 추가 활성화 절차는 없다.
+
+검증: Flutter 57개·JavaScript 13개 테스트 통과, 분석 오류 없음(기존 경고 3개·정보 27개), 진단 활성 웹 빌드 성공. 실기기 재현 기록은 배포 후 확인한다.

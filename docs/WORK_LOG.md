@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-09-17 - PWA 차단 실행 진단 보완
+
+| 항목 | 내용 |
+|---|---|
+| **Who** | 배진수(요청·검토) |
+| **When** | 2026-09-17, Asia/Seoul |
+| **Where** | `fix/pwa-gesture-diagnostics`, 설치형 iOS PWA |
+| **Status** | 로컬 구현·검증 완료, [PR #102](https://github.com/JinsuBae2/y-sync/pull/102), 미배포 |
+
+### 작업 개요(What·Why)
+
+- PR #101 배포 후에도 브라우저 history_pop이 발생했으나 차단 코드 실행 여부를 구분할 수 없었습니다. 차단 범위와 화면 동작을 유지하며 진단만 보완했습니다.
+
+### 구현(How)
+
+- 터치 차단 호출 결과와 미호출 이유를 고정 분류로 기록합니다.
+- 각 이벤트에 진단·차단·Flutter 진단 구현 세대와 차단 활성 여부를 기록합니다. 실행 표식이 없는 구버전은 unknown/null로 구분합니다.
+- 기존 150개 기기 내 기록·서버 미전송·진단 저장 버튼을 유지합니다. 진단 오류가 터치 처리를 중단하지 않도록 보호합니다.
+
+### 검증 및 추적(Verification·Tracking)
+
+- 코드 커밋: `0e7d7bf`. 문서는 별도 한글 Conventional Commit으로 분리했습니다.
+- JavaScript 13개·Flutter 57개 테스트 통과. 새 실행 결과·버전 누락 테스트의 수정 전 실패를 확인했습니다.
+- Flutter 분석 오류 없음(기존 경고 3개·정보 27개), `SWIPE_DIAGNOSTICS=true` 웹 릴리스 빌드 성공.
+- `bash ./gradlew test bootJar`: 성공(8개 작업 UP-TO-DATE).
+- 기존 로컬 iOS·Gradle 변경과 보안 검토 문서는 제외했습니다.
+
+### 후속 작업(Risks / Follow-up)
+
+- 배포 후 재현 직후 기존 진단 저장 버튼으로 기록을 확인합니다. 이번 변경은 회색 화면 해결이 아니라 원인 구분용입니다.
+- prevented는 defaultPrevented 확인 결과일 뿐 WebKit 화면 전환 차단의 보장이 아닙니다. 버전은 진단 구현 세대이며 전체 앱 빌드 번호가 아닙니다.
+
+---
+
 ## 2026-09-17 - 목록 스와이프 및 루트 복귀 안전망
 
 | 항목 | 내용 |
