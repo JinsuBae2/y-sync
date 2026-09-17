@@ -83,3 +83,12 @@ test('blocked session storage does not break diagnostic startup', () => {
   assert.equal(JSON.parse(x.api.export()).length, 2);
   assert.doesNotThrow(() => x.api.stop());
 });
+
+test('left edge diagnostics match the guarded 20px region', () => {
+  const x = boot(new Map(), '?swipeDebug=1');
+  for (const clientX of [0, 20, 21, 24, -1]) {
+    x.listeners.touchstart({ touches: [{ clientX }] });
+  }
+  const starts = JSON.parse(x.api.export()).filter(e => e.event === 'touch_start');
+  assert.deepEqual(starts.map(e => e.detail), ['left_edge', 'left_edge', 'other', 'other', 'other']);
+});

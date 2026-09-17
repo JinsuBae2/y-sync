@@ -1,1 +1,1 @@
-void setDetailBackGestureActive(bool active) {}
+bool isIosStandalonePwa() => false;

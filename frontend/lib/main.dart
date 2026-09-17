@@ -11,10 +11,8 @@ import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart'; // 💡 FCM 추가
 import 'widgets/server_availability_gate.dart';
 import 'utils/swipe_diagnostics.dart';
-import 'utils/adaptive_page_route.dart';
 
 final _swipeDiagnosticsObserver = SwipeDiagnosticsObserver();
-final _pwaDetailBackGestureObserver = PwaDetailBackGestureObserver();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +39,7 @@ class YSyncApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
-      navigatorObservers: [_swipeDiagnosticsObserver, _pwaDetailBackGestureObserver],
+      navigatorObservers: [_swipeDiagnosticsObserver],
       navigatorKey:
           PushNotificationService.navigatorKey, // 💡 전역 라우팅을 위한 네비게이터 키 등록
       title: 'Y-Sync',

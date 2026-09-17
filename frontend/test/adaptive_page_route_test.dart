@@ -18,44 +18,6 @@ void main() {
     expect(route.settings.name, isNull);
   });
 
-  testWidgets('상세에서만 브라우저 제스처 차단을 켜고 다이얼로그와 복귀에서는 해제한다', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    final active = <bool>[];
-    final key = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      MaterialApp(
-        navigatorKey: key,
-        navigatorObservers: [
-          PwaDetailBackGestureObserver(setActive: active.add),
-        ],
-        home: const Scaffold(body: Text('list')),
-      ),
-    );
-    key.currentState!.push(
-      adaptivePageRoute<void>(
-        builder: (_) => const Scaffold(body: Text('detail')),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(active.last, true);
-    showDialog<void>(
-      context: tester.element(find.text('detail')),
-      builder: (_) => const AlertDialog(content: Text('dialog')),
-    );
-    await tester.pumpAndSettle();
-    expect(active.last, false);
-    key.currentState!.pop();
-    await tester.pumpAndSettle();
-    expect(active.last, true);
-    final gesture = await tester.startGesture(const Offset(5, 300));
-    await gesture.moveBy(const Offset(600, 0));
-    await gesture.up();
-    await tester.pumpAndSettle();
-    expect(find.text('list'), findsOneWidget);
-    expect(active.last, false);
-    debugDefaultTargetPlatformOverride = null;
-  });
-
   for (final platform in <TargetPlatform>[
     TargetPlatform.android,
     TargetPlatform.fuchsia,

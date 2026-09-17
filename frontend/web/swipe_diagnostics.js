@@ -53,7 +53,7 @@
       addEventListener('popstate', () => record('history_pop'));
       document.addEventListener('visibilitychange', () => record('visibility', document.visibilityState));
       document.addEventListener('touchstart', e => record('touch_start',
-        e.touches[0]?.clientX <= 24 ? 'left_edge' : 'other'), { passive: true });
+        e.touches[0]?.clientX >= 0 && e.touches[0]?.clientX <= 20 ? 'left_edge' : 'other'), { passive: true });
       document.addEventListener('touchend', () => record('touch_end'), { passive: true });
       document.addEventListener('touchcancel', () => record('touch_cancel'), { passive: true });
     }

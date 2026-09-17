@@ -1,5 +1,10 @@
 import 'dart:ui';
 
+import '../widgets/app_root_back_guard.dart';
+import '../utils/pwa_back_gesture_stub.dart'
+    if (dart.library.js_interop) '../utils/pwa_back_gesture_web.dart'
+    as platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_design_tokens.dart';
@@ -72,7 +77,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
       const MyPageScreen(),
     ];
 
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 900;
 
@@ -262,6 +267,10 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
           ),
         );
       },
+    );
+    return AppRootBackGuard(
+      enabled: platform.isIosStandalonePwa(),
+      child: content,
     );
   }
 
