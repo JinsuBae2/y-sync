@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-09-17 - 목록 스와이프 및 루트 복귀 안전망
+
+| 항목 | 내용 |
+|---|---|
+| **Who** | 배진수(요청·검토) |
+| **When** | 2026-09-17, Asia/Seoul |
+| **Where** | `fix/pwa-root-back-navigation`, 설치형 iOS PWA |
+| **Status** | 로컬 구현·검증 완료, PR 준비, 미배포 |
+
+### 작업 개요(What·Why)
+
+- 상세 복귀 후 목록에서 가장자리 스와이프 시 브라우저 history_pop이 발생한 진단 결과에 대응합니다. 단계별 배포 계획 중 PR 1만 구현했습니다.
+
+### 구현(How)
+
+- 설치형 iOS PWA 전체 화면의 왼쪽 20px 단일 터치에서 브라우저 기본 동작을 차단합니다. Flutter 이벤트 전파와 목록 탭 이동은 유지합니다.
+- 메인 탭을 PopScope로 감싸 Flutter로 전달된 루트 뒤로가기 요청을 처리합니다. 상세 전용 observer·라우트 표식은 제거했습니다.
+- 진단 기준도 20px로 통일하고 JavaScript 테스트를 CI에 추가했습니다. 캐시된 이전 Flutter 번들의 JS 호출은 호환 유지합니다.
+
+### 검증 및 추적(Verification·Tracking)
+
+- 코드: `628e97c`, CI: `9c99541`. 프론트·CI·작업 문서를 별도 한글 Conventional Commits로 기록했습니다.
+- `flutter test`: 57개 통과. 루트 종료 요청 방지, 탭 이동, 상세 스와이프 및 시스템 뒤로가기 복귀 확인.
+- `node --test test/web/*.cjs`: 9개 통과. 목록 차단·진단 경계·루트 안전망 테스트의 수정 전 실패를 확인했습니다.
+- `flutter analyze --no-fatal-warnings --no-fatal-infos`: 오류 없음, 기존 경고 3개·정보 27개.
+- `flutter build web --release --dart-define=SWIPE_DIAGNOSTICS=true`: 성공.
+- 백엔드 `bash ./gradlew test bootJar`: 성공(8개 작업 UP-TO-DATE).
+- 기존 iOS·Gradle 로컬 변경 및 보안 검토 문서는 제외했습니다. develop이 main보다 뒤처진 상태여서 사용자가 이번 PR의 main 대상을 명시적으로 승인했습니다.
+
+### 후속 작업(Risks / Follow-up)
+
+- 실제 iPhone PWA의 회색 화면 해결 여부는 배포 후 확인해야 합니다. PopScope는 Flutter에 전달된 요청만 처리하며 브라우저 전환 자체를 차단한다고 보장하지 않습니다.
+- 좌표 없는 other → touch_cancel → history_pop 기록만으로 터치 방향과 정확한 시작 위치를 확정하지 않습니다.
+- 로딩 팝업 제거·진입 경로 통일은 PR 2, 불필요한 목록 재요청 검토는 PR 3으로 분리합니다.
+
+---
+
 ## 2026-09-17 - iOS PWA 게시글 뒤로가기 제스처 수정 후보
 
 - 실기기 진단에서 브라우저 history 복귀와 Flutter 스와이프 복귀 경로를 확인했습니다. 회색 화면의 직접 원인은 아직 확정하지 않았습니다.
