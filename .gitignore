@@ -16,3 +16,9 @@ backend/cookies.txt
 .ua/*
 !.ua/config.json
 !.ua/.understandignore
+
+# 서비스 계정 키
+# 💡 기존 규칙은 backend/.gitignore에만 있어 backend/ 하위에서만 유효했습니다.
+#    이 파일은 docker/ 에도 배치되므로 경로와 무관하게 무시합니다.
+**/firebase-adminsdk*.json
+**/*-service-account*.json
