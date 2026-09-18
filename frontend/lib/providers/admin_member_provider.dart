@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
 import '../models/notice_grade_preference.dart';
+import '../models/notice_grade_stats.dart';
 import 'api_client_provider.dart';
 
 class CsvImportError {
@@ -141,6 +142,20 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
         msg = e.response?.data['message'];
       }
       state = state.copyWith(isLoading: false, errorMessage: msg);
+    }
+  }
+
+  // 💡 학년별 알림 전환 시점 판단용 집계 조회
+  //    실패해도 회원 목록 사용을 막지 않도록 null을 돌려줍니다.
+  Future<NoticeGradeStats?> fetchNoticeGradeStats() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get('/admin/members/notice-grade-stats');
+      return NoticeGradeStats.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } catch (_) {
+      return null;
     }
   }
 

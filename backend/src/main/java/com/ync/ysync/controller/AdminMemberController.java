@@ -71,6 +71,13 @@ public class AdminMemberController {
         }
     }
 
+    @GetMapping("/notice-grade-stats")
+    @Operation(summary = "공지 알림 학년 선택 현황",
+            description = "학년별 알림 전환 시점을 판단하기 위한 집계입니다. 전환하면 미설정 회원은 학년 공지 알림을 받지 못합니다.")
+    public ResponseEntity<NoticeGradeStatsResponse> getNoticeGradeStats() {
+        return ResponseEntity.ok(noticeGradeService.collectStats());
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "학생 정보 수정", description = "학생의 이름 및 권한을 수정합니다.")
     public ResponseEntity<?> updateMember(@PathVariable Long id, @RequestBody AdminUpdateMemberRequest request,
