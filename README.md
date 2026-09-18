@@ -122,13 +122,13 @@ docker compose -f docker/docker-compose.yml config
 - 작업 브랜치는 CI 통과 후 `develop`에 병합합니다.
 - 운영 배포는 `develop`에서 `main`으로 PR을 생성하고 승인된 GitHub Actions 워크플로로 진행합니다.
 
-자세한 개발·배포 규칙은 [개발 가이드](docs/DEVELOPMENT.md)와 [macOS 운영 가이드](docs/MAC_MIGRATION_GUIDE.md)를 참고하세요.
+자세한 개발·배포 규칙은 [개발 가이드](docs/DEVELOPMENT.md)를 참고하세요.
 
 ## 문서
 
-- [서비스 컨텍스트와 기능 명세](docs/CONTEXT.md)
+- [문서 안내](docs/README.md)
 - [API 명세](docs/API_SPECIFICATION.md)
-- [시스템 아키텍처](docs/ARCHITECTURE.md)
+- [서비스 기능과 시스템 아키텍처](docs/ARCHITECTURE.md)
 - [개발 규칙](docs/DEVELOPMENT.md)
 - [보안 운영 기준](docs/SECURITY.md)
 - [문제 해결 기록](docs/TROUBLESHOOTING.md)
