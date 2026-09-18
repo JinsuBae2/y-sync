@@ -27,7 +27,7 @@
   - ⭕ Windows: `firebase.cmd deploy --only hosting` (정상 작동 보장)
 * **macOS (Mac) 터미널 환경**: Mac Zsh/Bash 터미널 환경에서는 `.cmd` 없이 표준 CLI 명령어를 사용합니다.
   - ⭕ macOS: `firebase deploy --only hosting`
-  - 💡 Mac 환경 세팅 및 전체 이관 방법은 [MAC_MIGRATION_GUIDE.md](./MAC_MIGRATION_GUIDE.md) 가이드 문서를 참고하십시오.
+  - 💡 Mac 환경 구성은 이 문서의 [macOS 개발 환경 구성](#macos-개발-환경-구성)을 참고하십시오.
 
 ### E. 컨트롤러 NPE 방지 및 JWT 가드 규칙
 * **빈(Bean) 주입 규칙**: 컨트롤러 내부 핸들러 메소드 매개변수에 `AuthUtil`을 직접 선언하여 요청 맵핑 시 null이 삽입되는 버그를 원천 차단하십시오. 반드시 클래스 필드 주입과 생성자(`@RequiredArgsConstructor`) 주입을 사용해야 합니다.
@@ -187,3 +187,147 @@
 * **머지 전 자가 빌드 검증**: `develop` 브랜치로 PR을 올리기 전에 반드시 백엔드 `./gradlew test bootJar` 및 프론트엔드 `flutter analyze`, `flutter test`, `flutter build web --release`가 로컬에서 성공적으로 통과되는지 확인합니다.
 * **머지 전 싱크업 (Sync-up)**: 본인의 브랜치를 머지하기 전, `git pull origin develop`를 먼저 수행하여 원격 최신 변경사항을 미리 충돌 해결 및 병합한 후에 완료해야 히스토리가 깨지지 않습니다.
 * **커밋 쪼개기**: 백엔드, 프론트엔드, 문서를 한 번에 섞어서 거대 커밋으로 올리는 것을 금지합니다. 피처 단계별로 빌드 확인 후 개별적인 분리 커밋을 준수합니다.
+
+---
+
+## macOS 개발 환경 구성
+
+### Homebrew와 Java 21
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install openjdk@21
+sudo ln -sfn "$(brew --prefix)/opt/openjdk@21/libexec/openjdk.jdk" \
+  /Library/Java/JavaVirtualMachines/openjdk-21.jdk
+java -version
+```
+
+프로젝트는 Gradle Wrapper를 사용하므로 시스템 Gradle을 별도로 설치하지 않습니다.
+
+### Flutter
+
+```bash
+brew install --cask flutter
+flutter doctor
+```
+
+### Docker와 선택 도구
+
+```bash
+# 둘 중 하나만 설치
+brew install orbstack
+# brew install --cask docker
+
+# 비상 수동 Firebase 배포가 필요한 경우만 설치
+brew install node
+npm install -g firebase-tools
+firebase login
+```
+
+### 저장소 복제
+
+```bash
+git clone https://github.com/JinsuBae2/y-sync.git
+cd y-sync
+git switch develop
+```
+
+---
+
+## 로컬 검증 절차
+
+### 백엔드
+
+```bash
+cd backend
+chmod +x gradlew
+./gradlew test bootJar
+```
+
+Java 선택이 필요한 경우 현재 셸에 Java 21을 지정합니다.
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+```
+
+### 프론트엔드
+
+```bash
+cd frontend
+flutter pub get --enforce-lockfile
+flutter analyze --no-fatal-warnings --no-fatal-infos
+flutter test
+flutter build web --release
+```
+
+### Docker Compose 설정
+
+운영 비밀값 대신 검사용 임시값을 현재 셸에만 지정한 뒤 설정을 렌더링합니다.
+
+```bash
+DB_PASSWORD=local-check \
+JWT_SECRET=local-check-local-check-local-check-local-check \
+MAIL_USERNAME=local@example.com \
+MAIL_PASSWORD=local-check \
+docker compose -f docker/docker-compose.yml config
+```
+
+## 자격 증명과 키 관리
+
+### 로컬 Mac에 필요한 항목
+
+| 항목 | 권장 위치/저장소 | 용도 |
+|---|---|---|
+| Oracle Cloud SSH 개인키 | `~/.ssh/y-sync-oci.key` | 운영 서버 점검 및 비상 대응 |
+| GitHub 인증 | macOS Keychain 또는 `gh auth login` | clone, push, PR 관리 |
+| SUPER_ADMIN 비밀번호 | macOS Keychain 서비스 `y-sync-production-super-admin`, 계정 `2305009` | 운영 점검용 로그인 |
+| Firebase CLI 로그인 | Firebase CLI 자체 로그인 저장소 | 비상 수동 Hosting 배포 시에만 필요 |
+
+SSH 개인키는 다음 권한을 유지합니다.
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+chmod 400 ~/.ssh/y-sync-oci.key
+```
+
+운영 SUPER_ADMIN 비밀번호는 평문 파일이나 셸 히스토리에 기록하지 않고 Keychain에서 조회합니다.
+
+```bash
+security find-generic-password \
+  -a 2305009 \
+  -s y-sync-production-super-admin \
+  -w
+```
+
+### 로컬로 복사하지 않는 운영 비밀값
+- `DB_PASSWORD`, `JWT_SECRET`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+- S3 애플리케이션 사용자용 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+- GitHub Actions의 `SERVER_IP`, `SERVER_USER`, `SSH_PRIVATE_KEY`
+- Firebase Hosting 배포용 `FIREBASE_SERVICE_ACCOUNT_Y_SYNC_31C03`
+- Oracle VM의 `/home/ubuntu/ysync/app/docker/firebase-adminsdk.json`
+
+위 값은 GitHub `production` Environment Secrets 또는 Oracle VM에만 보관합니다. Firebase Admin SDK 키는 백엔드 FCM용이고 Firebase Hosting 배포 서비스 계정과 별개입니다. 로컬 FCM 통합 테스트가 꼭 필요한 경우에만 별도 개발용 서비스 계정을 발급하고, Git 무시 경로에 저장합니다.
+
+S3 저장소 전환 시 GitHub `production` Environment Variables에는 다음 값을 등록합니다.
+
+- `STORAGE_PROVIDER=s3`
+- `AWS_S3_BUCKET=y-sync-attachments-155641294529`
+- `AWS_REGION=ap-northeast-2`
+
+신규 S3 파일은 `/s3-uploads/**` 경로에서 5분짜리 Presigned URL로 리다이렉트되고, 기존 로컬 파일은 `/uploads/**` 경로로 계속 제공됩니다. Secret 등록 전에는 `STORAGE_PROVIDER`를 `local`로 유지합니다.
+
+## 운영 서버 점검
+
+```bash
+ssh -i ~/.ssh/y-sync-oci.key ubuntu@168.107.29.144
+docker ps
+docker compose -f ~/ysync/app/docker/docker-compose.yml ps
+free -h
+df -h
+docker logs --tail 100 ysync-backend
+```
+
+백엔드의 8080 포트는 호스트에 공개하지 않고 Docker 네트워크 내부에서 Nginx가 접근합니다. 따라서 VM에서 `curl http://localhost:8080/...`가 실패하는 것은 현재 보안 구성에서 정상이며, HTTPS 도메인 또는 컨테이너 네트워크를 통해 상태를 확인합니다.
+
+수동 배포는 자동화 실패 시의 비상 대응 절차입니다. 먼저 GitHub Actions 로그와 서버 상태를 확인하고 복구 내용을 작업 이력에 기록합니다. 운영 구성은 [아키텍처](ARCHITECTURE.md), DB 변경은 [DDL 전환 절차](DDL_AUTO_MIGRATION.md)를 참고합니다.
