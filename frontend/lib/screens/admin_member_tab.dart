@@ -1189,6 +1189,17 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                           fontSize: 12,
                         ),
                       ),
+                      // 💡 학번 도용 신고 시 가해자를 특정하는 단서입니다.
+                      if (member.email != null) ...[
+                        const SizedBox(height: 2),
+                        SelectableText(
+                          '인증 메일: ${member.email}',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1252,6 +1263,12 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                 ),
                 DataColumn(
                   label: Text(
+                    '인증 메일',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
                     '권한 역할',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
@@ -1282,6 +1299,18 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                       Text(
                         member.name,
                         style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    // 💡 학번 도용 신고 시 가해자를 특정하는 단서입니다.
+                    DataCell(
+                      SelectableText(
+                        member.email ?? '-',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: member.email == null
+                              ? AppDesignTokens.muted
+                              : AppDesignTokens.navy,
+                        ),
                       ),
                     ),
                     DataCell(

@@ -65,6 +65,25 @@ void main() {
       }
     });
 
+    test('관리자 응답의 인증 메일을 읽고 본인 응답에는 없어도 된다', () {
+      // 학교 메일은 학번에서 유도할 수 없어 도용을 예방할 수 없습니다. 관리자가 신고를 받았을 때
+      // 가해자를 특정할 수 있도록 회원 관리 응답에서만 메일을 내려줍니다.
+      final adminRow = Member.fromJson({
+        'id': 1,
+        'loginId': '2305001',
+        'name': '학생',
+        'role': 'USER',
+        'activated': true,
+        'noticeEnabled': true,
+        'commentEnabled': true,
+        'email': 'hong@ync.ac.kr',
+      });
+      expect(adminRow.email, 'hong@ync.ac.kr');
+
+      // 본인 조회 응답에는 email이 없으며 그 경우 null이어야 합니다.
+      expect(member().email, isNull);
+    });
+
     test('모르는 값이나 필드 누락에도 앱이 깨지지 않는다', () {
       expect(NoticeGradePreference.fromWire('GRADE_4'), isNull);
       final legacy = Member.fromJson({

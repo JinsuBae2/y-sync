@@ -25,6 +25,25 @@ class AdminMemberResponseTest {
     }
 
     @Test
+    void 회원관리_DTO는_도용_추적에_필요한_인증_메일을_포함한다() throws Exception {
+        // 학교 메일은 사용자 정의 ID라 학번에서 유도할 수 없습니다. 타인 학번으로 가입한 사례를
+        // 사후에 특정하려면 관리자가 가입에 쓰인 메일 주소를 볼 수 있어야 합니다.
+        Member member = sensitiveMember();
+        member.setEmail("hong@ync.ac.kr");
+
+        String json = objectMapper.writeValueAsString(AdminMemberResponse.from(member));
+
+        assertThat(json).contains("\"email\":\"hong@ync.ac.kr\"");
+    }
+
+    @Test
+    void 회원관리_DTO는_관리에_쓰지_않는_개인_알림_설정을_노출하지_않는다() throws Exception {
+        String json = objectMapper.writeValueAsString(AdminMemberResponse.from(sensitiveMember()));
+
+        assertThat(json).doesNotContain("noticeEnabled", "commentEnabled");
+    }
+
+    @Test
     void Member_직접_직렬화에서도_password는_차단된다() throws Exception {
         String json = objectMapper.writeValueAsString(sensitiveMember());
 

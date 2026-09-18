@@ -11,8 +11,9 @@ public record AdminMemberResponse(
         String loginId,
         String name,
         MemberRole role,
-        boolean noticeEnabled,
-        boolean commentEnabled,
+        // 💡 학번 도용 신고를 받았을 때 가해자를 특정하는 유일한 단서입니다.
+        //    가입 시점에 인증된 학교 메일이며 가입 후에는 변경 경로가 없습니다.
+        String email,
         boolean activated,
         boolean suspended,
         NoticeGradePreference noticeGradePreference,
@@ -37,8 +38,7 @@ public record AdminMemberResponse(
                 member.getLoginId(),
                 member.getName(),
                 member.getRole(),
-                member.isNoticeEnabled(),
-                member.isCommentEnabled(),
+                member.getEmail(),
                 member.isActivated(),
                 member.isSuspended(),
                 member.getNoticeGradePreference(),
