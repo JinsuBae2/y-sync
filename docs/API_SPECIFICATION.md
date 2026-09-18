@@ -110,7 +110,9 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 #### 10. 관리자 회원 목록 (`GET /admin/members`)
 - **ADMIN / SUPER_ADMIN 전용**
 - `Member` 엔티티가 아닌 관리자 회원 DTO를 반환합니다.
-- 응답에는 `id`, `loginId`, `name`, `role`, 알림 설정, 활성·정지 상태와 생성 시각만 포함합니다.
+- 응답에는 `id`, `loginId`, `name`, `role`, `email`, 학년 선택 정보, 활성·정지 상태와 생성 시각만 포함합니다.
+- `email`은 가입 시 인증한 학교 메일이며 계정 관련 문의에 대응하기 위해 관리자에게만 제공합니다. 본인 조회(`GET /members/me`)에는 포함하지 않습니다.
+- 회원 개인의 알림 수신 토글(`noticeEnabled`, `commentEnabled`)은 관리 목적이 없어 반환하지 않습니다.
 - `password`, `fcmToken`, `socialId`, `authVersion`은 반환하지 않습니다.
 
 #### 11. 관리자 회원 등록·수정 (`POST /admin/members`, `POST /admin/members/csv`, `PUT /admin/members/{id}`)

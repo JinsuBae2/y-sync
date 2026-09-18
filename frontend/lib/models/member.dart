@@ -9,6 +9,11 @@ class Member {
   final bool commentEnabled;
   final bool isActivated; // 💡 가입(활성화) 여부 추가
 
+  /// 💡 가입에 사용된 학교 메일입니다. 관리자 회원 조회에서만 내려오며 본인 조회에는 없습니다.
+  ///    학교 메일은 사용자 정의 ID라 학번에서 유도할 수 없으므로, 학번 도용 신고를 받았을 때
+  ///    가해자를 특정하는 단서로 씁니다.
+  final String? email;
+
   /// 💡 공지 알림 수신 대상 선택입니다. null은 '미설정'입니다.
   final NoticeGradePreference? noticeGradePreference;
 
@@ -29,6 +34,7 @@ class Member {
     required this.noticeEnabled,
     required this.commentEnabled,
     required this.isActivated,
+    this.email,
     this.noticeGradePreference,
     this.gradeConfirmedYear,
     this.currentAcademicYear,
@@ -44,6 +50,7 @@ class Member {
       noticeEnabled: json['noticeEnabled'] ?? true,
       commentEnabled: json['commentEnabled'] ?? true,
       isActivated: json['activated'] ?? json['isActivated'] ?? false,
+      email: json['email'] as String?,
       noticeGradePreference: NoticeGradePreference.fromWire(
         json['noticeGradePreference'] as String?,
       ),

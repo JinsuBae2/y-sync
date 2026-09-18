@@ -290,7 +290,9 @@ public class MemberService {
 
         // 인증 성공 만료 처리
         verifiedStudents.remove(loginId);
-        log.info("회원 가입 완료 - 학번: {}, 이름: {}", loginId, name);
+        // 💡 학교 메일 주소는 학번에서 유도할 수 없으므로(사용자 정의 ID) 가입 주체를 서버가 사전에 검증할 수 없습니다.
+        //    대신 어떤 메일 계정이 어떤 학번으로 가입했는지를 남겨, 도용 신고 시 가해자를 특정할 수 있게 합니다.
+        log.info("회원 가입 완료 - 학번: {}, 이름: {}, 인증 메일: {}", loginId, name, verifiedInfo.getEmail());
 
         return memberRepository.save(member);
     }
