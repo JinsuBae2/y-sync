@@ -11,7 +11,7 @@
 | **Who** | 배진수(요청·검토) |
 | **When** | 2026-09-18, Asia/Seoul |
 | **Where** | `fix/pwa-back-loading-cache`, 웹 로딩 UI·Firebase Hosting |
-| **Status** | 로컬 구현·검증 완료, PR 준비, 미배포 |
+| **Status** | 로컬 구현·검증 완료, [PR #105](https://github.com/JinsuBae2/y-sync/pull/105), 미배포 |
 
 ### 작업 개요(What·Why)
 
