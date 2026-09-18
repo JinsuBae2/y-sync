@@ -11,7 +11,7 @@
 | **Who** | 배진수(정상 동작 확인·진단 버튼 제거 요청) |
 | **When** | 2026-09-18, Asia/Seoul |
 | **Where** | `fix/disable-pwa-swipe-diagnostics`, 웹 진입점·운영 빌드 |
-| **Status** | 로컬 검증 완료, PR 준비, 미배포 |
+| **Status** | 로컬 검증 완료, [PR #106](https://github.com/JinsuBae2/y-sync/pull/106), 미배포 |
 
 ### 작업 개요(What·Why)
 
