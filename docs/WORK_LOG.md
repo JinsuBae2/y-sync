@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-09-18 - PWA 복귀 로딩 표시와 캐시 보완
+
+| 항목 | 내용 |
+|---|---|
+| **Who** | 배진수(요청·검토) |
+| **When** | 2026-09-18, Asia/Seoul |
+| **Where** | `fix/pwa-back-loading-cache`, 웹 로딩 UI·Firebase Hosting |
+| **Status** | 로컬 구현·검증 완료, PR 준비, 미배포 |
+
+### 작업 개요(What·Why)
+
+- 회색 화면을 로딩 표시로 대체할 수 있는지 실기기에서 확인하기 위해 HTML 로딩 UI를 추가했습니다.
+- 배포 후에도 이전 20px JS가 사용된 기록에 대응해 물리적 파일명과 캐시 정책을 변경했습니다.
+
+### 구현(How)
+
+- 설치형 iOS PWA의 popstate에서 로딩을 표시하고 Flutter 전환 완료·프레임 후 해제합니다. 루트 뒤로가기 처리도 프레임 후 해제합니다.
+- 완료 신호 누락 시 2초 자동 해제, pagehide 정리, 토큰으로 이전 완료 신호 무시. 로딩은 터치를 가로채지 않습니다.
+- 보조 JS를 버전 파일명으로 참조하고 no-cache, no-store, must-revalidate를 설정합니다. 진단에 back_loading 이벤트를 추가했습니다.
+
+### 검증 및 추적(Verification·Tracking)
+
+- 코드 `e8b31e8`, 설정 `4de779d`. 문서는 별도 커밋입니다.
+- Flutter 62개·JavaScript 22개 테스트 통과. 표시·완료·시간 제한·연속 이동·페이지 이탈 및 일반 브라우저 제외 확인.
+- 분석 오류 없음(기존 경고 3개·정보 27개), 진단 활성 웹 빌드 성공. 빌드 출력의 새 파일과 부트스트랩 이전 로딩·캐시 규칙 확인.
+- 백엔드 test bootJar 성공(8개 작업 UP-TO-DATE). 기존 로컬 iOS·Gradle 변경은 제외했습니다.
+
+### 후속 작업(Risks / Follow-up)
+
+- WebKit 자체 전환 화면이나 popstate 이전의 회색 구간은 HTML 로딩으로 가리지 못할 수 있습니다. 배포 후 실기기 표시 확인 필요.
+- 새 index.html이 로드돼야 새 파일명을 사용합니다. 이미 실행 중인 앱을 강제로 갱신하지는 않습니다.
+- 진단에서 diag_v5 / guard_v4 및 back_loading shown/frame_ready/timeout을 확인합니다. 서버 전송은 없습니다.
+
+---
+
 ## 2026-09-17 - PWA 뒤로가기 경계 32px 조정
 
 | 항목 | 내용 |
