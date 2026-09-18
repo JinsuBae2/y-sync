@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../widgets/app_root_back_guard.dart';
+import '../widgets/notice_grade_prompt.dart';
 import '../utils/pwa_back_gesture_stub.dart'
     if (dart.library.js_interop) '../utils/pwa_back_gesture_web.dart'
     as platform;
@@ -268,9 +269,13 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
         );
       },
     );
-    return AppRootBackGuard(
-      enabled: platform.isIosStandalonePwa(),
-      child: content,
+    // 💡 학년 확인 안내는 로그인 후 첫 화면에서 한 번만 뜹니다. 탭을 옮길 때마다 뜨지 않도록
+    //    화면 단위가 아니라 이 최상위 화면에 한 번만 붙입니다.
+    return NoticeGradePrompt(
+      child: AppRootBackGuard(
+        enabled: platform.isIosStandalonePwa(),
+        child: content,
+      ),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
+import '../models/notice_grade_preference.dart';
 import 'api_client_provider.dart';
 import 'session_provider.dart';
 
@@ -236,16 +237,44 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     }
   }
 
-  Future<void> signup(String loginId, String password, String name) async {
+  Future<void> signup(
+    String loginId,
+    String password,
+    String name, {
+    NoticeGradePreference? noticeGradePreference,
+  }) async {
     try {
       final dio = ref.read(dioProvider);
       await dio.post(
         '/auth/signup',
-        data: {'loginId': loginId, 'password': password, 'name': name},
+        data: {
+          'loginId': loginId,
+          'password': password,
+          'name': name,
+          // 💡 확인 학년도는 보내지 않습니다. 단말기 시각과 무관하게 서버가 계산합니다.
+          if (noticeGradePreference != null)
+            'noticeGradePreference': noticeGradePreference.wireValue,
+        },
       );
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// 💡 공지 알림 수신 학년을 저장하고 최신 회원 정보로 갱신합니다.
+  ///
+  /// 인증된 본인의 설정만 수정합니다. 요청에 대상 회원을 지정하는 값이 없으므로
+  /// 학번이나 타인의 회원 ID로 다른 사람의 설정을 바꿀 수 없습니다.
+  /// 저장이 실패하면 기존 선택과 확인 학년도가 그대로 유지되도록 상태를 건드리지 않습니다.
+  Future<void> updateNoticeGradePreference(
+    NoticeGradePreference preference,
+  ) async {
+    final dio = ref.read(dioProvider);
+    final response = await dio.put(
+      '/members/me/notice-grade',
+      data: {'noticeGradePreference': preference.wireValue},
+    );
+    state = AsyncData(Member.fromJson(response.data));
   }
 
   Future<void> requestPasswordReset(String loginId, String name) async {

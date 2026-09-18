@@ -83,6 +83,17 @@ public class Member {
     @Column(nullable = false, columnDefinition = "int default 0")
     private int authVersion = 0;
 
+    // 💡 회원이 직접 선택한 공지 알림 수신 대상입니다. null은 '미설정'을 뜻합니다.
+    //    기존 회원과 이전 버전 클라이언트 호환을 위해 nullable로 도입합니다.
+    @Enumerated(EnumType.STRING)
+    @Setter
+    @Column(length = 20)
+    private NoticeGradePreference noticeGradePreference;
+
+    // 💡 서버가 계산한 마지막 확인 학년도입니다. null은 확인 이력이 없음을 뜻합니다.
+    @Setter
+    private Integer gradeConfirmedYear;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

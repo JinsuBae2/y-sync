@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/admin_member_provider.dart';
+import '../models/notice_grade_preference.dart';
 import '../models/member.dart';
 import '../theme/app_design_tokens.dart';
 import '../utils/csv_picker.dart';
@@ -725,6 +726,8 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
   void _showEditDialog(Member member) {
     final nameController = TextEditingController(text: member.name);
     String selectedRole = member.role;
+    // 💡 값을 건드리지 않으면 null로 남아 서버에서 기존 선택이 유지됩니다.
+    NoticeGradePreference? selectedGrade = member.noticeGradePreference;
 
     showDialog(
       context: context,
@@ -775,6 +778,33 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                       }
                     },
                   ),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<NoticeGradePreference?>(
+                    initialValue: selectedGrade,
+                    decoration: InputDecoration(
+                      labelText: '공지 알림 대상',
+                      prefixIcon: const Icon(Icons.school_outlined),
+                      helperText: member.gradeConfirmedYear == null
+                          ? '확인 학년도 없음'
+                          : '확인 학년도: ${member.gradeConfirmedYear}',
+                    ),
+                    items: [
+                      const DropdownMenuItem<NoticeGradePreference?>(
+                        value: null,
+                        child: Text('미설정 (변경 안 함)'),
+                      ),
+                      ...NoticeGradePreference.values.map(
+                        (preference) =>
+                            DropdownMenuItem<NoticeGradePreference?>(
+                              value: preference,
+                              child: Text(preference.label),
+                            ),
+                      ),
+                    ],
+                    onChanged: (val) => setDialogState(() {
+                      selectedGrade = val;
+                    }),
+                  ),
                 ],
               ),
               actions: [
@@ -790,7 +820,12 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                     try {
                       await ref
                           .read(adminMemberProvider.notifier)
-                          .updateMember(member.id, name, selectedRole);
+                          .updateMember(
+                            member.id,
+                            name,
+                            selectedRole,
+                            noticeGradePreference: selectedGrade,
+                          );
                       if (context.mounted) {
                         Navigator.pop(context);
                         _showSuccessSnackBar('정보가 정상적으로 수정되었습니다.');

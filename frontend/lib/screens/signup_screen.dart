@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../models/notice_grade_preference.dart';
+import '../widgets/notice_grade_selector.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -24,6 +26,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _isStudentInfoVerified = false; // 1차 정보 대조 확인 완료 여부
   bool _isEmailSent = false; // 2차 이메일 인증코드 발송 여부
   bool _isVerified = false; // 이메일 인증 최종 통과 여부
+  NoticeGradePreference? _noticeGradePreference; // 💡 공지 알림 수신 대상 선택
 
   Timer? _timer;
   int _timerSeconds = 300; // 5분
@@ -247,6 +250,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return;
     }
 
+    // 💡 새 가입 화면에서는 네 가지 중 하나를 골라야 완료할 수 있습니다.
+    if (_noticeGradePreference == null) {
+      _showWarningSnackBar('공지 알림을 받을 대상을 선택해주세요.');
+      return;
+    }
+
     if (password != passwordConfirm) {
       _showWarningSnackBar('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       return;
@@ -269,7 +278,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authProvider.notifier).signup(loginId, password, name);
+      await ref
+          .read(authProvider.notifier)
+          .signup(
+            loginId,
+            password,
+            name,
+            noticeGradePreference: _noticeGradePreference,
+          );
       if (mounted) {
         _showSuccessSnackBar('회원가입이 완료되었습니다. 로그인해 주세요.');
         Navigator.pop(context);
@@ -751,6 +767,34 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                     hint: '비밀번호 재입력',
                                     icon: Icons.lock_outline,
                                     isPassword: true,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // 4단계: 공지 알림 수신 대상 선택
+                                  const Text(
+                                    '공지 알림 대상',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppDesignTokens.navy,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    '전체 공지와 선택한 학년의 공지 알림을 받습니다. 나중에 내 정보에서 변경할 수 있습니다.',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      height: 1.45,
+                                      color: Color(0xFF6B7A90),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  NoticeGradeSelector(
+                                    selected: _noticeGradePreference,
+                                    enabled: !_isLoading,
+                                    onChanged: (value) => setState(
+                                      () => _noticeGradePreference = value,
+                                    ),
                                   ),
                                   const SizedBox(height: 28),
 
