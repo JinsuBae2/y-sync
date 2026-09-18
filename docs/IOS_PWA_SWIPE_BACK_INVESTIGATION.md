@@ -210,3 +210,10 @@ Flutter 3.41의 Cupertino 감지기는 max(왼쪽 padding, 20)으로 폭을 정�
 이전 파일 URL이 HTTP 또는 서비스 워커 캐시에서 재사용되지 않도록 pwa_back_gesture.v4.js, swipe_diagnostics.v5.js, back_navigation_loading.v1.js로 참조한다. 해당 보조 스크립트의 Hosting 헤더는 no-cache, no-store, must-revalidate다. 이미 실행 중인 페이지는 자동 교체하지 않으며 새 index.html 로딩 후 새 URL을 사용한다.
 
 진단 diag_v5는 back_loading의 shown/frame_ready/timeout/page_hidden을 기록한다. 기존 진단 저장 버튼을 사용한다. Flutter 62개·JS 22개 테스트, 분석, 웹 빌드를 확인했으나 실제 iPhone에서 회색 구간을 로딩으로 가리는지는 배포 후 확인해야 한다.
+
+
+## 2026-09-18 조사 종료 후 운영 진단 비활성화
+
+사용자가 로딩 표시 적용 후 정상 동작을 확인하여 운영 빌드의 진단 플래그와 index.html의 진단 스크립트 로드를 제거했다. 새 페이지 로드 시 sessionStorage의 ysync.swipe.enabled와 ysync.swipe.events만 정리한다. 저장된 플래그나 swipeDebug 쿼리로 버튼이 재활성화되지 않는다. 기존 제스처 처리, 웹 복귀 로딩, 캐시 정책은 유지한다. 진단 소스·테스트는 보존하지만 운영 페이지에서 실행하지 않는다.
+
+검증: Flutter 62개·JavaScript 22개 통과, 분석 오류 없음(기존 경고 3개·정보 27개), 진단 플래그 없는 운영 웹 빌드 성공. 이미 열린 페이지의 버튼은 새 페이지 로드 전까지 남을 수 있다.
