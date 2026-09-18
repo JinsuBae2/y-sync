@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const source = () => fs.readFileSync(path.join(__dirname, '../../web/swipe_diagnostics.js'), 'utf8');
+const source = () => fs.readFileSync(path.join(__dirname, '../../web/swipe_diagnostics.v5.js'), 'utf8');
 function boot(storage = new Map(), search = '', guard) {
   const listeners = {};
   const elements = [];
@@ -101,7 +101,7 @@ test('each event retains executing component revisions after the ring wraps', ()
   for (let i = 0; i < 155; i++) x.api.record('guard_touch', 'prevented');
   const events = JSON.parse(x.api.export());
   assert.equal(events.length, 150);
-  assert.equal(events[0].diagnosticVersion, 'diag_v4');
+  assert.equal(events[0].diagnosticVersion, 'diag_v5');
   assert.equal(events[0].guardVersion, 'guard_v3');
   assert.equal(events[0].guardEnabled, true);
   assert.equal(events[0].flutterVersion, 'flutter_v2');

@@ -199,3 +199,14 @@ Flutter 3.41의 Cupertino 감지기는 max(왼쪽 padding, 20)으로 폭을 정�
 진단 표식: guard_v4 / flutter_v3 / diag_v4, edgeWidth=32. 일반 Safari·네이티브 iOS·Android는 기존 라우트를 유지한다. MaterialPageRoute를 직접 사용하는 다른 상세 진입 경로 통일은 별도 후속 범위다.
 
 검증: 수정 전 실패했던 21·22·31px 상세 복귀 및 JS 경계 테스트가 통과했다. 짧은 드래그 취소, 중앙 드래그와 세로 스크롤 유지, 본문 여백 유지 포함 Flutter 61개·JavaScript 19개 통과. 분석 오류 없음(기존 경고 3개·정보 27개), 진단 활성 웹 빌드 성공. 배포 후 실기기 복귀·취소·목록 탭 이동·가로 화면 확인이 필요하다.
+
+
+## 2026-09-18 웹 복귀 로딩 표시·캐시 보완
+
+설치형 iOS PWA에서 브라우저 popstate를 받으면 HTML 최상단에 “화면을 불러오는 중…”을 표시한다. Flutter 라우트 전환 완료 및 프레임 처리가 끝나면 두 번의 requestAnimationFrame 뒤 해제한다. 루트 뒤로가기가 차단된 경우에도 프레임 후 해제한다. 완료가 누락되면 2초 뒤 자동 해제하며 pagehide에서도 정리한다. 요청 토큰으로 과거 완료 신호가 새로운 로딩을 닫지 않도록 한다. 로딩 UI는 pointer-events:none으로 터치를 가로채지 않는다.
+
+이 구현은 WebKit 자체 스와이프 스냅샷보다 위에 표시할 수 있다는 보장이 없다. popstate 이전 구간도 다루지 못한다. frame_ready는 앱의 전환·프레임 완료 신호이지 실제 기기 화면 픽셀의 준비 완료를 검증한 신호는 아니다. 정상 Flutter 복귀에는 popstate가 없으므로 표시하지 않는다.
+
+이전 파일 URL이 HTTP 또는 서비스 워커 캐시에서 재사용되지 않도록 pwa_back_gesture.v4.js, swipe_diagnostics.v5.js, back_navigation_loading.v1.js로 참조한다. 해당 보조 스크립트의 Hosting 헤더는 no-cache, no-store, must-revalidate다. 이미 실행 중인 페이지는 자동 교체하지 않으며 새 index.html 로딩 후 새 URL을 사용한다.
+
+진단 diag_v5는 back_loading의 shown/frame_ready/timeout/page_hidden을 기록한다. 기존 진단 저장 버튼을 사용한다. Flutter 62개·JS 22개 테스트, 분석, 웹 빌드를 확인했으나 실제 iPhone에서 회색 구간을 로딩으로 가리는지는 배포 후 확인해야 한다.

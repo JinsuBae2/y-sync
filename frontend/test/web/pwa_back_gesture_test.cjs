@@ -17,7 +17,7 @@ function setup(standalone = true, agent = 'iPhone') {
     matchMedia: () => ({ matches: standalone }),
   };
   ctx.window = ctx;
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../web/pwa_back_gesture.js'), 'utf8'), ctx);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../web/pwa_back_gesture.v4.js'), 'utf8'), ctx);
   return { ctx, records, fire(x, count = 1, cancelable = true, accepts = true) {
     let prevented = false;
     listener?.({ touches: Array.from({ length: count }, () => ({ clientX: x })),
