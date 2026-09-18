@@ -7,13 +7,13 @@
     'page_start', 'page_show', 'page_hide', 'visibility', 'history_pop',
     'touch_start', 'touch_end', 'touch_cancel', 'flutter_start',
     'route_push', 'route_pop', 'route_replace', 'gesture_start', 'gesture_stop',
-    'request_start', 'request_end', 'request_error', 'guard_touch',
+    'request_start', 'request_end', 'request_error', 'guard_touch', 'back_loading',
   ]);
   const detailsAllowed = new Set([
     'notice', 'community', 'other', 'left_edge', 'visible', 'hidden',
     'cached', 'fresh', 'navigate', 'reload', 'back_forward', 'unknown',
     'prevented', 'not_prevented', 'not_cancelable', 'outside_edge', 'multi_touch',
-    'flutter_v2', 'flutter_v3',
+    'flutter_v2', 'flutter_v3', 'shown', 'frame_ready', 'timeout', 'page_hidden',
   ]);
   let flutterVersion = 'unknown';
   let activeTouch;
@@ -34,7 +34,7 @@
     if (!enabled || !eventsAllowed.has(event)) return;
     events.push({ at: new Date().toISOString(), run, event,
       detail: detailsAllowed.has(detail) ? detail : '',
-      diagnosticVersion: 'diag_v4',
+      diagnosticVersion: 'diag_v5',
       guardVersion: ['guard_v3', 'guard_v4'].includes(window.ysyncPwaBackGesture?.version)
         ? window.ysyncPwaBackGesture.version : 'unknown',
       guardEnabled: typeof window.ysyncPwaBackGesture?.enabled === 'boolean'
