@@ -22,7 +22,13 @@
 
 <body>
   <script src="pwa_back_gesture.v4.js"></script>
-  <script src="swipe_diagnostics.v5.js"></script>
+  <script>
+    // Clear temporary diagnostics from earlier investigation builds.
+    try {
+      sessionStorage.removeItem('ysync.swipe.enabled');
+      sessionStorage.removeItem('ysync.swipe.events');
+    } catch (_) {}
+  </script>
   <script src="back_navigation_loading.v1.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
