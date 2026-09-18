@@ -153,7 +153,7 @@ jobs:
         working-directory: frontend
         run: |
           flutter test
-          flutter build web --release --dart-define=SWIPE_DIAGNOSTICS=true
+          flutter build web --release
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
