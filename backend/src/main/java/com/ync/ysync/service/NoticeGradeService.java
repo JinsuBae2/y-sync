@@ -2,11 +2,15 @@ package com.ync.ysync.service;
 
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.NoticeGradePreference;
+import com.ync.ysync.controller.NoticeGradeStatsResponse;
 import com.ync.ysync.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 💡 공지 알림 수신 학년의 선택과 학년도 확인을 담당합니다.
@@ -69,5 +73,31 @@ public class NoticeGradeService {
         return member.getNoticeGradePreference() == null
                 || member.getGradeConfirmedYear() == null
                 || member.getGradeConfirmedYear() < currentAcademicYear;
+    }
+
+    /**
+     * 학년별 알림 전환 시점을 판단하기 위한 집계입니다.
+     *
+     * 전환하면 미설정 회원은 학년 공지 알림을 받지 못하므로, 그 인원을 먼저 확인하고 정할 수 있어야 합니다.
+     * 회원 전체를 메모리로 읽지 않고 DB에서 집계합니다.
+     */
+    @Transactional(readOnly = true)
+    public NoticeGradeStatsResponse collectStats() {
+        int currentAcademicYear = currentAcademicYear();
+
+        Map<NoticeGradePreference, Long> counts = new HashMap<>();
+        for (Object[] row : memberRepository.countNoticeTargetsByGradePreference()) {
+            NoticeGradePreference preference = (NoticeGradePreference) row[0];
+            if (preference == null) {
+                continue; // 미설정은 전체 수에서 빼는 방식으로 계산합니다.
+            }
+            counts.put(preference, ((Number) row[1]).longValue());
+        }
+
+        return NoticeGradeStatsResponse.of(
+                currentAcademicYear,
+                memberRepository.countNoticeTargets(),
+                memberRepository.countNoticeTargetsNeedingConfirmation(currentAcademicYear),
+                counts);
     }
 }

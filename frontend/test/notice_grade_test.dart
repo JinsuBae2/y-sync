@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:y_sync/models/member.dart';
 import 'package:y_sync/models/notice_grade_preference.dart';
+import 'package:y_sync/models/notice_grade_stats.dart';
 import 'package:y_sync/providers/api_client_provider.dart';
 import 'package:y_sync/providers/auth_provider.dart';
 import 'package:y_sync/providers/notice_grade_prompt_provider.dart';
@@ -33,6 +34,8 @@ Member member({
 }
 
 void main() {
+  _statsTests();
+
   group('선택값 해석', () {
     test('미설정은 null이며 전체 공지만 받기와 구분된다', () {
       expect(member(preference: null).noticeGradePreference, isNull);
@@ -249,4 +252,48 @@ class _FailingAdapter implements HttpClientAdapter {
       reason: '네트워크 연결 없음',
     );
   }
+}
+
+/// 💡 전환 판단용 집계 파싱을 고정합니다. 미설정 인원이 곧 전환 시 영향받는 인원입니다.
+void _statsTests() {
+  group('전환 현황 집계', () {
+    test('선택값별 인원과 미설정 인원, 비율을 읽는다', () {
+      final stats = NoticeGradeStats.fromJson({
+        'currentAcademicYear': 2027,
+        'noticeTargetCount': 300,
+        'unsetCount': 120,
+        'selectedCount': 180,
+        'needsConfirmationCount': 150,
+        'countsByPreference': {
+          'GRADE_1': 60,
+          'GRADE_2': 70,
+          'GRADE_3': 30,
+          'GENERAL_ONLY': 20,
+        },
+      });
+
+      expect(stats.unsetCount, 120);
+      expect(stats.selectedPercent, 60);
+      expect(stats.countsByPreference[NoticeGradePreference.grade1], 60);
+      expect(stats.countsByPreference[NoticeGradePreference.generalOnly], 20);
+    });
+
+    test('빠진 선택지는 0으로 채우고 대상이 없으면 비율은 0이다', () {
+      final stats = NoticeGradeStats.fromJson({
+        'currentAcademicYear': 2027,
+        'noticeTargetCount': 0,
+        'unsetCount': 0,
+        'selectedCount': 0,
+        'needsConfirmationCount': 0,
+        'countsByPreference': <String, dynamic>{},
+      });
+
+      expect(stats.selectedPercent, 0);
+      expect(
+        stats.countsByPreference.length,
+        NoticeGradePreference.values.length,
+      );
+      expect(stats.countsByPreference.values, everyElement(0));
+    });
+  });
 }

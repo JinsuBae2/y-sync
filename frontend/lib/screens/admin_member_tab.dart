@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/admin_member_provider.dart';
 import '../models/notice_grade_preference.dart';
+import '../models/notice_grade_stats.dart';
 import '../models/member.dart';
 import '../theme/app_design_tokens.dart';
 import '../utils/csv_picker.dart';
@@ -979,6 +980,8 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
       backgroundColor: Colors.transparent,
       body: Column(
         children: [
+          // 학년 선택 현황 (학년별 알림 전환 시점 판단용)
+          _NoticeGradeStatsCard(isDesktop: widget.isDesktop),
           // 검색창 영역
           Padding(
             padding: EdgeInsets.fromLTRB(
@@ -1414,5 +1417,178 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
         ),
       ),
     ];
+  }
+}
+
+/// 💡 학년별 알림 전환 시점을 판단하기 위한 현황 카드입니다.
+///
+/// 전환하면 아직 학년을 고르지 않은 회원은 학년 공지 알림을 받지 못합니다.
+/// 그 인원을 먼저 확인하고 전환 여부를 정할 수 있도록 회원 관리 상단에 둡니다.
+class _NoticeGradeStatsCard extends ConsumerStatefulWidget {
+  const _NoticeGradeStatsCard({required this.isDesktop});
+
+  final bool isDesktop;
+
+  @override
+  ConsumerState<_NoticeGradeStatsCard> createState() =>
+      _NoticeGradeStatsCardState();
+}
+
+class _NoticeGradeStatsCardState extends ConsumerState<_NoticeGradeStatsCard> {
+  NoticeGradeStats? _stats;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final stats = await ref
+        .read(adminMemberProvider.notifier)
+        .fetchNoticeGradeStats();
+    if (!mounted) return;
+    setState(() {
+      _stats = stats;
+      _loaded = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = _stats;
+    // 집계를 불러오지 못해도 회원 관리 사용을 막지 않습니다.
+    if (!_loaded || stats == null) return const SizedBox.shrink();
+
+    final horizontal = widget.isDesktop ? 24.0 : 16.0;
+    final hasUnset = stats.unsetCount > 0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppDesignTokens.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppDesignTokens.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.school_outlined,
+                  size: 18,
+                  color: AppDesignTokens.blue,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '공지 알림 학년 선택 현황 (${stats.currentAcademicYear}학년도)',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppDesignTokens.navy,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  tooltip: '새로고침',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: stats.selectedPercent / 100,
+                minHeight: 6,
+                backgroundColor: AppDesignTokens.divider,
+                color: AppDesignTokens.blue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '알림 대상 ${stats.noticeTargetCount}명 중 '
+              '${stats.selectedCount}명 선택 완료 (${stats.selectedPercent}%)',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppDesignTokens.navy,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hasUnset
+                  ? '아직 선택하지 않은 ${stats.unsetCount}명은 학년별 알림으로 전환하면 '
+                        '학년 공지 알림을 받지 못합니다.'
+                  : '알림 대상 전원이 선택을 마쳤습니다. 학년별 알림으로 전환할 수 있습니다.',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+                color: hasUnset
+                    ? const Color(0xFFD1453B)
+                    : AppDesignTokens.muted,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final entry in stats.countsByPreference.entries)
+                  _StatChip(label: entry.key.label, count: entry.value),
+                _StatChip(label: '미설정', count: stats.unsetCount),
+              ],
+            ),
+            if (stats.needsConfirmationCount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                '올해 확인이 필요한 회원 ${stats.needsConfirmationCount}명 '
+                '(미설정 포함). 확인 전까지는 이전 선택 기준으로 알림을 받습니다.',
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: AppDesignTokens.muted,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.count});
+
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppDesignTokens.background,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppDesignTokens.divider),
+      ),
+      child: Text(
+        '$label $count',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppDesignTokens.navy,
+        ),
+      ),
+    );
   }
 }
