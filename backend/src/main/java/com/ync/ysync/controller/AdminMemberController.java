@@ -26,6 +26,7 @@ import java.util.Map;
 public class AdminMemberController {
 
     private final MemberService memberService;
+    private final com.ync.ysync.service.NoticeGradeService noticeGradeService;
 
     @GetMapping
     @Operation(summary = "회원 목록 조회", description = "학과 회원 목록을 페이징 및 이름/학번 검색으로 조회합니다.")
@@ -35,7 +36,7 @@ public class AdminMemberController {
             @RequestParam(required = false) String search) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<AdminMemberResponse> members = memberService.getMembers(pageRequest, search)
-                .map(AdminMemberResponse::from);
+                .map(member -> AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         return ResponseEntity.ok(members);
     }
 
@@ -48,7 +49,7 @@ public class AdminMemberController {
         try {
             Member member = memberService.createMemberByAdmin(
                     request.getLoginId(), request.getName(), request.getRole(), currentRole(authentication));
-            return ResponseEntity.ok(AdminMemberResponse.from(member));
+            return ResponseEntity.ok(AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -76,8 +77,10 @@ public class AdminMemberController {
             Authentication authentication) {
         try {
             Member member = memberService.updateMemberByAdmin(
-                    id, request.getName(), request.getRole(), currentRole(authentication));
-            return ResponseEntity.ok(AdminMemberResponse.from(member));
+                    id, request.getName(), request.getRole(), currentRole(authentication),
+                    request.getNoticeGradePreference(),
+                    request.getNoticeGradePreference() == null ? null : noticeGradeService.currentAcademicYear());
+            return ResponseEntity.ok(AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -156,6 +159,8 @@ public class AdminMemberController {
     public static class AdminUpdateMemberRequest {
         private String name;
         private MemberRole role;
+        // 💡 문의로 들어온 예외 상황을 지원하기 위한 학년 수정입니다. 값이 없으면 기존 선택을 유지합니다.
+        private com.ync.ysync.domain.NoticeGradePreference noticeGradePreference;
     }
 
     private MemberRole currentRole(Authentication authentication) {

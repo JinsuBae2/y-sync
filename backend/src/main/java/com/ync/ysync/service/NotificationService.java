@@ -86,8 +86,19 @@ public class NotificationService {
      */
     @Transactional
     public void createNotificationsForNotice(String title, String body, Long noticeId) {
-        List<Member> targetMembers = memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue();
-        if (targetMembers.isEmpty()) {
+        createNotificationsForNotice(
+                memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue(), title, body, noticeId);
+    }
+
+    /**
+     * 💡 공지사항 알림 일괄 등록 (수신자 목록을 외부에서 받는 형태)
+     *
+     * 푸시와 앱 알림함이 같은 수신자 목록을 쓰도록, 수신자 선정은 호출부에서 한 번만 수행합니다.
+     * 푸시 토큰이 없는 회원도 이 목록에 포함되며 앱 알림함에는 그대로 저장됩니다.
+     */
+    @Transactional
+    public void createNotificationsForNotice(List<Member> targetMembers, String title, String body, Long noticeId) {
+        if (targetMembers == null || targetMembers.isEmpty()) {
             log.info("[Notification] 공지사항 알림을 수신할 대상 회원이 없습니다.");
             return;
         }

@@ -3,8 +3,10 @@ package com.ync.ysync.controller;
 import com.ync.ysync.config.JwtUtil;
 import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.Member;
+import com.ync.ysync.domain.NoticeGradePreference;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.service.MemberService;
+import com.ync.ysync.service.NoticeGradeService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class MemberController {
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+    private final NoticeGradeService noticeGradeService;
 
     @GetMapping("/check-duplicate")
     @Operation(summary = "아이디 중복 확인", description = "입력한 아이디(학번)가 이미 등록되어 있는지 확인합니다.")
@@ -37,7 +40,15 @@ public class MemberController {
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
-        memberService.signup(request.getLoginId(), request.getPassword(), request.getName());
+        // 💡 공지 알림 수신 학년은 선택 항목으로 받습니다. 값이 없으면 미설정으로 두어
+        //    학년 선택이 없는 이전 버전 클라이언트의 가입 요청도 그대로 처리됩니다.
+        //    확인 학년도는 클라이언트가 지정하지 않고 서버가 계산합니다.
+        memberService.signup(
+                request.getLoginId(),
+                request.getPassword(),
+                request.getName(),
+                request.getNoticeGradePreference(),
+                request.getNoticeGradePreference() == null ? null : noticeGradeService.currentAcademicYear());
         return ResponseEntity.ok("회원가입 성공");
     }
 
@@ -182,6 +193,7 @@ public class MemberController {
         private String loginId;
         private String password;
         private String name;
+        private NoticeGradePreference noticeGradePreference;
     }
 
     @Data

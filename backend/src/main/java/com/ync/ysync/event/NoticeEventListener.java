@@ -1,8 +1,9 @@
 package com.ync.ysync.event;
 
+import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.Notice;
-import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.service.FCMService;
+import com.ync.ysync.service.NoticeRecipientSelector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -24,7 +25,7 @@ import java.util.Map;
 public class NoticeEventListener {
 
     private final FCMService fcmService;
-    private final MemberRepository memberRepository;
+    private final NoticeRecipientSelector noticeRecipientSelector;
     private final com.ync.ysync.service.NotificationService notificationService;
 
     @Async
@@ -34,9 +35,19 @@ public class NoticeEventListener {
         log.info("[FCM] 공지사항 알림 발송 시작 - Notice ID: {}, Title: '{}', Thread: {}", 
                 notice.getId(), notice.getTitle(), Thread.currentThread().getName());
 
-        // 💡 1. 인앱 알림 DB 적재 (수신 동의한 전체 활성 회원 대상)
+        // 💡 0. 수신자를 한 번만 선정합니다. 앱 알림함과 푸시가 같은 목록을 사용해야 학년 판정이 어긋나지 않습니다.
+        List<Member> recipients;
+        try {
+            recipients = noticeRecipientSelector.selectRecipients(notice);
+        } catch (Exception e) {
+            log.error("[Notification] 공지 수신자 선정 실패 - Notice ID: {}, 사유: {}", notice.getId(), e.getMessage(), e);
+            return;
+        }
+
+        // 💡 1. 인앱 알림 DB 적재 (선정된 수신자 대상, 푸시 토큰이 없어도 저장)
         try {
             notificationService.createNotificationsForNotice(
+                    recipients,
                     "[새 공지사항] " + notice.getTitle(),
                     "새로운 공지사항이 등록되었습니다.",
                     notice.getId()
@@ -45,9 +56,13 @@ public class NoticeEventListener {
             log.error("[Notification] 공지사항 인앱 알림 일괄 DB 적재 실패 - Notice ID: {}, 사유: {}", notice.getId(), e.getMessage(), e);
         }
 
+        // 💡 2. 푸시 발송. 실패해도 위의 앱 알림함 저장을 되돌리지 않도록 독립적으로 처리합니다.
         try {
-            // 💡 [웹앱 알림 제약 해결] 전체 활성 회원의 FCM 토큰 조회
-            List<String> fcmTokens = memberRepository.findAllFcmTokensOfActivatedMembers();
+            List<String> fcmTokens = recipients.stream()
+                    .map(Member::getFcmToken)
+                    .filter(token -> token != null && !token.isBlank())
+                    .distinct()
+                    .toList();
             
             if (fcmTokens.isEmpty()) {
                 log.info("[FCM] 알림을 수신할 활성화된 회원이 없습니다. 발송을 스킵합니다. Notice ID: {}", notice.getId());

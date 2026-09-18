@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/mypage_provider.dart';
 import '../providers/api_client_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../models/member.dart';
+import '../models/notice_grade_preference.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/notice_grade_prompt.dart';
 
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -114,6 +118,8 @@ class _NotificationSettingsScreenState
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+              const _NoticeGradeSection(),
               if (kIsWeb) ...[
                 const SizedBox(height: 20),
                 Container(
@@ -254,4 +260,101 @@ class _NotificationToggle extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// 💡 공지 알림 대상(학년) 표시와 변경 진입점입니다.
+///
+/// 공지 알림을 켜고 끄는 위 설정과는 별개입니다. 학년을 바꿔도 꺼 둔 알림이 자동으로 켜지지 않습니다.
+class _NoticeGradeSection extends ConsumerWidget {
+  const _NoticeGradeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Member? member = ref.watch(authProvider).asData?.value;
+    if (member == null) return const SizedBox.shrink();
+
+    final needsAttention = member.gradeConfirmationRequired;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '공지 알림 대상',
+          style: TextStyle(
+            color: AppDesignTokens.navy,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          '선택한 학년과 전체 공지의 알림을 받습니다.',
+          style: TextStyle(color: AppDesignTokens.muted, fontSize: 13),
+        ),
+        const SizedBox(height: 18),
+        _SettingGroup(
+          children: [
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+              leading: const Icon(
+                Icons.school_outlined,
+                color: AppDesignTokens.blue,
+              ),
+              title: Text(
+                NoticeGradePreference.labelOf(member.noticeGradePreference),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppDesignTokens.navy,
+                ),
+              ),
+              subtitle: Text(
+                member.gradeConfirmedYear == null
+                    ? '아직 확인한 학년도가 없습니다.'
+                    : '확인 학년도: ${member.gradeConfirmedYear}',
+                style: const TextStyle(fontSize: 12.5),
+              ),
+              trailing: TextButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => NoticeGradeDialog(member: member),
+                ),
+                child: const Text('알림 대상 변경'),
+              ),
+            ),
+          ],
+        ),
+        if (needsAttention) ...[
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 17,
+                color: Color(0xFFD1453B),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  member.noticeGradePreference == null
+                      ? '아직 선택하지 않아 전체 공지만 받고 있습니다.'
+                      : '올해 학년 확인이 필요합니다. 확인 전까지는 이전 선택 기준으로 알림을 받습니다.',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFD1453B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 }

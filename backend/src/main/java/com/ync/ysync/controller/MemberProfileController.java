@@ -10,6 +10,9 @@ import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.repository.NoticeRepository; // 💡 추가
 import com.ync.ysync.config.AuthUtil;
 import com.ync.ysync.domain.CommentDeletedBy;
+import com.ync.ysync.domain.Member;
+import com.ync.ysync.domain.NoticeGradePreference;
+import com.ync.ysync.service.NoticeGradeService;
 import com.ync.ysync.service.MemberService;
 import lombok.AllArgsConstructor;
 import lombok.AccessLevel;
@@ -34,6 +37,7 @@ public class MemberProfileController {
     private final CommentRepository commentRepository;
     private final NoticeRepository noticeRepository;
     private final MemberService memberService;
+    private final NoticeGradeService noticeGradeService;
     private final AuthUtil authUtil;
 
     @GetMapping("/me")
@@ -41,16 +45,44 @@ public class MemberProfileController {
         Long memberId = authUtil.getLoginMemberId();
         if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
+        int currentAcademicYear = noticeGradeService.currentAcademicYear();
         return memberRepository.findById(memberId)
-                .map(member -> ResponseEntity.ok(new MemberResponse(
-                        member.getId(),
-                        member.getLoginId(),
-                        member.getName(),
-                        member.getRole().name(),
-                        member.isNoticeEnabled(),
-                        member.isCommentEnabled()
-                )))
+                .map(member -> ResponseEntity.ok(toMemberResponse(member, currentAcademicYear)))
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    /**
+     * 💡 공지 알림 수신 학년 선택/재확인
+     *
+     * 인증된 본인의 정보만 수정합니다. 요청 본문에는 대상 회원을 지정하는 값이 없으므로
+     * 학번이나 타인의 회원 ID를 바꿔 다른 사람의 설정을 수정할 수 없습니다.
+     */
+    @PutMapping("/me/notice-grade")
+    public ResponseEntity<?> updateNoticeGrade(@RequestBody NoticeGradeRequest request) {
+        Long memberId = authUtil.getLoginMemberId();
+        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        try {
+            Member member = noticeGradeService.updateOwnPreference(memberId, request.getNoticeGradePreference());
+            return ResponseEntity.ok(toMemberResponse(member, noticeGradeService.currentAcademicYear()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
+
+    private MemberResponse toMemberResponse(Member member, int currentAcademicYear) {
+        return new MemberResponse(
+                member.getId(),
+                member.getLoginId(),
+                member.getName(),
+                member.getRole().name(),
+                member.isNoticeEnabled(),
+                member.isCommentEnabled(),
+                member.getNoticeGradePreference(),
+                member.getGradeConfirmedYear(),
+                currentAcademicYear,
+                noticeGradeService.confirmationRequired(member, currentAcademicYear)
+        );
     }
 
     @GetMapping("/settings")
@@ -150,6 +182,17 @@ public class MemberProfileController {
         private String role;
         private boolean noticeEnabled;
         private boolean commentEnabled;
+        // 💡 미설정은 null로 내려가며, 사용자가 명시적으로 고른 GENERAL_ONLY와 구분됩니다.
+        private NoticeGradePreference noticeGradePreference;
+        private Integer gradeConfirmedYear;
+        private int currentAcademicYear;
+        private boolean gradeConfirmationRequired;
+    }
+
+    @Data
+    public static class NoticeGradeRequest {
+        // 💡 허용된 네 값만 역직렬화되며, 다른 문자열은 요청 단계에서 거부됩니다.
+        private NoticeGradePreference noticeGradePreference;
     }
 
     @Data

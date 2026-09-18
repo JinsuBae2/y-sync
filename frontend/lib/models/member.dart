@@ -1,3 +1,5 @@
+import 'notice_grade_preference.dart';
+
 class Member {
   final int id;
   final String loginId;
@@ -7,6 +9,18 @@ class Member {
   final bool commentEnabled;
   final bool isActivated; // 💡 가입(활성화) 여부 추가
 
+  /// 💡 공지 알림 수신 대상 선택입니다. null은 '미설정'입니다.
+  final NoticeGradePreference? noticeGradePreference;
+
+  /// 서버가 계산한 마지막 확인 학년도입니다. null은 확인 이력이 없음을 뜻합니다.
+  final int? gradeConfirmedYear;
+
+  /// 서버가 계산한 현재 학년도입니다. 단말기 시각에 의존하지 않습니다.
+  final int? currentAcademicYear;
+
+  /// 학년 확인 안내가 필요한 상태인지 서버가 판정한 결과입니다.
+  final bool gradeConfirmationRequired;
+
   Member({
     required this.id,
     required this.loginId,
@@ -15,6 +29,10 @@ class Member {
     required this.noticeEnabled,
     required this.commentEnabled,
     required this.isActivated,
+    this.noticeGradePreference,
+    this.gradeConfirmedYear,
+    this.currentAcademicYear,
+    this.gradeConfirmationRequired = false,
   });
 
   factory Member.fromJson(Map<String, dynamic> json) {
@@ -26,6 +44,13 @@ class Member {
       noticeEnabled: json['noticeEnabled'] ?? true,
       commentEnabled: json['commentEnabled'] ?? true,
       isActivated: json['activated'] ?? json['isActivated'] ?? false,
+      noticeGradePreference: NoticeGradePreference.fromWire(
+        json['noticeGradePreference'] as String?,
+      ),
+      gradeConfirmedYear: json['gradeConfirmedYear'] as int?,
+      currentAcademicYear: json['currentAcademicYear'] as int?,
+      // 💡 이 필드를 내려주지 않는 구버전 서버와도 동작하도록 기본값은 false입니다.
+      gradeConfirmationRequired: json['gradeConfirmationRequired'] ?? false,
     );
   }
 }

@@ -2,6 +2,7 @@ package com.ync.ysync.service;
 
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
+import com.ync.ysync.domain.NoticeGradePreference;
 import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.AuthType;
 import com.ync.ysync.repository.MemberRepository;
@@ -238,6 +239,19 @@ public class MemberService {
      */
     @Transactional
     public Member signup(String loginId, String password, String name) {
+        return signup(loginId, password, name, null, null);
+    }
+
+    /**
+     * 최종 회원가입 및 계정 활성화 (공지 알림 수신 학년 선택 포함)
+     *
+     * 💡 학년 선택값과 확인 학년도는 가입 트랜잭션 안에서 함께 저장합니다. 가입이 실패하면 함께 롤백되어
+     *    확인 완료 상태만 남는 일이 없습니다. 확인 학년도는 클라이언트가 지정하지 않고 서버가 계산한 값을 받습니다.
+     *    이전 버전 클라이언트 호환을 위해 선택값이 없으면 미설정으로 둡니다.
+     */
+    @Transactional
+    public Member signup(String loginId, String password, String name,
+                         NoticeGradePreference noticeGradePreference, Integer academicYear) {
         // 💡 비밀번호 정책은 인증 상태를 확인하기 전에 검사합니다. 정책 위반 같은 단순 입력 오류로
         //    이메일 인증 결과가 소모되지 않아야 사용자가 같은 인증으로 다시 시도할 수 있습니다.
         //    기존에는 이 검사가 비밀번호 재설정에만 있어 회원가입에서는 한 글자 비밀번호도 허용됐습니다.
@@ -268,6 +282,11 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(password));
         member.setEmail(verifiedInfo.getEmail());
         member.setActivated(true);
+
+        if (noticeGradePreference != null) {
+            member.setNoticeGradePreference(noticeGradePreference);
+            member.setGradeConfirmedYear(academicYear);
+        }
 
         // 인증 성공 만료 처리
         verifiedStudents.remove(loginId);
@@ -686,6 +705,18 @@ public class MemberService {
      */
     @Transactional
     public Member updateMemberByAdmin(Long id, String name, MemberRole role, MemberRole actorRole) {
+        return updateMemberByAdmin(id, name, role, actorRole, null, null);
+    }
+
+    /**
+     * 관리자 권한 회원 정보 수정 (이름, 권한, 공지 알림 수신 학년)
+     *
+     * 💡 학년은 문의가 들어온 예외 상황을 지원하기 위한 수단이며, 수정 권한은 기존 회원 수정 권한을 그대로 따릅니다.
+     *    관리자 수정도 현재 학년도 확인으로 처리하므로 학생에게 같은 학년도 안내가 다시 뜨지 않습니다.
+     */
+    @Transactional
+    public Member updateMemberByAdmin(Long id, String name, MemberRole role, MemberRole actorRole,
+                                      NoticeGradePreference noticeGradePreference, Integer academicYear) {
         Member member = findById(id);
 
         if (actorRole != MemberRole.SUPER_ADMIN && member.getRole() == MemberRole.SUPER_ADMIN) {
@@ -701,7 +732,13 @@ public class MemberService {
             member.setAuthVersion(member.getAuthVersion() + 1);
         }
 
-        log.info("관리자 회원정보 수정 완료 - ID: {}, 수정된 이름: {}, 권한: {}", id, member.getName(), member.getRole());
+        if (noticeGradePreference != null) {
+            member.setNoticeGradePreference(noticeGradePreference);
+            member.setGradeConfirmedYear(academicYear);
+        }
+
+        log.info("관리자 회원정보 수정 완료 - ID: {}, 수정된 이름: {}, 권한: {}, 공지 학년: {}",
+                id, member.getName(), member.getRole(), member.getNoticeGradePreference());
         return memberRepository.save(member);
     }
 
