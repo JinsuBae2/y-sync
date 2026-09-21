@@ -30,14 +30,6 @@ public class MemberController {
     private final MemberRepository memberRepository;
     private final NoticeGradeService noticeGradeService;
 
-    @GetMapping("/check-duplicate")
-    @Operation(summary = "아이디 중복 확인", description = "입력한 아이디(학번)가 이미 등록되어 있는지 확인합니다.")
-    public ResponseEntity<Map<String, Boolean>> checkDuplicate(@RequestParam String loginId) {
-        boolean isDuplicate = memberRepository.findByLoginId(loginId).isPresent();
-        log.info("아이디 중복 확인 요청 - LoginID: {}, 중복여부: {}", loginId, isDuplicate);
-        return ResponseEntity.ok(Map.of("isDuplicate", isDuplicate));
-    }
-
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
         // 💡 공지 알림 수신 학년은 선택 항목으로 받습니다. 값이 없으면 미설정으로 두어

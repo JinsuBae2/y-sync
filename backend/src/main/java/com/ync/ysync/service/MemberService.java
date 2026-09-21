@@ -54,6 +54,11 @@ public class MemberService {
 
     // 💡 인증번호는 한 번 발급된 뒤 5분간 고정되므로, 시도 횟수를 제한하지 않으면 6자리(10^6)를
     //    무차별 대입할 수 있습니다. 아래 상수로 challenge당 시도 횟수와 재발급 간격을 제한합니다.
+    // 💡 '명단에 없음'과 '이름 불일치'를 구분하지 않기 위한 공통 메시지입니다.
+    //    두 경우를 다르게 답하면 어떤 학번이 명단에 있는지 조회할 수 있게 됩니다.
+    private static final String SIGNUP_LOOKUP_FAILURE_MESSAGE =
+            "학번과 이름을 확인해 주세요. 등록되지 않은 경우 학과 사무실에 문의하세요.";
+
     private static final int MAX_VERIFICATION_ATTEMPTS = 5;
     private static final int VERIFICATION_TTL_MINUTES = 5;
     private static final int RESEND_COOLDOWN_SECONDS = 60;
@@ -126,15 +131,21 @@ public class MemberService {
      */
     @Transactional(readOnly = true)
     public void verifyStudentForSignup(String loginId, String name) {
+        // 💡 응답으로 '명단에 있지만 아직 가입하지 않은 학번'을 골라낼 수 없어야 합니다.
+        //    그 조합이 곧 타인 명의 가입의 표적이며, 학번을 순서대로 넣어보면 표적 명단이 만들어집니다.
+        //    따라서 '등록되지 않은 학번'과 '이름 불일치'를 같은 응답으로 돌려줍니다.
+        //    이미 가입된 경우는 구분해 알려줍니다. 정상 사용자에게 로그인으로 안내해야 하고,
+        //    공격자가 찾는 것은 '미가입' 상태라 이 정보만으로는 표적을 좁힐 수 없습니다.
+        //    비밀번호 재설정(`requestPasswordReset`)이 이미 같은 기준을 따르고 있습니다.
         Member member = memberRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 학번입니다. 학과 사무실에 문의하세요."));
+                .orElseThrow(() -> new IllegalArgumentException(SIGNUP_LOOKUP_FAILURE_MESSAGE));
 
         if (member.isActivated()) {
-            throw new IllegalArgumentException("이미 회원가입이 완료된 학번입니다.");
+            throw new IllegalArgumentException("이미 가입이 완료된 학번입니다. 로그인해 주세요.");
         }
 
         if (!member.getName().equals(name)) {
-            throw new IllegalArgumentException("학번과 이름이 일치하지 않습니다.");
+            throw new IllegalArgumentException(SIGNUP_LOOKUP_FAILURE_MESSAGE);
         }
     }
 
