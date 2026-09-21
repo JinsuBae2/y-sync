@@ -89,6 +89,23 @@ jobs:
       - name: Validate Docker Compose
         run: docker compose -f docker/docker-compose.yml config --quiet
 
+      - name: Verify Notice Grade Filter Wiring
+        env:
+          NOTICE_GRADE_FILTER_ENABLED: 'true'
+        run: |
+          backend_config="$(docker compose -f docker/docker-compose.yml config \
+            | sed -n '/ysync-backend:/,/ysync-nginx:/p')"
+          if ! grep -Fq 'NOTICE_GRADE_FILTER_ENABLED: "true"' <<<"$backend_config"; then
+            echo 'The notice grade filter flag must reach the backend container.' >&2
+            exit 1
+          fi
+
+          if [[ "$(grep -c 'NOTICE_GRADE_FILTER_ENABLED' .github/workflows/deploy-production.yml)" -lt 2 ]] \
+            || ! grep -Eq 'envs: .*NOTICE_GRADE_FILTER_ENABLED' .github/workflows/deploy-production.yml; then
+            echo 'Production Deploy must source and forward the notice grade filter variable.' >&2
+            exit 1
+          fi
+
       - name: Verify MySQL Is Not Published
         run: |
           if docker compose -f docker/docker-compose.yml config \
