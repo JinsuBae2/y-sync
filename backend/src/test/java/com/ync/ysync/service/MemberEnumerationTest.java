@@ -42,11 +42,14 @@ class MemberEnumerationTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
 
+    @Mock
+    private MemberWithdrawer memberWithdrawer;
+
     private MemberService memberService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService);
+        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
         when(memberRepository.findByLoginId(UNKNOWN_ID)).thenReturn(Optional.empty());
         when(memberRepository.findByLoginId(REGISTERED_ID)).thenReturn(Optional.of(member("홍길동", false)));
         when(memberRepository.findByLoginId(ACTIVATED_ID)).thenReturn(Optional.of(member("김철수", true)));

@@ -23,6 +23,7 @@ public class CommunityService {
     private final CommunityPostRepository communityPostRepository;
     private final MemberRepository memberRepository;
     private final FileService fileService;
+    private final PostDeletionCleaner postDeletionCleaner;
 
     // 💡 카테고리별 혹은 전체 목록 조회 (고정글 우선, 최신순 필터링)
     public List<CommunityPost> getPosts(String category) {
@@ -142,7 +143,10 @@ public class CommunityService {
             throw new IllegalArgumentException("게시글 삭제 권한이 없습니다.");
         }
 
-        
+        // 💡 댓글에는 FK가 걸려 있어 먼저 지우지 않으면 삭제 자체가 제약 위반으로 실패합니다.
+        //    스크랩·신고는 FK가 없어 남아도 삭제는 되지만, 가리킬 글이 없는 행이 되므로 함께 정리합니다.
+        postDeletionCleaner.cleanUpCommunityPost(post.getId());
+
         communityPostRepository.delete(post);
     }
 }

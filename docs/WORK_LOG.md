@@ -4,6 +4,87 @@
 
 ---
 
+## 2026-09-21 - 스크랩·신고 중복행 차단 (UNIQUE 제약)
+
+- 누가: 백엔드·운영 DB 공통 작업
+- 무엇을: `scrap`과 `report`에 UNIQUE 제약을 추가하고, 중복키 위반이 500이 아닌 정상 응답으로 처리되게 했습니다.
+- 왜:
+  - 두 서비스 모두 "조회 후 INSERT" 구조라 같은 요청이 동시에 들어오면 애플리케이션 검사를 둘 다 통과해 중복행이 생깁니다.
+  - 스크랩은 중복행이 한 번 생기면 `findByMemberIdAndTargetTypeAndTargetId`가 `IncorrectResultSizeDataAccessException`으로 깨져 **그 사용자는 해당 글의 스크랩 토글에서 영구히 500을 받습니다.**
+  - 신고는 한 사람의 신고가 여러 건으로 세어져, 자동 블라인드 임계(5회)가 실제 5명보다 적은 인원으로 도달합니다.
+  - 제약 추가 전에 운영 DB에 중복행이 있으면 DDL 자체가 실패하므로 확인이 선행 조건이었습니다.
+- 어떻게:
+  - 운영 MySQL에서 중복행을 먼저 조회했습니다. `scrap` 0건, `report` 0건이라 정리 없이 제약을 추가할 수 있었습니다.
+  - `report`의 사용자 식별 컬럼은 `member_id`가 아니라 **`reporter_id`** 입니다. 확인 쿼리를 이 컬럼으로 실행했습니다.
+  - 엔티티에 `@Table(uniqueConstraints = ...)`를 선언했습니다. `uq_scrap(member_id, target_type, target_id)`, `uq_report(reporter_id, target_type, target_id)`.
+  - 스크랩 **해제**는 조건부 DELETE 한 문장으로 바꿨습니다. 엔티티를 조회해서 지우면 같은 해제 요청이 동시에 들어왔을 때(버튼 연타) 한쪽이 `ObjectOptimisticLockingFailureException`("expected row count 1 but was 0")으로 500을 받습니다. "0행 삭제"는 오류가 아니므로 이 방식은 경쟁에서 져도 실패하지 않습니다. 동시성 테스트를 CI에서 돌리다 실제로 발견해 함께 고쳤습니다.
+  - 중복키 예외는 트랜잭션 경계 **밖**인 컨트롤러에서 잡습니다. 서비스 안에서 잡으면 이미 롤백 표시된 트랜잭션을 커밋하려다 `UnexpectedRollbackException`이 납니다.
+    - 스크랩: 경쟁에서 진 요청도 "스크랩됨"이라는 결과는 달성됐으므로 200으로 응답합니다.
+    - 신고: 사전 검사와 같은 "이미 신고한 대상입니다." 400으로 응답합니다.
+  - `GlobalExceptionHandler`에 `DataIntegrityViolationException` 핸들러를 마지막 방어선으로 추가했습니다(409). 제약 위반은 서버 결함이 아니라 데이터 상태이므로 500으로 내보내지 않습니다.
+- 운영 DDL: **2026-09-21 운영 DB에 적용 완료했습니다.** 배포보다 먼저 적용한 이유는, `ddl-auto=update`라 그냥 배포해도 Hibernate가 같은 인덱스를 만들지만 그 시점에 중복행이 있으면 **배포 중 앱이 기동에 실패**하기 때문입니다. 미리 적용하면 실패해도 SQL 오류 한 줄로 끝납니다. 적용 전 중복행 재확인은 둘 다 0건, `ALTER` 두 건 모두 `Query OK, 0 rows affected`였습니다. 서비스는 중단하지 않았습니다(MySQL 8은 보조 인덱스 추가를 INPLACE로 처리합니다).
+
+```sql
+-- 적용 직전 재확인 (둘 다 0행이어야 합니다)
+SELECT member_id, target_type, target_id, COUNT(*) c
+FROM scrap GROUP BY member_id, target_type, target_id HAVING c > 1;
+SELECT reporter_id, target_type, target_id, COUNT(*) c
+FROM report GROUP BY reporter_id, target_type, target_id HAVING c > 1;
+
+ALTER TABLE scrap  ADD CONSTRAINT uq_scrap  UNIQUE (member_id, target_type, target_id);
+ALTER TABLE report ADD CONSTRAINT uq_report UNIQUE (reporter_id, target_type, target_id);
+```
+
+- 언제·어디서: 2026-09-21, `fix/scrap-report-unique` 브랜치.
+- 검증: 백엔드 테스트 통과. 동시성 테스트는 10회 반복 실행해 흔들리지 않는 것을 확인했습니다. 같은 회원·대상으로 두 번째 행을 저장하면 `DataIntegrityViolationException`이 나는지, 8개 스레드가 동시에 토글·신고해도 스크랩 행이 2건 이상으로 늘지 않고 신고가 정확히 1건만 적재되는지 실제 커밋으로 확인했습니다. 중복행이 있을 때만 나는 `IncorrectResultSizeDataAccessException`이 한 건도 발생하지 않는 것도 함께 고정했습니다.
+- 남은 일: `ddl-auto`를 `validate`로 전환하는 작업은 별도입니다. 전환 시 이 두 제약이 스키마에 실제로 존재해야 기동에 실패하지 않습니다.
+
+---
+
+## 2026-09-21 - 댓글 달린 글이 삭제되지 않던 문제 (하드 삭제 FK)
+
+- 누가: 백엔드
+- 무엇을: 글을 하드 삭제하기 전에 딸린 댓글·신고·스크랩을 정리하도록 바꿨습니다.
+- 왜:
+  - 운영 DB의 외래키 제약 14개를 조회해 `comment.community_post_id`와 `comment.notice_id`에 FK가 실제로 존재하는 것을 확인했습니다.
+  - `CommunityService.deletePost`와 `NoticeService.deleteNotice`는 딸린 댓글을 지우지 않고 글만 지우려 했습니다. **댓글이 하나라도 달린 글은 작성자든 관리자든 삭제할 수 없었고**, 제약 위반이 500으로 나갔습니다. 이미지는 엔티티 cascade가 처리하고 있어 댓글만 사각지대였습니다.
+  - `scrap.target_id`와 `report.target_id`에는 FK가 없습니다. 삭제를 막지는 않지만 남으면 관리자 신고함에 "존재하지 않는 게시글" 항목이 계속 쌓이고 스크랩 목록에 빈 자리가 생깁니다.
+- 어떻게:
+  - 정리 책임을 `PostDeletionCleaner`로 분리했습니다. 커뮤니티 글과 공지가 같은 문제를 갖고 있어 두 서비스에 같은 코드를 넣지 않기 위해서입니다.
+  - 댓글은 **대댓글을 먼저, 원 댓글을 나중에** 지웁니다. `comment.parent_id`가 comment 자신을 참조하기 때문입니다. `CommentService.validateReplyableParent`가 대댓글에 답글을 막고 있어 깊이는 2단계입니다.
+  - 댓글을 가리키던 신고는 댓글 ID를 먼저 모아 한 번에 지웁니다.
+  - 정리는 `@Transactional(propagation = MANDATORY)`로 호출한 삭제 트랜잭션 안에서만 실행됩니다. 정리만 커밋되고 글 삭제가 실패하면 댓글만 사라진 글이 남기 때문입니다.
+  - 알림(`notification`)은 정리하지 않았습니다. 이미 발송된 수신 기록이라 지우면 사용자 이력이 사라집니다.
+- 언제·어디서: 2026-09-21, `fix/hard-delete-orphans` 브랜치.
+- 검증: 백엔드 테스트 전체 통과. 정리 호출을 일부러 주석 처리해 추가한 테스트 3건이 실제로 `ConstraintViolationException`으로 실패하는 것을 확인한 뒤 원복했습니다. 실제 DELETE가 DB까지 도달해야 FK 위반을 볼 수 있으므로 테스트 클래스에 `@Transactional`을 걸지 않았습니다.
+- 남은 일: `MemberService.deleteMemberByAdmin`도 같은 계열의 문제를 갖고 있습니다. `member`를 참조하는 FK가 8개(admin_request, comment, community_post, notice, notification, personal_timetable_entry, report, scrap)라 글이나 댓글을 쓴 적 있는 회원은 삭제할 수 없습니다. 다만 해결 방향이 "딸린 글까지 함께 삭제"인지 "계정만 익명화"인지는 서비스 정책 판단이 필요해 이 브랜치에는 넣지 않았고, 같은 날 "계정만 익명화"로 정해 아래 항목에서 처리했습니다.
+
+---
+
+## 2026-09-21 - 관리자 회원 삭제를 계정 익명화로 전환
+
+- 누가: 백엔드·프론트엔드 공통 작업
+- 무엇을: `DELETE /admin/members/{id}`가 회원 행을 지우는 대신 계정을 익명화하도록 바꿨습니다.
+- 왜:
+  - 운영 DB 조회 결과 `member`를 참조하는 외래키가 8개였습니다(admin_request, comment, community_post, notice, notification, personal_timetable_entry, report, scrap).
+  - 기존 구현은 회원 행을 그대로 지웠기 때문에 **글이나 댓글을 쓴 적 있는 회원은 관리자도 삭제할 수 없었고** 500이 났습니다.
+  - 딸린 데이터까지 함께 지우는 방식은 택하지 않았습니다. 그 회원의 글에 달린 **다른 학생의 댓글까지 사라지고** 대화 맥락이 끊깁니다.
+- 어떻게:
+  - `Member.withdraw(...)`가 개인을 특정할 수 있는 값을 모두 지웁니다. 학번, 이메일, 이름, 소셜 ID, FCM 토큰, 알림 설정, 권한입니다.
+  - `loginId`는 NOT NULL·UNIQUE라 비울 수 없어 `withdrawn-{id}`로 바꿉니다. 학번이 풀리므로 같은 학생을 다시 사전 등록할 수 있습니다.
+  - 다시 로그인할 수 없도록 비밀번호를 어떤 입력과도 일치하지 않는 값으로 바꾸고, `isActivated=false`, `authVersion`을 올려 이미 발급된 JWT를 무효화합니다.
+  - 본인만 보는 데이터는 함께 지웁니다. 수신 알림, 스크랩, 개인 시간표, 권한 신청 이력입니다.
+  - 신고 이력은 남깁니다. 신고자 식별 정보가 이미 지워졌고, 지우면 누적 신고 수가 줄어 처리 중인 건의 판단이 바뀝니다.
+  - 관리자 회원 목록은 사전 등록 명단을 겸하므로 탈퇴 계정을 제외합니다. 행 자체는 글·댓글의 작성자로 남습니다.
+  - 정리와 익명화가 한 트랜잭션에서 함께 커밋되도록 `MemberWithdrawer`를 `@Transactional(propagation = MANDATORY)`로 두었습니다.
+  - 관리자 화면의 확인 문구와 API 설명을 실제 동작에 맞게 고쳤습니다. "완전히 삭제"라고 안내하면서 익명화하면 관리자가 잘못 이해합니다.
+  - 삭제 로그에서 학번을 뺐습니다. 지운 개인정보를 로그에 다시 적으면 익명화한 의미가 없습니다.
+- 언제·어디서: 2026-09-21, `fix/member-anonymization` 브랜치.
+- 검증: 백엔드 테스트 전체 통과, Flutter 78개 통과, 분석 경고 0건. 익명화를 기존 `memberRepository.delete(member)`로 되돌려 추가한 테스트 6건 중 5건이 실제로 실패하는 것을 확인한 뒤 원복했습니다.
+- 남은 일: 익명화는 개인정보를 계정에서 지우지만 회원 행 자체는 남습니다. 완전 파기를 요구하는 기준이 따로 있다면 별도 판단이 필요합니다.
+
+---
+
 ## 2026-09-21 - 분석 경고 정리, CI 게이트, 관리자 API 테스트, DB 기동 순서
 
 - 누가: 프론트엔드·백엔드·인프라 공통 정리

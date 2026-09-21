@@ -27,6 +27,7 @@ public class NoticeService {
     private final MemberRepository memberRepository;
     private final FileService fileService; // 💡 추가
     private final ApplicationEventPublisher eventPublisher;
+    private final PostDeletionCleaner postDeletionCleaner;
 
     // 전체 공지사항을 최신순으로 가져옵니다.
     public List<Notice> getAllNotices() {
@@ -147,7 +148,10 @@ public class NoticeService {
     public void deleteNotice(Long id, Long memberId, MemberRole role) {
         Notice notice = findNotice(id);
         validateAuthorOrAdmin(notice, memberId, role);
-        
+
+        // 💡 공지 댓글에도 FK가 걸려 있어, 댓글이 하나라도 달린 공지는 먼저 정리하지 않으면 삭제에 실패합니다.
+        postDeletionCleaner.cleanUpNotice(notice.getId());
+
         noticeRepository.delete(notice);
     }
 

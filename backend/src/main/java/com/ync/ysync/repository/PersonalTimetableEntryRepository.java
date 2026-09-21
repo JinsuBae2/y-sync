@@ -13,6 +13,9 @@ public interface PersonalTimetableEntryRepository extends JpaRepository<Personal
 
     List<PersonalTimetableEntry> findAllByMemberId(Long memberId);
 
+    // 💡 탈퇴 처리 시 개인 시간표를 모두 지웁니다.
+    void deleteAllByMemberId(Long memberId);
+
     Optional<PersonalTimetableEntry> findByIdAndMemberId(Long id, Long memberId);
 
     @Query("SELECT COUNT(t) > 0 FROM PersonalTimetableEntry t " +
