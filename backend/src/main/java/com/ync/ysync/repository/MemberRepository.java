@@ -15,6 +15,16 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findBySocialIdAndProvider(String socialId, com.ync.ysync.domain.AuthProvider provider);
     Page<Member> findByLoginIdContainingOrNameContaining(String loginId, String name, Pageable pageable);
 
+    // 💡 관리자 회원 목록은 사전 등록 명단을 겸하므로 탈퇴 처리된 계정을 보여주지 않습니다.
+    //    행 자체는 글·댓글의 작성자로 남아 있습니다.
+    @org.springframework.data.jpa.repository.Query("select m from Member m where m.withdrawnAt is null")
+    Page<Member> findAllNotWithdrawn(Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("select m from Member m where m.withdrawnAt is null "
+            + "and (m.loginId like %:search% or m.name like %:search%)")
+    Page<Member> searchNotWithdrawn(@org.springframework.data.repository.query.Param("search") String search,
+                                    Pageable pageable);
+
     @org.springframework.data.jpa.repository.Query("select m.fcmToken from Member m where m.isActivated = true and m.noticeEnabled = true and m.fcmToken is not null")
     java.util.List<String> findAllFcmTokensOfActivatedMembers();
 

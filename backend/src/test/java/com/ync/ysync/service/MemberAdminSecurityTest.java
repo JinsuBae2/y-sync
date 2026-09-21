@@ -37,11 +37,14 @@ class MemberAdminSecurityTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private MemberWithdrawer memberWithdrawer;
+
     private MemberService memberService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService);
+        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
     }
 
     @Test
