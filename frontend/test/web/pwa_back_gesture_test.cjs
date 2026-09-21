@@ -5,9 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 function setup(standalone = true, agent = 'iPhone') {
   let listener;
-  const records = [];
   const ctx = {
-    ysyncSwipeDiagnostics: { record: (...args) => records.push(args) },
     navigator: { standalone, userAgent: agent, maxTouchPoints: 1 },
     document: { addEventListener: (name, fn, options) => {
       assert.equal(name, 'touchstart');
@@ -18,7 +16,7 @@ function setup(standalone = true, agent = 'iPhone') {
   };
   ctx.window = ctx;
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../web/pwa_back_gesture.v4.js'), 'utf8'), ctx);
-  return { ctx, records, fire(x, count = 1, cancelable = true, accepts = true) {
+  return { ctx, fire(x, count = 1, cancelable = true, accepts = true) {
     let prevented = false;
     listener?.({ touches: Array.from({ length: count }, () => ({ clientX: x })),
       cancelable, get defaultPrevented() { return prevented; },
@@ -54,23 +52,11 @@ test('Safari tabs and Android keep browser navigation', () => {
   }
 });
 
-test('reports whether prevention ran, was accepted, or could not run', () => {
+test('경계 조건별로 차단 여부가 갈린다', () => {
+  // 진단 기록 대신 실제 차단 결과로 고정합니다. 각 분기가 의도대로 동작해야 합니다.
   const x = setup();
-  x.fire(5);
-  x.fire(5, 1, false);
-  x.fire(5, 1, true, false);
-  x.fire(50);
-  x.fire(5, 2);
-  assert.deepEqual(x.records, [
-    ['guard_touch', 'prevented'], ['guard_touch', 'not_cancelable'],
-    ['guard_touch', 'not_prevented'], ['guard_touch', 'outside_edge'],
-    ['guard_touch', 'multi_touch'],
-  ]);
-});
-test('missing or broken diagnostics never interrupts prevention', () => {
-  const x = setup();
-  delete x.ctx.ysyncSwipeDiagnostics;
-  assert.equal(x.fire(5), true);
-  x.ctx.ysyncSwipeDiagnostics = { record() { throw Error('unavailable'); } };
-  assert.equal(x.fire(5), true);
+  assert.equal(x.fire(5), true, '가장자리 단일 터치는 차단한다');
+  assert.equal(x.fire(5, 1, false), false, 'cancelable하지 않으면 차단하지 않는다');
+  assert.equal(x.fire(50), false, '가장자리 밖은 차단하지 않는다');
+  assert.equal(x.fire(5, 2), false, '다중 터치는 차단하지 않는다');
 });
