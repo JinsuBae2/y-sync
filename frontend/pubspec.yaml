@@ -45,7 +45,6 @@ dependencies:
   firebase_core: ^4.15.0
   firebase_messaging: ^16.2.0
   flutter_local_notifications: ^22.3.1
-  google_sign_in: ^7.2.0
   kakao_flutter_sdk: ^2.0.1
   local_auth: ^3.0.2
   flutter_secure_storage: ^10.0.0

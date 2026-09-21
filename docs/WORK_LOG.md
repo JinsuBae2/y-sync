@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-09-21 - 웹앱 보안 헤더 적용
+
+- 누가: 프론트엔드 호스팅 설정
+- 무엇을: Firebase Hosting 응답에 보안 헤더 5종을 추가하고, 그 과정에서 쓰지 않는 `google_sign_in` 의존성을 제거했습니다.
+- 왜: API(nginx)에는 보안 헤더가 있었지만 정작 사용자가 접속하는 웹앱에는 하나도 없었습니다. 특히 클릭재킹 방어가 없었습니다.
+- 어떻게:
+  - `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy`를 모든 경로에 적용했습니다.
+  - CSP는 추측으로 쓰지 않고, 빌드 산출물을 헤더와 함께 로컬에서 서빙해 브라우저로 직접 검증했습니다. 이 과정에서 세 가지가 잡혔습니다.
+    - `index.html`의 인라인 스크립트가 차단됨 → 별도 파일로 분리했습니다. 해시는 공백 하나만 바뀌어도 깨지므로 파일 분리가 안전합니다.
+    - Flutter가 폰트를 `fetch()`로 가져와 `font-src`만으로는 부족함 → `connect-src`에도 `fonts.gstatic.com`을 넣었습니다.
+    - `google_sign_in`이 `accounts.google.com/gsi/client`를 주입함 → 코드에서 쓰지 않는 의존성이라 제거했습니다.
+  - `script-src`에는 `'unsafe-inline'`이 필요합니다. Firebase 플러그인이 초기화 스크립트를 인라인으로 주입하며, 빼면 앱이 부팅하지 못하는 것을 확인했습니다. 인라인은 허용하되 외부 스크립트 출처는 `gstatic`으로 제한됩니다.
+- 언제·어디서: 2026-09-21, `fix/web-security-headers` 브랜치.
+- 검증: 헤더를 적용한 상태로 앱이 정상 부팅·렌더링하고 CSP 위반이 0건임을 브라우저 콘솔에서 확인했습니다. Flutter 81개, JavaScript 22개 테스트 통과. 호스팅 설정 테스트에 보안 헤더 회귀 검증을 추가했습니다.
+- 남은 일: `web/swipe_diagnostics.v5.js`는 참조가 없는데도 배포에 포함됩니다. 관련 테스트 15개와 함께 별도로 정리해야 합니다.
+
+---
+
 ## 2026-09-21 - 가입 인증 증표 도입
 
 - 누가: 백엔드·프론트엔드 공통 작업
