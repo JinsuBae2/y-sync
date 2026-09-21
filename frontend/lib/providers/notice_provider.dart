@@ -43,20 +43,16 @@ final noticesProvider = FutureProvider<List<Notice>>((ref) async {
   final dio = ref.watch(dioProvider);
   final keyword = ref.watch(searchKeywordProvider);
 
-  // 키워드가 비어있으면 전체 조회, 값이 있으면 검색 쿼리 사용
-  final String path = keyword.trim().isEmpty
-      ? '/notices'
-      : '/notices/search?keyword=${Uri.encodeComponent(keyword.trim())}';
+  // 💡 검색도 페이징 API를 씁니다. `/notices`가 keyword를 지원하므로 별도의 `/notices/search`를
+  //    부를 이유가 없습니다. 레거시 검색 API는 결과 전체를 한 번에 돌려주기 때문에, 공지가 쌓이면
+  //    응답이 무한정 커집니다.
+  final trimmed = keyword.trim();
+  final response = await dio.get(
+    '/notices',
+    queryParameters: {if (trimmed.isNotEmpty) 'keyword': trimmed},
+  );
 
-  final response = await dio.get(path);
-
-  // 💡 백엔드 페이징 API 적용으로 인해, 전체 조회의 경우 Page<NoticeResponse> 형식(Map)으로 반환됩니다.
-  final List<dynamic> data;
-  if (keyword.trim().isEmpty) {
-    data = response.data['content'] as List<dynamic>;
-  } else {
-    data = response.data as List<dynamic>;
-  }
+  final data = response.data['content'] as List<dynamic>;
 
   return data.map((json) => Notice.fromJson(json)).toList();
 });

@@ -33,4 +33,12 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
     // 💡 특정 카테고리 내에서 키워드로 게시글을 검색합니다. (제목 또는 내용에 포함, 대소문자 구분 없음)
     @Query("SELECT p FROM CommunityPost p WHERE p.category = :category AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY p.isPinned DESC, p.createdAt DESC")
     List<CommunityPost> searchByCategoryAndKeyword(@Param("category") String category, @Param("keyword") String keyword);
+
+
+    // 💡 조회수는 DB에서 직접 올립니다. 엔티티 필드를 읽어 +1 하고 저장하면 두 사람이 동시에 열었을 때
+    //    둘 다 같은 값을 읽어 1만 증가합니다(lost update). 댓글 수가 이미 쓰고 있는 방식과 같습니다.
+    //    clearAutomatically로 영속성 컨텍스트를 비워, 직후 조회가 갱신된 값을 읽게 합니다.
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE CommunityPost p SET p.viewCount = p.viewCount + 1 WHERE p.id = :id")
+    int incrementViewCount(@Param("id") Long id);
 }

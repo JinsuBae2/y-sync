@@ -51,7 +51,7 @@ function requestForUser(url) {
     return `${url}/api/v1/notices?page=0&size=20&sort=createdAt,desc`;
   }
   if (roll < 0.95) {
-    return `${url}/api/v1/notices/search?keyword=%EA%B3%B5%EC%A7%80`;
+    return `${url}/api/v1/notices?keyword=%EA%B3%B5%EC%A7%80&page=0&size=20`;
   }
   return `${url}/api/v1/hello`;
 }
