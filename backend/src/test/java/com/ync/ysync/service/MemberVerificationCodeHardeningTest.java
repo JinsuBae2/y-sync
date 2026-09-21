@@ -84,7 +84,7 @@ class MemberVerificationCodeHardeningTest {
     void 정상_인증에_사용된_인증번호는_재사용할_수_없다() {
         String code = issueSignupCodeAndCapture();
 
-        assertThat(memberService.verifySignupCode(LOGIN_ID, code)).isTrue();
+        assertThat(memberService.verifySignupCode(LOGIN_ID, code)).isNotBlank();
 
         assertThatThrownBy(() -> memberService.verifySignupCode(LOGIN_ID, code))
                 .hasMessageContaining("인증 요청 기록이 없거나 만료되었습니다");
@@ -113,7 +113,7 @@ class MemberVerificationCodeHardeningTest {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendVerificationCode(eq("other@ync.ac.kr"), captor.capture());
 
-        assertThat(memberService.verifySignupCode(otherLoginId, captor.getValue())).isTrue();
+        assertThat(memberService.verifySignupCode(otherLoginId, captor.getValue())).isNotBlank();
         assertThat(code).isNotNull();
     }
 

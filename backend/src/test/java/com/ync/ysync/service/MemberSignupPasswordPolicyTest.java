@@ -36,26 +36,26 @@ class MemberSignupPasswordPolicyTest {
 
     @Test
     void 정책에_미달하는_비밀번호로는_가입할_수_없다() {
-        assertThatThrownBy(() -> memberService.signup("2305001", "1", "학생"))
+        assertThatThrownBy(() -> memberService.signup("2305001", "1", "학생", null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("비밀번호는");
     }
 
     @Test
     void 영문_숫자_특수문자를_모두_포함하지_않으면_거부된다() {
-        assertThatThrownBy(() -> memberService.signup("2305001", "password1234", "학생"))
+        assertThatThrownBy(() -> memberService.signup("2305001", "password1234", "학생", null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("비밀번호는");
 
-        assertThatThrownBy(() -> memberService.signup("2305001", "Password!!!!", "학생"))
+        assertThatThrownBy(() -> memberService.signup("2305001", "Password!!!!", "학생", null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("비밀번호는");
     }
 
     @Test
     void 비밀번호_검사는_이메일_인증_확인보다_먼저_수행된다() {
-        // 인증 상태가 없는 학번이므로, 비밀번호 검사가 나중이라면 "이메일 인증" 오류가 나와야 합니다.
-        assertThatThrownBy(() -> memberService.signup("2305001", "1", "학생"))
+        // 인증 증표가 없는 요청이므로, 비밀번호 검사가 나중이라면 "이메일 인증" 오류가 나와야 합니다.
+        assertThatThrownBy(() -> memberService.signup("2305001", "1", "학생", null))
                 .hasMessageContaining("비밀번호는");
 
         // 인증 상태를 조회하기 전에 차단되므로 저장소를 건드리지 않습니다.
@@ -64,8 +64,17 @@ class MemberSignupPasswordPolicyTest {
 
     @Test
     void 정책을_만족하는_비밀번호는_정책_검사를_통과하고_인증_단계로_넘어간다() {
-        assertThatThrownBy(() -> memberService.signup("2305001", "Strong1234!", "학생"))
+        assertThatThrownBy(() -> memberService.signup("2305001", "Strong1234!", "학생", null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("이메일 인증");
+    }
+
+    @Test
+    void 증표_없이는_비밀번호가_정책을_만족해도_가입할_수_없다() {
+        // 인증 증표는 인증을 통과한 주체만 가질 수 있습니다. 증표가 없으면 저장소를 건드리기 전에 막힙니다.
+        assertThatThrownBy(() -> memberService.signup("2305001", "Strong1234!", "학생", null))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verifyNoInteractions(memberRepository);
     }
 }
