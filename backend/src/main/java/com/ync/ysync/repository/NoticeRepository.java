@@ -42,4 +42,81 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Notice n SET n.viewCount = n.viewCount + 1 WHERE n.id = :id")
     int incrementViewCount(@Param("id") Long id);
+
+    // ==========================================
+    // 공지 피드 — 커서 페이징
+    //
+    // 💡 필터 두 개는 null 대신 "무필터 값"으로 표현합니다.
+    //    - grade: `Grade.ALL`이면 필터하지 않습니다. 그 외에는 전체 공지(ALL)와 해당 학년만 봅니다.
+    //      프론트가 하던 `targetGrade == 'ALL' || targetGrade == selected`와 같은 의미입니다.
+    //    - keyword: 빈 문자열이면 필터하지 않습니다.
+    //    JPQL의 `:param IS NULL` 비교는 파라미터 타입 추론이 흔들릴 수 있어 피했습니다.
+    //
+    // 💡 정렬은 `createdAt DESC, id DESC`입니다. createdAt은 UNIQUE가 아니라서, 같은 시각에
+    //    두 건이 들어오면 id 없이는 커서가 행을 건너뛰거나 중복시킵니다.
+    // ==========================================
+
+    @Query("""
+            SELECT n FROM Notice n
+            WHERE n.isPinned = :pinned
+              AND (:grade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = :grade)
+              AND (:keyword = ''
+                   OR LOWER(n.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(n.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            ORDER BY n.createdAt DESC, n.id DESC
+            """)
+    List<Notice> findFeedFirstPage(@Param("pinned") boolean pinned,
+                                   @Param("grade") com.ync.ysync.domain.Grade grade,
+                                   @Param("keyword") String keyword,
+                                   Pageable pageable);
+
+    @Query("""
+            SELECT n FROM Notice n
+            WHERE n.isPinned = :pinned
+              AND (:grade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = :grade)
+              AND (:keyword = ''
+                   OR LOWER(n.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(n.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (n.createdAt < :cursorCreatedAt
+                   OR (n.createdAt = :cursorCreatedAt AND n.id < :cursorId))
+            ORDER BY n.createdAt DESC, n.id DESC
+            """)
+    List<Notice> findFeedAfterCursor(@Param("pinned") boolean pinned,
+                                     @Param("grade") com.ync.ysync.domain.Grade grade,
+                                     @Param("keyword") String keyword,
+                                     @Param("cursorCreatedAt") java.time.LocalDateTime cursorCreatedAt,
+                                     @Param("cursorId") Long cursorId,
+                                     Pageable pageable);
+
+    /** 💡 같은 필터 조건에서 가장 최근 공지의 id입니다. 클라이언트가 새 공지 감지 기준으로 들고 다닙니다. */
+    @Query("""
+            SELECT MAX(n.id) FROM Notice n
+            WHERE (:grade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = :grade)
+              AND (:keyword = ''
+                   OR LOWER(n.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(n.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            """)
+    Long findLatestId(@Param("grade") com.ync.ysync.domain.Grade grade,
+                      @Param("keyword") String keyword);
+
+    /** 💡 고정 여부와 무관하게 셉니다. 스크롤 도중 올라온 고정 공지도 "새 공지"이기 때문입니다. */
+    @Query("""
+            SELECT COUNT(n) FROM Notice n
+            WHERE n.id > :sinceId
+              AND (:grade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = com.ync.ysync.domain.Grade.ALL
+                   OR n.targetGrade = :grade)
+              AND (:keyword = ''
+                   OR LOWER(n.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(n.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            """)
+    long countNewerThan(@Param("sinceId") Long sinceId,
+                        @Param("grade") com.ync.ysync.domain.Grade grade,
+                        @Param("keyword") String keyword);
 }
