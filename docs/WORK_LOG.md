@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-09-21 - 댓글 달린 글이 삭제되지 않던 문제 (하드 삭제 FK)
+
+- 누가: 백엔드
+- 무엇을: 글을 하드 삭제하기 전에 딸린 댓글·신고·스크랩을 정리하도록 바꿨습니다.
+- 왜:
+  - 운영 DB의 외래키 제약 14개를 조회해 `comment.community_post_id`와 `comment.notice_id`에 FK가 실제로 존재하는 것을 확인했습니다.
+  - `CommunityService.deletePost`와 `NoticeService.deleteNotice`는 딸린 댓글을 지우지 않고 글만 지우려 했습니다. **댓글이 하나라도 달린 글은 작성자든 관리자든 삭제할 수 없었고**, 제약 위반이 500으로 나갔습니다. 이미지는 엔티티 cascade가 처리하고 있어 댓글만 사각지대였습니다.
+  - `scrap.target_id`와 `report.target_id`에는 FK가 없습니다. 삭제를 막지는 않지만 남으면 관리자 신고함에 "존재하지 않는 게시글" 항목이 계속 쌓이고 스크랩 목록에 빈 자리가 생깁니다.
+- 어떻게:
+  - 정리 책임을 `PostDeletionCleaner`로 분리했습니다. 커뮤니티 글과 공지가 같은 문제를 갖고 있어 두 서비스에 같은 코드를 넣지 않기 위해서입니다.
+  - 댓글은 **대댓글을 먼저, 원 댓글을 나중에** 지웁니다. `comment.parent_id`가 comment 자신을 참조하기 때문입니다. `CommentService.validateReplyableParent`가 대댓글에 답글을 막고 있어 깊이는 2단계입니다.
+  - 댓글을 가리키던 신고는 댓글 ID를 먼저 모아 한 번에 지웁니다.
+  - 정리는 `@Transactional(propagation = MANDATORY)`로 호출한 삭제 트랜잭션 안에서만 실행됩니다. 정리만 커밋되고 글 삭제가 실패하면 댓글만 사라진 글이 남기 때문입니다.
+  - 알림(`notification`)은 정리하지 않았습니다. 이미 발송된 수신 기록이라 지우면 사용자 이력이 사라집니다.
+- 언제·어디서: 2026-09-21, `fix/hard-delete-orphans` 브랜치.
+- 검증: 백엔드 테스트 전체 통과. 정리 호출을 일부러 주석 처리해 추가한 테스트 3건이 실제로 `ConstraintViolationException`으로 실패하는 것을 확인한 뒤 원복했습니다. 실제 DELETE가 DB까지 도달해야 FK 위반을 볼 수 있으므로 테스트 클래스에 `@Transactional`을 걸지 않았습니다.
+- 남은 일: `MemberService.deleteMemberByAdmin`도 같은 계열의 문제를 갖고 있습니다. `member`를 참조하는 FK가 8개(admin_request, comment, community_post, notice, notification, personal_timetable_entry, report, scrap)라 글이나 댓글을 쓴 적 있는 회원은 삭제할 수 없습니다. 다만 해결 방향이 "딸린 글까지 함께 삭제"인지 "계정만 익명화"인지는 서비스 정책 판단이 필요해 이번 범위에 넣지 않았습니다.
+
+---
+
 ## 2026-09-21 - 분석 경고 정리, CI 게이트, 관리자 API 테스트, DB 기동 순서
 
 - 누가: 프론트엔드·백엔드·인프라 공통 정리
