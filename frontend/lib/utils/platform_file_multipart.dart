@@ -6,10 +6,10 @@ import 'package:http_parser/http_parser.dart';
 Future<MultipartFile> platformFileToMultipart(PlatformFile file) async {
   final contentType = _contentType(file.extension);
   if (kIsWeb) {
-    final bytes = file.bytes;
-    if (bytes == null) throw StateError('${file.name} 파일을 읽을 수 없습니다.');
+    // 💡 file_picker 13부터 bytes 게터가 없어졌습니다. 고르는 시점에 전부 메모리에 올리지 않고
+    //    필요할 때 읽습니다(withData 제거와 같은 취지).
     return MultipartFile.fromBytes(
-      bytes,
+      await file.readAsBytes(),
       filename: file.name,
       contentType: contentType,
     );

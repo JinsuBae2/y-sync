@@ -1,6 +1,9 @@
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
+
+import '../utils/platform_file_size.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -64,9 +67,9 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   }
 
   Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      withData: true,
+    // 💡 file_picker 13: pickFiles()는 정적 메서드이고 List<PlatformFile>을 그대로 돌려줍니다.
+    //    allowMultiple(기본 다중 선택)과 withData(선택 시 전체 메모리 적재)는 없어졌습니다.
+    final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const [
         'png',
@@ -87,39 +90,42 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
         'zip',
       ],
     );
-    if (!mounted || result == null) return;
-    if (_files.length + result.files.length > 10) {
+    if (!mounted || picked.isEmpty) return;
+    if (_files.length + picked.length > 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('첨부파일은 최대 10개까지 선택할 수 있습니다.')),
       );
       return;
     }
-    if (result.files.any((file) => file.size > 20 * 1024 * 1024)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('파일 하나의 크기는 20MB 이하여야 합니다.')),
-      );
-      return;
+    // 💡 크기를 알 수 없는 파일(null)은 클라이언트에서 한도를 검사할 수 없으므로 거절합니다.
+    //    서버가 최종 관문이지만, 업로드를 다 보낸 뒤 거절당하는 것보다 지금 막는 편이 낫습니다.
+    for (final file in picked) {
+      final size = await platformFileSize(file);
+      if (!mounted) return;
+      if (size == null || size > 20 * 1024 * 1024) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('파일 하나의 크기는 20MB 이하여야 합니다.')),
+        );
+        return;
+      }
     }
-    final totalSize = [
-      ..._files,
-      ...result.files,
-    ].fold<int>(0, (sum, file) => sum + file.size);
-    if (totalSize > 50 * 1024 * 1024) {
+    final totalSize = await platformFilesTotalSize([..._files, ...picked]);
+    if (!mounted) return;
+    if (totalSize == null || totalSize > 50 * 1024 * 1024) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('첨부파일 전체 크기는 50MB 이하여야 합니다.')),
       );
       return;
     }
-    setState(() => _files.addAll(result.files));
+    setState(() => _files.addAll(picked));
   }
 
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     if (title.isEmpty || content.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('제목과 내용을 모두 입력해주세요.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('제목과 내용을 모두 입력해주세요.')));
       return;
     }
 
@@ -162,9 +168,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('저장 실패: $error')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('저장 실패: $error')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

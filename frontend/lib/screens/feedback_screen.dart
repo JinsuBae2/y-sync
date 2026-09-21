@@ -1,7 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+
+import '../utils/platform_file_size.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/feedback_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../widgets/selection_highlight.dart';
@@ -33,21 +37,27 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 
   Future<void> _pickImages() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      // 💡 file_picker 13: pickFiles()는 정적 메서드이고 List<PlatformFile>을 그대로 돌려줍니다.
+      //    allowMultiple·withData는 없어졌습니다.
+      final picked = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['png', 'jpg', 'jpeg'],
-        allowMultiple: true,
-        withData: true,
       );
-      if (!mounted || result == null) return;
-      if (_images.length + result.files.length > 3 ||
-          result.files.any(
-            (file) => file.size == 0 || file.size > 2 * 1024 * 1024,
-          )) {
+      if (!mounted || picked.isEmpty) return;
+      if (_images.length + picked.length > 3) {
         _message('PNG/JPG 이미지 최대 3개, 한 장당 2MB 이하로 선택해주세요.');
         return;
       }
-      setState(() => _images.addAll(result.files));
+      for (final file in picked) {
+        // 크기를 알 수 없으면(null) 검사할 수 없으므로 0바이트와 같게 거절합니다.
+        final size = await platformFileSize(file);
+        if (!mounted) return;
+        if (size == null || size == 0 || size > 2 * 1024 * 1024) {
+          _message('PNG/JPG 이미지 최대 3개, 한 장당 2MB 이하로 선택해주세요.');
+          return;
+        }
+      }
+      setState(() => _images.addAll(picked));
     } catch (_) {
       if (mounted) _message('이미지를 불러오지 못했습니다. 다시 선택해주세요.');
     }
