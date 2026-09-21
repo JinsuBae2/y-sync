@@ -42,14 +42,13 @@ class MemberEnumerationTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
 
-    @Mock
-    private MemberWithdrawer memberWithdrawer;
-
-    private MemberService memberService;
+    private MemberSignupService signupService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
+        // 인증 상태는 실제 구현을 그대로 씁니다. 이 테스트들이 검증하는 것이 그 동작이기 때문입니다.
+        signupService = new MemberSignupService(
+                memberRepository, passwordEncoder, emailService, new MemberVerificationService());
         when(memberRepository.findByLoginId(UNKNOWN_ID)).thenReturn(Optional.empty());
         when(memberRepository.findByLoginId(REGISTERED_ID)).thenReturn(Optional.of(member("홍길동", false)));
         when(memberRepository.findByLoginId(ACTIVATED_ID)).thenReturn(Optional.of(member("김철수", true)));
@@ -67,9 +66,9 @@ class MemberEnumerationTest {
     void 등록되지_않은_학번과_이름_불일치는_같은_응답을_준다() {
         // 두 응답이 다르면 어떤 학번이 명단에 있는지 조회할 수 있게 됩니다.
         Throwable unknown = catchThrowable(
-                () -> memberService.verifyStudentForSignup(UNKNOWN_ID, "홍길동"));
+                () -> signupService.verifyStudentForSignup(UNKNOWN_ID, "홍길동"));
         Throwable wrongName = catchThrowable(
-                () -> memberService.verifyStudentForSignup(REGISTERED_ID, "다른이름"));
+                () -> signupService.verifyStudentForSignup(REGISTERED_ID, "다른이름"));
 
         assertThat(unknown).isInstanceOf(IllegalArgumentException.class);
         assertThat(wrongName).isInstanceOf(IllegalArgumentException.class);
@@ -81,9 +80,9 @@ class MemberEnumerationTest {
         // 문구에 "등록되지 않은 경우 문의하세요" 같은 안내가 들어가는 것 자체는 문제가 아닙니다.
         // 중요한 것은 어떤 입력으로 실패해도 응답이 구분되지 않는다는 점입니다.
         java.util.List<String> messages = java.util.stream.Stream.of(
-                        catchThrowable(() -> memberService.verifyStudentForSignup(UNKNOWN_ID, "홍길동")),
-                        catchThrowable(() -> memberService.verifyStudentForSignup(UNKNOWN_ID, "아무개")),
-                        catchThrowable(() -> memberService.verifyStudentForSignup(REGISTERED_ID, "다른이름")))
+                        catchThrowable(() -> signupService.verifyStudentForSignup(UNKNOWN_ID, "홍길동")),
+                        catchThrowable(() -> signupService.verifyStudentForSignup(UNKNOWN_ID, "아무개")),
+                        catchThrowable(() -> signupService.verifyStudentForSignup(REGISTERED_ID, "다른이름")))
                 .map(Throwable::getMessage)
                 .distinct()
                 .toList();
@@ -94,13 +93,13 @@ class MemberEnumerationTest {
     @Test
     void 정상_조합은_통과한다() {
         // 응답을 통일해도 실제 가입자는 막히지 않아야 합니다.
-        memberService.verifyStudentForSignup(REGISTERED_ID, "홍길동");
+        signupService.verifyStudentForSignup(REGISTERED_ID, "홍길동");
     }
 
     @Test
     void 이미_가입한_학번은_로그인으로_안내한다() {
         // 이 경우만 구분합니다. 공격자가 찾는 미가입 상태를 알려주지는 않습니다.
-        assertThatThrownBy(() -> memberService.verifyStudentForSignup(ACTIVATED_ID, "김철수"))
+        assertThatThrownBy(() -> signupService.verifyStudentForSignup(ACTIVATED_ID, "김철수"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("로그인");
     }
@@ -109,9 +108,9 @@ class MemberEnumerationTest {
     void 비밀번호_재설정도_계정_상태를_구분하지_않는다() {
         // 기존에 지켜지던 성질입니다. 가입 흐름을 고치면서 깨지지 않았는지 함께 고정합니다.
         Throwable unknown = catchThrowable(
-                () -> memberService.requestPasswordReset(UNKNOWN_ID, "홍길동"));
+                () -> signupService.requestPasswordReset(UNKNOWN_ID, "홍길동"));
         Throwable notActivated = catchThrowable(
-                () -> memberService.requestPasswordReset(REGISTERED_ID, "홍길동"));
+                () -> signupService.requestPasswordReset(REGISTERED_ID, "홍길동"));
 
         assertThat(unknown.getMessage()).isEqualTo(notActivated.getMessage());
     }

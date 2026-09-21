@@ -55,14 +55,13 @@ class MemberSignupGrantTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
 
-    @Mock
-    private MemberWithdrawer memberWithdrawer;
-
-    private MemberService memberService;
+    private MemberSignupService signupService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
+        // 인증 상태는 실제 구현을 그대로 씁니다. 이 테스트들이 검증하는 것이 그 동작이기 때문입니다.
+        signupService = new MemberSignupService(
+                memberRepository, passwordEncoder, emailService, new MemberVerificationService());
         when(memberRepository.findByLoginId(LOGIN_ID)).thenReturn(Optional.of(pendingMember()));
         when(memberRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(anyString())).thenReturn("encoded");
@@ -80,11 +79,11 @@ class MemberSignupGrantTest {
 
     /** 인증까지 마치고 증표를 받아 옵니다. */
     private String verifyAndGetGrant() {
-        memberService.sendVerificationEmail(LOGIN_ID, NAME, EMAIL);
+        signupService.sendVerificationEmail(LOGIN_ID, NAME, EMAIL);
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(emailService, org.mockito.Mockito.atLeastOnce())
                 .sendVerificationCode(eq(EMAIL), captor.capture());
-        return memberService.verifySignupCode(LOGIN_ID, captor.getValue());
+        return signupService.verifySignupCode(LOGIN_ID, captor.getValue());
     }
 
     @Test
@@ -106,10 +105,10 @@ class MemberSignupGrantTest {
             String email = "student" + i + "@ync.ac.kr";
             when(memberRepository.findByLoginId(loginId)).thenReturn(Optional.of(pendingMember()));
 
-            memberService.sendVerificationEmail(loginId, NAME, email);
+            signupService.sendVerificationEmail(loginId, NAME, email);
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(emailService).sendVerificationCode(eq(email), captor.capture());
-            grants.add(memberService.verifySignupCode(loginId, captor.getValue()));
+            grants.add(signupService.verifySignupCode(loginId, captor.getValue()));
         }
 
         assertThat(grants).doesNotHaveDuplicates();
@@ -120,7 +119,7 @@ class MemberSignupGrantTest {
     void 증표를_제시하면_가입이_완료된다() {
         String grant = verifyAndGetGrant();
 
-        Member joined = memberService.signup(LOGIN_ID, PASSWORD, NAME, grant);
+        Member joined = signupService.signup(LOGIN_ID, PASSWORD, NAME, grant);
 
         assertThat(joined.isActivated()).isTrue();
         assertThat(joined.getEmail()).isEqualTo(EMAIL);
@@ -131,7 +130,7 @@ class MemberSignupGrantTest {
         // 이것이 이전 구현에서 뚫려 있던 경로입니다. 제3자는 학번과 이름만 알고 증표는 받지 못합니다.
         verifyAndGetGrant();
 
-        assertThatThrownBy(() -> memberService.signup(LOGIN_ID, PASSWORD, NAME, null))
+        assertThatThrownBy(() -> signupService.signup(LOGIN_ID, PASSWORD, NAME, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -139,7 +138,7 @@ class MemberSignupGrantTest {
     void 남의_인증을_추측한_증표로는_가입할_수_없다() {
         verifyAndGetGrant();
 
-        assertThatThrownBy(() -> memberService.signup(LOGIN_ID, PASSWORD, NAME, "guessed-grant-value"))
+        assertThatThrownBy(() -> signupService.signup(LOGIN_ID, PASSWORD, NAME, "guessed-grant-value"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -148,18 +147,18 @@ class MemberSignupGrantTest {
         // 제3자가 아무 값이나 보내서 진짜 사용자의 가입을 방해할 수 없어야 합니다.
         String grant = verifyAndGetGrant();
 
-        assertThatThrownBy(() -> memberService.signup(LOGIN_ID, PASSWORD, NAME, "wrong"))
+        assertThatThrownBy(() -> signupService.signup(LOGIN_ID, PASSWORD, NAME, "wrong"))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThat(memberService.signup(LOGIN_ID, PASSWORD, NAME, grant).isActivated()).isTrue();
+        assertThat(signupService.signup(LOGIN_ID, PASSWORD, NAME, grant).isActivated()).isTrue();
     }
 
     @Test
     void 같은_증표로_두_번_가입할_수_없다() {
         String grant = verifyAndGetGrant();
-        memberService.signup(LOGIN_ID, PASSWORD, NAME, grant);
+        signupService.signup(LOGIN_ID, PASSWORD, NAME, grant);
 
-        assertThatThrownBy(() -> memberService.signup(LOGIN_ID, PASSWORD, NAME, grant))
+        assertThatThrownBy(() -> signupService.signup(LOGIN_ID, PASSWORD, NAME, grant))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -178,7 +177,7 @@ class MemberSignupGrantTest {
                 futures.add(pool.submit(() -> {
                     try {
                         barrier.await(5, TimeUnit.SECONDS);
-                        memberService.signup(LOGIN_ID, PASSWORD, NAME, grant);
+                        signupService.signup(LOGIN_ID, PASSWORD, NAME, grant);
                         succeeded.incrementAndGet();
                     } catch (IllegalArgumentException expected) {
                         // 증표는 최대 한 번만 소비됩니다.

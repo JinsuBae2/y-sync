@@ -40,16 +40,21 @@ class MemberAdminSecurityTest {
     @Mock
     private MemberWithdrawer memberWithdrawer;
 
-    private MemberService memberService;
+    private MemberAdminService adminService;
+    private MemberSpreadsheetImportService spreadsheetImportService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
+        MemberVerificationService verificationService = new MemberVerificationService();
+        adminService = new MemberAdminService(
+                memberRepository, passwordEncoder, memberWithdrawer, verificationService,
+                new MemberSignupService(memberRepository, passwordEncoder, emailService, verificationService));
+        spreadsheetImportService = new MemberSpreadsheetImportService(memberRepository, passwordEncoder);
     }
 
     @Test
     void admin은_superAdmin_계정을_생성할_수_없다() {
-        assertThatThrownBy(() -> memberService.createMemberByAdmin(
+        assertThatThrownBy(() -> adminService.createMemberByAdmin(
                 "2305001", "관리대상", MemberRole.SUPER_ADMIN, MemberRole.ADMIN))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("SUPER_ADMIN");
@@ -62,7 +67,7 @@ class MemberAdminSecurityTest {
         Member target = member(MemberRole.ADMIN);
         when(memberRepository.findById(1L)).thenReturn(Optional.of(target));
 
-        assertThatThrownBy(() -> memberService.updateMemberByAdmin(
+        assertThatThrownBy(() -> adminService.updateMemberByAdmin(
                 1L, null, MemberRole.SUPER_ADMIN, MemberRole.ADMIN))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("SUPER_ADMIN");
@@ -77,7 +82,7 @@ class MemberAdminSecurityTest {
         ByteArrayInputStream csv = new ByteArrayInputStream(
                 "loginId,name,role\n2305001,관리대상,SUPER_ADMIN\n".getBytes(StandardCharsets.UTF_8));
 
-        MemberService.CsvImportResult result = memberService.createMembersByCsv(csv, MemberRole.ADMIN);
+        MemberSpreadsheetImportService.CsvImportResult result = spreadsheetImportService.importFromCsv(csv, MemberRole.ADMIN);
 
         assertThat(result.createdCount()).isZero();
         assertThat(result.errorCount()).isEqualTo(1);
@@ -104,7 +109,7 @@ class MemberAdminSecurityTest {
         when(memberRepository.findAllByLoginIdIn(org.mockito.ArgumentMatchers.anyCollection()))
                 .thenReturn(List.of(existing));
 
-        MemberService.CsvImportResult result = memberService.createMembersByCsv(csv, MemberRole.ADMIN);
+        MemberSpreadsheetImportService.CsvImportResult result = spreadsheetImportService.importFromCsv(csv, MemberRole.ADMIN);
 
         assertThat(result.totalCount()).isEqualTo(4);
         assertThat(result.createdCount()).isEqualTo(1);
@@ -121,7 +126,7 @@ class MemberAdminSecurityTest {
         when(memberRepository.findAllByLoginIdIn(org.mockito.ArgumentMatchers.anyCollection()))
                 .thenReturn(List.of());
 
-        MemberService.CsvImportResult result = memberService.createMembersByCsv(csv, MemberRole.ADMIN);
+        MemberSpreadsheetImportService.CsvImportResult result = spreadsheetImportService.importFromCsv(csv, MemberRole.ADMIN);
 
         assertThat(result.createdCount()).isEqualTo(1);
         assertThat(result.errorCount()).isZero();
@@ -138,7 +143,7 @@ class MemberAdminSecurityTest {
         ByteArrayInputStream csv = new ByteArrayInputStream(
                 "이름,전화번호,주소\n홍길동,010-1234-5678,대구광역시\n".getBytes(StandardCharsets.UTF_8));
 
-        assertThatThrownBy(() -> memberService.createMembersByCsv(csv, MemberRole.ADMIN))
+        assertThatThrownBy(() -> spreadsheetImportService.importFromCsv(csv, MemberRole.ADMIN))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("학번과 이름 열");
 
@@ -165,7 +170,7 @@ class MemberAdminSecurityTest {
         when(memberRepository.findAllByLoginIdIn(org.mockito.ArgumentMatchers.anyCollection()))
                 .thenReturn(List.of());
 
-        MemberService.CsvImportResult result = memberService.createMembersBySpreadsheet(
+        MemberSpreadsheetImportService.CsvImportResult result = spreadsheetImportService.importMembers(
                 new ByteArrayInputStream(excelBytes), "students.xlsx", MemberRole.ADMIN);
 
         assertThat(result.createdCount()).isEqualTo(1);
@@ -183,7 +188,7 @@ class MemberAdminSecurityTest {
         when(memberRepository.findById(1L)).thenReturn(Optional.of(target));
         when(memberRepository.save(target)).thenReturn(target);
 
-        memberService.updateMemberByAdmin(1L, null, MemberRole.ADMIN, MemberRole.ADMIN);
+        adminService.updateMemberByAdmin(1L, null, MemberRole.ADMIN, MemberRole.ADMIN);
 
         assertThat(target.getRole()).isEqualTo(MemberRole.ADMIN);
         assertThat(target.getAuthVersion()).isEqualTo(8);

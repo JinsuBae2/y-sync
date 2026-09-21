@@ -53,14 +53,13 @@ class MemberVerificationCodeHardeningTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
 
-    @Mock
-    private MemberWithdrawer memberWithdrawer;
-
-    private MemberService memberService;
+    private MemberSignupService signupService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
+        // 인증 상태는 실제 구현을 그대로 씁니다. 이 테스트들이 검증하는 것이 그 동작이기 때문입니다.
+        signupService = new MemberSignupService(
+                memberRepository, passwordEncoder, emailService, new MemberVerificationService());
         when(memberRepository.findByLoginId(LOGIN_ID)).thenReturn(Optional.of(pendingMember()));
         when(memberRepository.findByEmail(anyString())).thenReturn(Optional.empty());
     }
@@ -70,16 +69,16 @@ class MemberVerificationCodeHardeningTest {
         String code = issueSignupCodeAndCapture();
 
         for (int i = 1; i <= 4; i++) {
-            assertThatThrownBy(() -> memberService.verifySignupCode(LOGIN_ID, "000000"))
+            assertThatThrownBy(() -> signupService.verifySignupCode(LOGIN_ID, "000000"))
                     .hasMessageContaining("인증 번호가 일치하지 않습니다");
         }
 
         // 5번째 실패에서 challenge가 폐기됩니다.
-        assertThatThrownBy(() -> memberService.verifySignupCode(LOGIN_ID, "000000"))
+        assertThatThrownBy(() -> signupService.verifySignupCode(LOGIN_ID, "000000"))
                 .hasMessageContaining("시도 횟수를 초과");
 
         // 폐기되었으므로 올바른 코드도 더 이상 통하지 않습니다.
-        assertThatThrownBy(() -> memberService.verifySignupCode(LOGIN_ID, code))
+        assertThatThrownBy(() -> signupService.verifySignupCode(LOGIN_ID, code))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -87,9 +86,9 @@ class MemberVerificationCodeHardeningTest {
     void 정상_인증에_사용된_인증번호는_재사용할_수_없다() {
         String code = issueSignupCodeAndCapture();
 
-        assertThat(memberService.verifySignupCode(LOGIN_ID, code)).isNotBlank();
+        assertThat(signupService.verifySignupCode(LOGIN_ID, code)).isNotBlank();
 
-        assertThatThrownBy(() -> memberService.verifySignupCode(LOGIN_ID, code))
+        assertThatThrownBy(() -> signupService.verifySignupCode(LOGIN_ID, code))
                 .hasMessageContaining("인증 요청 기록이 없거나 만료되었습니다");
     }
 
@@ -97,7 +96,7 @@ class MemberVerificationCodeHardeningTest {
     void 재발급은_쿨다운_동안_거부된다() {
         issueSignupCodeAndCapture();
 
-        assertThatThrownBy(() -> memberService.sendVerificationEmail(LOGIN_ID, NAME, EMAIL))
+        assertThatThrownBy(() -> signupService.sendVerificationEmail(LOGIN_ID, NAME, EMAIL))
                 .hasMessageContaining("잠시 후에 다시 요청");
     }
 
@@ -106,17 +105,17 @@ class MemberVerificationCodeHardeningTest {
         // 계정 잠금을 두지 않았음을 확인합니다. 폐기 대상은 challenge이지 계정이 아닙니다.
         String code = issueSignupCodeAndCapture();
         for (int i = 1; i <= 5; i++) {
-            assertThatThrownBy(() -> memberService.verifySignupCode(LOGIN_ID, "000000"))
+            assertThatThrownBy(() -> signupService.verifySignupCode(LOGIN_ID, "000000"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         String otherLoginId = "2305002";
         when(memberRepository.findByLoginId(otherLoginId)).thenReturn(Optional.of(pendingMember()));
-        memberService.sendVerificationEmail(otherLoginId, NAME, "other@ync.ac.kr");
+        signupService.sendVerificationEmail(otherLoginId, NAME, "other@ync.ac.kr");
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendVerificationCode(eq("other@ync.ac.kr"), captor.capture());
 
-        assertThat(memberService.verifySignupCode(otherLoginId, captor.getValue())).isNotBlank();
+        assertThat(signupService.verifySignupCode(otherLoginId, captor.getValue())).isNotBlank();
         assertThat(code).isNotNull();
     }
 
@@ -134,7 +133,7 @@ class MemberVerificationCodeHardeningTest {
             futures.add(pool.submit(() -> {
                 barrier.await();
                 try {
-                    memberService.verifySignupCode(LOGIN_ID, code);
+                    signupService.verifySignupCode(LOGIN_ID, code);
                     successes.incrementAndGet();
                 } catch (IllegalArgumentException expectedForLoser) {
                     // 한 요청만 challenge를 소비합니다.
@@ -151,7 +150,7 @@ class MemberVerificationCodeHardeningTest {
     }
 
     private String issueSignupCodeAndCapture() {
-        memberService.sendVerificationEmail(LOGIN_ID, NAME, EMAIL);
+        signupService.sendVerificationEmail(LOGIN_ID, NAME, EMAIL);
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendVerificationCode(eq(EMAIL), captor.capture());
         return captor.getValue();
