@@ -208,6 +208,7 @@ jobs:
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          NOTICE_GRADE_FILTER_ENABLED: ${{ vars.NOTICE_GRADE_FILTER_ENABLED }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
@@ -220,7 +221,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DB_PASSWORD,JWT_SECRET,MAIL_USERNAME,MAIL_PASSWORD,STORAGE_PROVIDER,AWS_S3_BUCKET,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
+          envs: DB_PASSWORD,NOTICE_GRADE_FILTER_ENABLED,JWT_SECRET,MAIL_USERNAME,MAIL_PASSWORD,STORAGE_PROVIDER,AWS_S3_BUCKET,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
           script: |
             set -eu
             mkdir -p ~/ysync/app

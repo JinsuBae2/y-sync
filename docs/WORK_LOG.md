@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-09-21 - 학년별 공지 알림 필터 운영 전환
+
+- 누가: 백엔드·운영 설정
+- 무엇을: 운영의 `NOTICE_GRADE_FILTER_ENABLED`를 GitHub Repository Variable에서 배포 워크플로와 Docker Compose를 거쳐 백엔드 컨테이너로 전달하도록 연결하고 값을 `true`로 설정했습니다.
+- 왜: 학생 대상 링크 배포 전부터 학년 선택 정책을 적용해야 출시 후 미설정 사용자의 수신 범위가 갑자기 바뀌는 전환 문제를 피할 수 있기 때문입니다.
+- 어떻게:
+  - Production Deploy가 Repository Variable을 SSH 배포 환경으로 전달합니다.
+  - Docker Compose가 값을 백엔드 환경변수로 주입하며, 변수가 없으면 기존 안전 기본값 `false`를 사용합니다.
+  - CI Configuration job이 `true`가 Compose 결과에 나타나는지, 배포 워크플로가 변수를 선언하고 전달하는지 검사합니다.
+  - 전환 직전 운영 집계는 활성·공지 알림 대상 9명, 학년 미설정 8명, 3학년 선택 1명입니다. 미설정 회원은 전환 후 전체 공지만 받습니다.
+- 언제·어디서: 2026-09-21, `chore/enable-notice-grade-filter` 브랜치, [PR #127](https://github.com/JinsuBae2/y-sync/pull/127).
+- 검증: 연결 전 구성 검사가 의도대로 실패하는 것을 확인한 뒤, `unset`·`false`는 `false`, `true`는 `true`로 렌더링되는지와 정확한 GitHub Variable 원본·SSH 전달 목록을 CI로 고정했습니다. 변수 원본을 일부러 오타 내면 검사가 실패하는 것도 확인했습니다. 기준선에서 백엔드 전체 테스트, Flutter 78개 테스트와 Compose 구성이 통과했습니다.
+- 롤백: Repository Variable을 `false`로 바꾸고 백엔드를 재배포하면 저장된 학년 선택을 유지한 채 기존 전체 대상 발송으로 복구됩니다.
+
+---
+
 ## 2026-09-21 - MemberService 925줄을 다섯 갈래로 분할
 
 - 누가: 백엔드

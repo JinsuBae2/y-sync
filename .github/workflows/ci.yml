@@ -89,6 +89,35 @@ jobs:
       - name: Validate Docker Compose
         run: docker compose -f docker/docker-compose.yml config --quiet
 
+      - name: Verify Notice Grade Filter Wiring
+        run: |
+          render_grade_filter() {
+            docker compose -f docker/docker-compose.yml config \
+              | sed -n '/ysync-backend:/,/ysync-nginx:/p' \
+              | grep 'NOTICE_GRADE_FILTER_ENABLED:'
+          }
+
+          unset NOTICE_GRADE_FILTER_ENABLED
+          unset_value="$(render_grade_filter)"
+          export NOTICE_GRADE_FILTER_ENABLED=false
+          false_value="$(render_grade_filter)"
+          export NOTICE_GRADE_FILTER_ENABLED=true
+          true_value="$(render_grade_filter)"
+
+          [[ "$unset_value" == *'NOTICE_GRADE_FILTER_ENABLED: "false"'* ]]
+          [[ "$false_value" == *'NOTICE_GRADE_FILTER_ENABLED: "false"'* ]]
+          [[ "$true_value" == *'NOTICE_GRADE_FILTER_ENABLED: "true"'* ]]
+
+          variable_expression='$'
+          variable_expression+='{{ vars.NOTICE_GRADE_FILTER_ENABLED }}'
+          expected_mapping="NOTICE_GRADE_FILTER_ENABLED: $variable_expression"
+
+          if ! grep -Fq "$expected_mapping" .github/workflows/deploy-production.yml \
+            || ! grep -Eq 'envs: .*NOTICE_GRADE_FILTER_ENABLED' .github/workflows/deploy-production.yml; then
+            echo 'Production Deploy must source and forward the notice grade filter variable.' >&2
+            exit 1
+          fi
+
       - name: Verify MySQL Is Not Published
         run: |
           if docker compose -f docker/docker-compose.yml config \
