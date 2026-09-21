@@ -15,7 +15,7 @@
   - CI Configuration job이 `true`가 Compose 결과에 나타나는지, 배포 워크플로가 변수를 선언하고 전달하는지 검사합니다.
   - 전환 직전 운영 집계는 활성·공지 알림 대상 9명, 학년 미설정 8명, 3학년 선택 1명입니다. 미설정 회원은 전환 후 전체 공지만 받습니다.
 - 언제·어디서: 2026-09-21, `chore/enable-notice-grade-filter` 브랜치, [PR #127](https://github.com/JinsuBae2/y-sync/pull/127).
-- 검증: 연결 전 구성 검사가 의도대로 실패하는 것을 확인한 뒤, 연결 후 같은 검사가 통과했습니다. 기준선에서 백엔드 전체 테스트, Flutter 78개 테스트와 Compose 구성이 통과했습니다.
+- 검증: 연결 전 구성 검사가 의도대로 실패하는 것을 확인한 뒤, `unset`·`false`는 `false`, `true`는 `true`로 렌더링되는지와 정확한 GitHub Variable 원본·SSH 전달 목록을 CI로 고정했습니다. 변수 원본을 일부러 오타 내면 검사가 실패하는 것도 확인했습니다. 기준선에서 백엔드 전체 테스트, Flutter 78개 테스트와 Compose 구성이 통과했습니다.
 - 롤백: Repository Variable을 `false`로 바꾸고 백엔드를 재배포하면 저장된 학년 선택을 유지한 채 기존 전체 대상 발송으로 복구됩니다.
 
 ---
