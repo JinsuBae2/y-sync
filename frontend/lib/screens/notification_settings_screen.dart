@@ -197,11 +197,17 @@ class _SettingGroup extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: AppDesignTokens.surface,
+  // 💡 안에 ListTile 계열이 들어오므로 배경을 Material(Card)이 그려야 합니다.
+  //    Container(decoration: ...)로 감싸면 탭 잉크가 가려지고,
+  //    Flutter 3.47부터는 디버그 빌드에서 assertion으로 잡힙니다.
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    elevation: 0,
+    clipBehavior: Clip.antiAlias,
+    color: AppDesignTokens.surface,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: AppDesignTokens.divider),
+      side: const BorderSide(color: AppDesignTokens.divider),
     ),
     child: Column(
       children: [

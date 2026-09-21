@@ -146,11 +146,15 @@ class HelpScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppDesignTokens.surface,
+              // 💡 ExpansionTile도 내부적으로 ListTile을 씁니다. 배경은 Material(Card)이 그립니다.
+              Card(
+                margin: EdgeInsets.zero,
+                elevation: 0,
+                clipBehavior: Clip.antiAlias,
+                color: AppDesignTokens.surface,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppDesignTokens.divider),
+                  side: const BorderSide(color: AppDesignTokens.divider),
                 ),
                 child: Column(
                   children: [

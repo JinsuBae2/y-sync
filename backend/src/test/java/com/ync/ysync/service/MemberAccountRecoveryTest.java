@@ -35,11 +35,18 @@ class MemberAccountRecoveryTest {
     @Mock
     private MemberWithdrawer memberWithdrawer;
 
-    private MemberService memberService;
+    private MemberSignupService signupService;
+    private MemberAdminService adminService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
+        // 💡 인증 상태는 두 서비스가 같은 인스턴스를 봐야 합니다. 관리자 계정 초기화가
+        //    진행 중이던 인증을 실제로 지우는지 확인하려면 모의 객체로는 안 됩니다.
+        MemberVerificationService verificationService = new MemberVerificationService();
+        signupService = new MemberSignupService(
+                memberRepository, passwordEncoder, emailService, verificationService);
+        adminService = new MemberAdminService(
+                memberRepository, passwordEncoder, memberWithdrawer, verificationService, signupService);
     }
 
     @Test
@@ -50,12 +57,12 @@ class MemberAccountRecoveryTest {
         when(memberRepository.findByLoginId("2305009")).thenReturn(Optional.of(member));
         when(passwordEncoder.encode("NewPassword1!")).thenReturn("encoded-new-password");
 
-        memberService.requestPasswordReset("2305009", "배진수");
+        signupService.requestPasswordReset("2305009", "배진수");
         ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendPasswordResetCode(org.mockito.ArgumentMatchers.eq("2305009@ync.ac.kr"),
                 codeCaptor.capture());
 
-        memberService.confirmPasswordReset("2305009", codeCaptor.getValue(), "NewPassword1!");
+        signupService.confirmPasswordReset("2305009", codeCaptor.getValue(), "NewPassword1!");
 
         assertThat(member.getPassword()).isEqualTo("encoded-new-password");
         assertThat(member.getEmail()).isEqualTo("2305009@ync.ac.kr");
@@ -74,7 +81,7 @@ class MemberAccountRecoveryTest {
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
         when(passwordEncoder.encode(anyString())).thenReturn("encoded-temp-password");
 
-        memberService.resetMemberRegistration(1L);
+        adminService.resetMemberRegistration(1L);
 
         assertThat(member.getPassword()).isEqualTo("encoded-temp-password");
         assertThat(member.getEmail()).isNull();

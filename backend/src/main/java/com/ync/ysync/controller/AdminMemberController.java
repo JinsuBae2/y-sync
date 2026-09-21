@@ -2,7 +2,8 @@ package com.ync.ysync.controller;
 
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
-import com.ync.ysync.service.MemberService;
+import com.ync.ysync.service.MemberAdminService;
+import com.ync.ysync.service.MemberSpreadsheetImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,8 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 학과 관리자 이상 권한만 호출 가능
 public class AdminMemberController {
 
-    private final MemberService memberService;
+    private final MemberAdminService memberAdminService;
+    private final MemberSpreadsheetImportService spreadsheetImportService;
     private final com.ync.ysync.service.NoticeGradeService noticeGradeService;
 
     @GetMapping
@@ -35,7 +37,7 @@ public class AdminMemberController {
             @RequestParam(defaultValue = "15") int size,
             @RequestParam(required = false) String search) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<AdminMemberResponse> members = memberService.getMembers(pageRequest, search)
+        Page<AdminMemberResponse> members = memberAdminService.getMembers(pageRequest, search)
                 .map(member -> AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         return ResponseEntity.ok(members);
     }
@@ -47,7 +49,7 @@ public class AdminMemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
         }
         try {
-            Member member = memberService.createMemberByAdmin(
+            Member member = memberAdminService.createMemberByAdmin(
                     request.getLoginId(), request.getName(), request.getRole(), currentRole(authentication));
             return ResponseEntity.ok(AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         } catch (IllegalArgumentException e) {
@@ -62,7 +64,7 @@ public class AdminMemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "파일이 비어있습니다."));
         }
         try {
-            MemberService.CsvImportResult result = memberService.createMembersBySpreadsheet(
+            MemberSpreadsheetImportService.CsvImportResult result = spreadsheetImportService.importMembers(
                     file.getInputStream(), file.getOriginalFilename(), currentRole(authentication));
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -83,7 +85,7 @@ public class AdminMemberController {
     public ResponseEntity<?> updateMember(@PathVariable Long id, @RequestBody AdminUpdateMemberRequest request,
             Authentication authentication) {
         try {
-            Member member = memberService.updateMemberByAdmin(
+            Member member = memberAdminService.updateMemberByAdmin(
                     id, request.getName(), request.getRole(), currentRole(authentication),
                     request.getNoticeGradePreference(),
                     request.getNoticeGradePreference() == null ? null : noticeGradeService.currentAcademicYear());
@@ -100,7 +102,7 @@ public class AdminMemberController {
                     + "글을 함께 지우면 그 글에 달린 다른 학생의 댓글까지 사라지기 때문입니다.")
     public ResponseEntity<?> deleteMember(@PathVariable Long id) {
         try {
-            memberService.deleteMemberByAdmin(id);
+            memberAdminService.deleteMemberByAdmin(id);
             return ResponseEntity.ok(Map.of("message",
                     "회원을 탈퇴 처리했습니다. 작성한 글과 댓글은 '탈퇴한 학생' 이름으로 남습니다."));
         } catch (IllegalArgumentException e) {
@@ -112,7 +114,7 @@ public class AdminMemberController {
     @Operation(summary = "비밀번호 재설정 안내 발송", description = "회원의 등록 이메일로 비밀번호 재설정 인증번호를 전송합니다. 계정 데이터와 권한은 변경하지 않습니다.")
     public ResponseEntity<?> sendPasswordResetEmail(@PathVariable Long id) {
         try {
-            memberService.requestPasswordResetByAdmin(id);
+            memberAdminService.requestPasswordResetByAdmin(id);
             return ResponseEntity.ok(Map.of("message", "등록된 이메일로 비밀번호 재설정 안내를 발송했습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -123,7 +125,7 @@ public class AdminMemberController {
     @Operation(summary = "계정 재등록 초기화", description = "이메일과 비밀번호를 초기화하고 가입 대기 상태로 전환합니다. 게시글, 댓글, 권한과 정지 상태는 유지합니다.")
     public ResponseEntity<?> resetRegistration(@PathVariable Long id) {
         try {
-            memberService.resetMemberRegistration(id);
+            memberAdminService.resetMemberRegistration(id);
             return ResponseEntity.ok(Map.of("message", "계정이 재등록 대기 상태로 초기화되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -141,7 +143,7 @@ public class AdminMemberController {
     @Operation(summary = "회원 차단", description = "특정 회원을 차단(정지) 상태로 설정합니다.")
     public ResponseEntity<?> suspendMember(@PathVariable Long id) {
         try {
-            memberService.suspendMember(id);
+            memberAdminService.suspendMember(id);
             return ResponseEntity.ok(Map.of("message", "회원이 성공적으로 차단되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -152,7 +154,7 @@ public class AdminMemberController {
     @Operation(summary = "회원 차단 해제", description = "특정 회원의 차단(정지) 상태를 해제합니다.")
     public ResponseEntity<?> unsuspendMember(@PathVariable Long id) {
         try {
-            memberService.unsuspendMember(id);
+            memberAdminService.unsuspendMember(id);
             return ResponseEntity.ok(Map.of("message", "회원의 차단이 성공적으로 해제되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

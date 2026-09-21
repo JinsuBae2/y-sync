@@ -248,12 +248,17 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     required bool isNoticeLink,
     required bool isAdmin,
   }) {
-    return Container(
+    // 💡 배경색을 Container가 아니라 Material(Card)이 그립니다.
+    //    ListTile은 가장 가까운 Material에 배경과 잉크를 그리므로, 사이에 색을 가진
+    //    DecoratedBox가 끼면 탭 잉크가 가려집니다. Flutter 3.47부터 assertion으로 잡힙니다.
+    return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppDesignTokens.surface,
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      color: AppDesignTokens.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppDesignTokens.divider),
+        side: const BorderSide(color: AppDesignTokens.divider),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),

@@ -45,7 +45,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 class MemberWithdrawalTest {
 
-    @Autowired private MemberService memberService;
+    @Autowired private MemberAdminService memberAdminService;
     @Autowired private MemberRepository memberRepository;
     @Autowired private CommunityPostRepository communityPostRepository;
     @Autowired private CommentRepository commentRepository;
@@ -82,7 +82,7 @@ class MemberWithdrawalTest {
         commentRepository.save(Comment.builder()
                 .content("내 댓글").communityPost(post).member(member).build());
 
-        assertThatCode(() -> memberService.deleteMemberByAdmin(member.getId()))
+        assertThatCode(() -> memberAdminService.deleteMemberByAdmin(member.getId()))
                 .doesNotThrowAnyException();
     }
 
@@ -92,7 +92,7 @@ class MemberWithdrawalTest {
         Member member = createMember(loginId, "홍길동", MemberRole.ADMIN);
         int authVersionBefore = member.getAuthVersion();
 
-        memberService.deleteMemberByAdmin(member.getId());
+        memberAdminService.deleteMemberByAdmin(member.getId());
 
         Member withdrawn = memberRepository.findById(member.getId()).orElseThrow();
         assertThat(withdrawn.isWithdrawn()).isTrue();
@@ -121,7 +121,7 @@ class MemberWithdrawalTest {
         Comment others = commentRepository.save(Comment.builder()
                 .content("남의 댓글").communityPost(post).member(other).build());
 
-        memberService.deleteMemberByAdmin(author.getId());
+        memberAdminService.deleteMemberByAdmin(author.getId());
 
         assertThat(communityPostRepository.findById(post.getId())).isPresent();
         assertThat(commentRepository.findById(mine.getId())).isPresent();
@@ -150,7 +150,7 @@ class MemberWithdrawalTest {
         adminRequestRepository.save(AdminRequest.builder()
                 .requester(member).reason("사유").build());
 
-        memberService.deleteMemberByAdmin(member.getId());
+        memberAdminService.deleteMemberByAdmin(member.getId());
 
         assertThat(notificationRepository.findByMemberIdOrderByCreatedAtDesc(member.getId())).isEmpty();
         assertThat(scrapRepository.findAllByMemberIdOrderByCreatedAtDesc(member.getId())).isEmpty();
@@ -163,27 +163,27 @@ class MemberWithdrawalTest {
         String loginId = "wd-list-" + System.nanoTime();
         Member member = createMember(loginId, "목록테스트", MemberRole.USER);
 
-        assertThat(memberService.getMembers(PageRequest.of(0, 200), loginId).getContent())
+        assertThat(memberAdminService.getMembers(PageRequest.of(0, 200), loginId).getContent())
                 .extracting(Member::getId).contains(member.getId());
 
-        memberService.deleteMemberByAdmin(member.getId());
+        memberAdminService.deleteMemberByAdmin(member.getId());
 
-        assertThat(memberService.getMembers(PageRequest.of(0, 200), loginId).getContent())
+        assertThat(memberAdminService.getMembers(PageRequest.of(0, 200), loginId).getContent())
                 .isEmpty();
-        assertThat(memberService.getMembers(PageRequest.of(0, 500), null).getContent())
+        assertThat(memberAdminService.getMembers(PageRequest.of(0, 500), null).getContent())
                 .extracting(Member::getId).doesNotContain(member.getId());
     }
 
     @Test
     void SUPER_ADMIN과_이미_탈퇴한_계정은_처리하지_않는다() {
         Member superAdmin = createMember("wd-su-" + System.nanoTime(), "슈퍼", MemberRole.SUPER_ADMIN);
-        assertThatThrownBy(() -> memberService.deleteMemberByAdmin(superAdmin.getId()))
+        assertThatThrownBy(() -> memberAdminService.deleteMemberByAdmin(superAdmin.getId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("SUPER_ADMIN");
 
         Member member = createMember("wd-twice-" + System.nanoTime(), "홍길동", MemberRole.USER);
-        memberService.deleteMemberByAdmin(member.getId());
-        assertThatThrownBy(() -> memberService.deleteMemberByAdmin(member.getId()))
+        memberAdminService.deleteMemberByAdmin(member.getId());
+        assertThatThrownBy(() -> memberAdminService.deleteMemberByAdmin(member.getId()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("이미 탈퇴");
     }

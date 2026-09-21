@@ -4,6 +4,61 @@
 
 ---
 
+## 2026-09-21 - MemberService 925줄을 다섯 갈래로 분할
+
+- 누가: 백엔드
+- 무엇을: 한 클래스가 들고 있던 가입·인증·명단 업로드·관리자 조작·로그인을 책임별로 나눴습니다. 동작은 바꾸지 않았습니다.
+- 왜:
+  - **길이보다 권한 경계가 문제였습니다.** 가입·로그인과 관리자 조작이 한 클래스에 있으니 `AdminMemberController`가 `signup()`을, `MemberProfileController`가 `suspendMember()`를 부를 수 있는 상태였습니다. 실수로 그렇게 써도 컴파일이 통과합니다.
+  - 인증 상태(인메모리 맵 3개)가 회원 조회·비밀번호 로직과 섞여 있어, `compute`로 보장하는 원자성이 어디까지인지 읽어내기 어려웠습니다.
+  - CSV·Excel 파싱 200여 줄은 회원 도메인과 무관한 코드인데 같은 파일에 있어 어느 쪽을 고치든 나머지를 함께 읽어야 했습니다.
+- 어떻게:
+
+| 클래스 | 책임 | 줄 수 |
+|---|---|---|
+| `MemberVerificationService` | 인증번호·가입 증표 발급과 검증 (인메모리 상태) | 273 |
+| `MemberSpreadsheetImportService` | 학생 명단 CSV·Excel 일괄 등록 | 278 |
+| `MemberSignupService` | 가입과 비밀번호 재설정 흐름 | 215 |
+| `MemberAdminService` | 관리자 전용 회원 관리 | 210 |
+| `MemberService` | 로그인·조회·개인 설정 | 92 |
+| `MemberRolePolicy` | 권한 부여 규칙 (단건 등록과 명단 등록이 공유) | 21 |
+
+  - 나누는 기준은 줄 수가 아니라 **누가 부르는가**였습니다. 컨트롤러 셋이 각각 필요한 것만 주입받습니다.
+  - `MemberVerificationService`는 내부 값 타입(`VerificationInfo`·`VerifiedInfo`)을 밖으로 내보내지 않습니다. 호출자는 "인증된 이메일" 문자열만 돌려받습니다. 맵을 건드리는 코드가 한 파일 안에 모두 있습니다.
+  - 권한 부여 규칙은 `MemberRolePolicy`로 뽑았습니다. 한 쪽에만 두면 다른 경로로 우회할 수 있고, 실제로 명단 업로드는 권한 열을 받으므로 여기서 막지 않으면 CSV 한 줄로 SUPER_ADMIN을 만들 수 있습니다.
+  - 관리자 계정 초기화가 진행 중이던 인증을 지우던 부분은 `MemberVerificationService.clear()`로 옮겼습니다. 재발급 쿨다운까지 함께 지우는 동작은 그대로입니다.
+  - 기존 단위 테스트 6개는 이제 각자 필요한 서비스만 만들어 씁니다. 인증 상태를 실제로 확인하는 테스트는 `MemberVerificationService` 실제 구현을 공유 인스턴스로 주입해, 모의 객체로는 볼 수 없는 "초기화가 인증을 지우는지"를 계속 검증합니다.
+- 언제·어디서: 2026-09-21, `refactor/member-service` 브랜치.
+- 검증: 백엔드 테스트 전체 통과, 컴파일 경고 0건. 순수 이동이라 새 회귀 테스트는 추가하지 않았고, 기존 테스트가 분할 후에도 같은 동작을 고정하는지로 확인했습니다. Spring 컨텍스트 기동(`@SpringBootTest`)으로 새 빈 배선도 함께 확인됩니다.
+- 남은 일: 커스텀 예외 도입은 별도입니다. 지금은 모든 실패가 `IllegalArgumentException`이라 400과 404, 409를 구분하지 못합니다.
+
+---
+
+## 2026-09-21 - Flutter 3.41.4 → 3.47.5 업그레이드
+
+- 누가: 프론트엔드
+- 무엇을: Flutter SDK를 3.41.4(2026-03)에서 3.47.5(2026-09-18, 현재 최신 stable)로 올리고, 새 버전이 잡아낸 UI 결함 6건을 고쳤습니다.
+- 왜: 반년 가까이 묵은 버전이라 `flutter_riverpod` 등 의존성 Dependabot PR이 최신 버전을 해석하지 못하고 계속 실패하고 있었습니다.
+- 어떻게:
+  - 로컬 SDK를 올리고, CI(`ci.yml`)와 배포(`deploy-production.yml`)의 `flutter-version` 핀을 `3.47.5`로 맞췄습니다. 두 곳 모두 바꿔야 로컬과 CI가 갈라지지 않습니다.
+  - `pubspec.yaml`의 Dart SDK 제약을 `^3.11.1`에서 `^3.13.4`로 올렸습니다. `pubspec.lock`은 SDK가 고정하는 패키지들이 패치·마이너 단위로 7개 갱신됐습니다(major 변경 없음).
+  - **Flutter 3.47이 새로 잡는 assertion 때문에 테스트 3건이 깨졌습니다.** 원인은 하나였습니다.
+    > `ListTile background color or ink splashes may be invisible.`
+    `ListTile`은 가장 가까운 `Material`에 배경과 잉크를 그리는데, 그 사이에 배경색을 가진 `DecoratedBox`(= `Container(decoration:)`)가 끼면 탭 잉크가 가려집니다. **실제 UI 결함이고**, 지금까지는 조용히 잘못 그려지고 있었습니다.
+  - 해당 지점 6곳을 고쳤습니다. 배경을 `Container`가 아니라 `Material`이 그리도록 바꾸는 방식입니다.
+    - 단순한 4곳(`academic_calendar_view`, `auth_settings_screen`, `notification_settings_screen`의 `_SettingGroup`, `help_screen`의 FAQ 묶음)은 `Card(elevation: 0, shape: RoundedRectangleBorder(...))`로 바꿨습니다. `admin_feedback_screen`과 `admin_post_management_screen`이 이미 쓰던 방식이라 저장소 관례를 따랐습니다.
+    - 커스텀 그림자가 있는 2곳(`notice_form_screen`, `community_form_screen`의 `SwitchListTile`)은 `Card`로 옮기면 그림자 모양이 달라지므로, 그림자는 `Container`에 두고 배경색·테두리만 `Material`로 옮겼습니다. 겹치는 순서가 같아 보이는 결과는 동일합니다.
+    - 모두 `clipBehavior: Clip.antiAlias`를 넣어 둥근 모서리 밖으로 잉크가 새지 않게 했습니다.
+  - `flutter pub get`이 `analysis_options.yaml`에 `analyzer.exclude`(build·android·ios·web)를 자동 추가했습니다. 새 프로젝트 템플릿의 기본값이고, 해당 경로에는 서드파티 빌드 산출물 외에 우리 Dart 코드가 없어 그대로 뒀습니다.
+- 언제·어디서: 2026-09-21, `chore/flutter-3-47-5` 브랜치.
+- 검증:
+  - `flutter analyze` 경고 0건, Flutter 테스트 78개 통과, JavaScript 테스트 6개 통과.
+  - `flutter build web --release` 성공.
+  - **CSP 재확인.** 빌드 산출물을 운영과 같은 CSP 헤더로 로컬 서빙해 브라우저로 직접 띄웠습니다. 앱이 정상 부팅하고 Firebase 초기화까지 통과했으며 **CSP 위반 0건**입니다(콘솔의 CORS 오류는 localhost에서 운영 API를 부른 탓이라 무관). `index.html`에 인라인 스크립트가 없고 외부 출처도 `www.gstatic.com` 하나라 기존 CSP로 충분합니다.
+- 남은 일: 막혀 있던 의존성 Dependabot PR들이 이제 해석될 수 있습니다. `flutter pub outdated` 기준 30개가 제약 밖에 있는데, 이건 SDK 업그레이드와 분리해서 따로 봅니다.
+
+---
+
 ## 2026-09-21 - `ddl-auto`를 validate로 전환
 
 - 누가: 백엔드·운영 DB
