@@ -30,14 +30,14 @@ repositories {
 }
 
 dependencies {
-	implementation platform('software.amazon.awssdk:bom:2.54.7')
+	implementation platform('software.amazon.awssdk:bom:2.54.18')
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'com.google.firebase:firebase-admin:9.10.0'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
 	implementation 'org.apache.poi:poi-ooxml:5.5.1'
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:url-connection-client'
