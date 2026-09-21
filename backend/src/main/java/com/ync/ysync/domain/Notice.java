@@ -12,6 +12,14 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
+// 💡 공지 피드(커서 페이징)가 쓰는 인덱스입니다. 정렬이 `is_pinned` → `created_at DESC, id DESC`라
+//    이 순서로 잡아야 커서 조회가 정렬과 탐색을 한 번에 처리합니다. 없으면 풀스캔 후 정렬입니다.
+//
+//    ⚠️ `ddl-auto=validate`는 **인덱스를 검증하지 않습니다.** 즉 이 선언만으로는 운영에 인덱스가
+//    생기지 않고, 없어도 기동은 성공합니다(느려질 뿐입니다). 운영에는 직접 적용해야 합니다.
+//    적용 DDL은 docs/NOTICE_FEED_PLAN.md 에 있습니다.
+@Table(name = "notice", indexes = @Index(
+        name = "idx_notice_feed", columnList = "is_pinned, created_at, id"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/notice.dart';
 import '../providers/mypage_provider.dart';
+import '../providers/notice_feed_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/scrap_provider.dart';
 import '../theme/app_design_tokens.dart';
@@ -18,8 +21,20 @@ class NoticeListScreen extends ConsumerStatefulWidget {
   ConsumerState<NoticeListScreen> createState() => _NoticeListScreenState();
 }
 
-class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
+class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
+    with WidgetsBindingObserver {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+  Timer? _newNoticeTimer;
+
+  /// 💡 새 공지를 확인하는 주기입니다. 공지는 자주 올라오지 않으므로 짧게 잡을 이유가 없습니다.
+  static const _newNoticePollInterval = Duration(seconds: 60);
+
+  /// 바닥에서 이만큼 남았을 때 미리 다음 페이지를 불러옵니다. 바닥에 닿은 뒤 부르면 빈 화면이 보입니다.
+  static const _loadMoreThreshold = 400.0;
+
+  /// 이보다 위로 올라와 있으면 "새 공지" 칩을 띄웁니다. 최상단에서는 당겨서 새로고침이면 충분합니다.
+  static const _chipVisibleOffset = 200.0;
 
   static const _grades = <(String, String)>[
     ('ALL', '전체'),
@@ -29,9 +44,49 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_onScroll);
+    _newNoticeTimer = Timer.periodic(
+      _newNoticePollInterval,
+      (_) => ref.read(noticeFeedProvider.notifier).checkForNewNotices(),
+    );
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _newNoticeTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 💡 앱을 다시 열었을 때는 주기를 기다리지 않고 바로 확인합니다. 백그라운드에 있는 동안
+    //    타이머가 멈춰 있었을 수 있고, 사용자가 가장 궁금해하는 순간이기도 합니다.
+    if (state == AppLifecycleState.resumed) {
+      ref.read(noticeFeedProvider.notifier).checkForNewNotices();
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.extentAfter < _loadMoreThreshold) {
+      ref.read(noticeFeedProvider.notifier).loadMore();
+    }
+    // 칩 노출 조건이 스크롤 위치에 걸려 있어 다시 그려야 합니다.
+    setState(() {});
+  }
+
+  Future<void> _goToTopAndRefresh() async {
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    await ref.read(noticeFeedProvider.notifier).refresh();
   }
 
   void _performSearch() {
@@ -42,7 +97,7 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final noticesAsync = ref.watch(noticesProvider);
+    final feedAsync = ref.watch(noticeFeedProvider);
     final selectedGrade = ref.watch(noticeGradeProvider);
     final myPageAsync = ref.watch(myPageProvider);
     final isAdmin = myPageAsync.maybeWhen(
@@ -84,7 +139,7 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const NoticeFormScreen()),
                 );
-                if (created == true) ref.invalidate(noticesProvider);
+                if (created == true) ref.invalidate(noticeFeedProvider);
               },
               child: const Icon(Icons.edit_outlined),
             )
@@ -123,10 +178,22 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
               Expanded(
                 child: Stack(
                   children: [
-                    Positioned.fill(
-                      child: _buildNoticeList(noticesAsync, selectedGrade),
-                    ),
-                    if (noticesAsync.isRefreshing)
+                    Positioned.fill(child: _buildNoticeList(feedAsync)),
+                    // 💡 스크롤을 내린 상태에서만 띄웁니다. 최상단에서는 당겨서 새로고침이면 충분하고,
+                    //    읽는 중에 목록을 자동으로 밀어 넣으면 보던 자리를 잃습니다.
+                    if (_shouldShowNewNoticeChip(feedAsync))
+                      Positioned(
+                        top: 8,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: _NewNoticeChip(
+                            count: feedAsync.value!.newCount,
+                            onTap: _goToTopAndRefresh,
+                          ),
+                        ),
+                      ),
+                    if (feedAsync.isRefreshing)
                       const Positioned(
                         top: 0,
                         left: 20,
@@ -147,50 +214,63 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
     );
   }
 
-  Widget _buildNoticeList(
-    AsyncValue<List<Notice>> noticesAsync,
-    String selectedGrade,
-  ) {
-    return noticesAsync.when(
-      data: (notices) {
-        final filteredNotices = selectedGrade == 'ALL'
-            ? notices
-            : notices
-                  .where(
-                    (notice) =>
-                        notice.targetGrade == 'ALL' ||
-                        notice.targetGrade == selectedGrade,
-                  )
-                  .toList();
+  /// 칩은 "새 공지가 있고" + "스크롤을 내려둔 상태"일 때만 띄웁니다.
+  bool _shouldShowNewNoticeChip(AsyncValue<NoticeFeedState> feedAsync) {
+    final feed = feedAsync.value;
+    if (feed == null || feed.newCount <= 0) return false;
+    if (!_scrollController.hasClients) return false;
+    return _scrollController.offset > _chipVisibleOffset;
+  }
 
-        if (filteredNotices.isEmpty) {
+  Widget _buildNoticeList(AsyncValue<NoticeFeedState> feedAsync) {
+    return feedAsync.when(
+      // 💡 더 불러오는 중에도 이미 받은 목록을 계속 보여줍니다. skipLoadingOnReload를 쓰지 않고
+      //    상태에 isLoadingMore를 두는 이유가 이것입니다.
+      data: (feed) {
+        if (feed.isEmpty) {
           return _EmptyNoticeList(
             hasKeyword: ref.read(searchKeywordProvider).trim().isNotEmpty,
-            onRefresh: () async => ref.invalidate(noticesProvider),
+            onRefresh: () => ref.read(noticeFeedProvider.notifier).refresh(),
           );
         }
 
+        // 💡 학년 필터는 더 이상 여기서 걸지 않습니다. 서버가 걸러 줍니다.
+        //    받은 10건을 클라이언트가 필터하면 0건이 남을 수 있고, 그게 "끝"인지
+        //    "이 페이지에 없음"인지 구분할 수 없어 무한 스크롤과 양립하지 못합니다.
+        final notices = feed.visibleNotices;
+
         return RefreshIndicator(
           color: AppDesignTokens.blue,
-          onRefresh: () async => ref.invalidate(noticesProvider),
+          onRefresh: () => ref.read(noticeFeedProvider.notifier).refresh(),
           child: ListView.separated(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            itemCount: filteredNotices.length,
+            // 마지막 한 칸은 더 불러오는 중 표시이거나 목록 끝 안내입니다.
+            itemCount: notices.length + 1,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) => NoticeCard(
-              notice: filteredNotices[index],
-              onOpen: () async {
-                final result = await openContentDetail(
-                  context,
-                  ref,
-                  targetType: 'NOTICE',
-                  targetId: filteredNotices[index].id,
+            itemBuilder: (context, index) {
+              if (index == notices.length) {
+                return _FeedFooter(
+                  isLoadingMore: feed.isLoadingMore,
+                  hasNext: feed.hasNext,
                 );
-                if (result != null) {
-                  ref.invalidate(noticesProvider);
-                }
-              },
-            ),
+              }
+              final notice = notices[index];
+              return NoticeCard(
+                notice: notice,
+                onOpen: () async {
+                  final result = await openContentDetail(
+                    context,
+                    ref,
+                    targetType: 'NOTICE',
+                    targetId: notice.id,
+                  );
+                  if (result != null) {
+                    ref.invalidate(noticeFeedProvider);
+                  }
+                },
+              );
+            },
           ),
         );
       },
@@ -198,7 +278,91 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen> {
         child: CircularProgressIndicator(color: AppDesignTokens.blue),
       ),
       error: (_, _) =>
-          _NoticeListError(onRetry: () => ref.invalidate(noticesProvider)),
+          _NoticeListError(onRetry: () => ref.invalidate(noticeFeedProvider)),
+    );
+  }
+}
+
+/// 목록 맨 아래에 붙는 한 칸입니다. 더 불러오는 중이면 진행 표시, 끝이면 안내를 보여줍니다.
+class _FeedFooter extends StatelessWidget {
+  const _FeedFooter({required this.isLoadingMore, required this.hasNext});
+
+  final bool isLoadingMore;
+  final bool hasNext;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 18),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppDesignTokens.blue,
+            ),
+          ),
+        ),
+      );
+    }
+    if (hasNext) {
+      return const SizedBox(height: 18);
+    }
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 18),
+      child: Center(
+        child: Text(
+          '마지막 공지입니다',
+          style: TextStyle(color: AppDesignTokens.muted, fontSize: 12),
+        ),
+      ),
+    );
+  }
+}
+
+/// 스크롤 도중 새 공지가 올라왔을 때 뜨는 칩입니다. 누르면 최상단으로 올라가며 새로고침합니다.
+class _NewNoticeChip extends StatelessWidget {
+  const _NewNoticeChip({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppDesignTokens.blue,
+      borderRadius: BorderRadius.circular(999),
+      clipBehavior: Clip.antiAlias,
+      elevation: 3,
+      child: InkWell(
+        key: const ValueKey('notice-new-chip'),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.arrow_upward_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                // 상한을 넘으면 서버가 99로 잘라 보냅니다.
+                count >= 99 ? '새 공지 99+개' : '새 공지 $count개',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

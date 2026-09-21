@@ -11,6 +11,7 @@ import 'package:y_sync/providers/auth_provider.dart';
 import 'package:y_sync/providers/comment_provider.dart';
 import 'package:y_sync/providers/community_provider.dart';
 import 'package:y_sync/providers/mypage_provider.dart';
+import 'package:y_sync/providers/notice_feed_provider.dart';
 import 'package:y_sync/providers/notice_provider.dart';
 import 'package:y_sync/providers/notification_provider.dart';
 import 'package:y_sync/providers/scrap_provider.dart';
@@ -114,6 +115,25 @@ final _comment = Comment(
   createdAt: DateTime(2026, 8, 25).toIso8601String(),
 );
 
+/// 💡 공지 목록은 이제 커서 피드를 씁니다. 서버가 하는 일(고정/일반 분리)을 그대로 흉내 냅니다.
+class _TestNoticeFeedNotifier extends NoticeFeedNotifier {
+  _TestNoticeFeedNotifier(this.notices, {this.onBuild});
+
+  final List<Notice> notices;
+  final VoidCallback? onBuild;
+
+  @override
+  Future<NoticeFeedState> build() async {
+    onBuild?.call();
+    return NoticeFeedState(
+      pinned: notices.where((notice) => notice.isPinned).toList(),
+      items: notices.where((notice) => !notice.isPinned).toList(),
+      hasNext: false,
+      latestId: notices.isEmpty ? null : notices.first.id,
+    );
+  }
+}
+
 void main() {
   testWidgets('공지 목록은 검색과 중요도를 먼저 보여준다', (tester) async {
     _setMobileViewport(tester);
@@ -121,8 +141,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          noticesProvider.overrideWith(
-            (ref) async => [_notice, _noticeWithAttachment],
+          noticeFeedProvider.overrideWith(
+            () => _TestNoticeFeedNotifier([_notice, _noticeWithAttachment]),
           ),
           myPageProvider.overrideWith(_TestMyPageNotifier.new),
           scrapsProvider.overrideWith((ref) async => []),
@@ -157,10 +177,12 @@ void main() {
       ProviderScope(
         overrides: [
           authProvider.overrideWith(_TestAuthNotifier.new),
-          noticesProvider.overrideWith((ref) async {
-            requestCount += 1;
-            return [_notice];
-          }),
+          noticeFeedProvider.overrideWith(
+            () => _TestNoticeFeedNotifier(
+              [_notice],
+              onBuild: () => requestCount += 1,
+            ),
+          ),
           noticeNotifierProvider.overrideWith(_TestNoticeNotifier.new),
           myPageProvider.overrideWith(_TestMyPageNotifier.new),
           commentsProvider.overrideWith((ref, arg) async => []),
