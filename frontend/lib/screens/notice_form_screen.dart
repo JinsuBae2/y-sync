@@ -254,13 +254,12 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               const SizedBox(height: 28),
               const _FormSectionTitle(title: '학사일정 연동'),
               const SizedBox(height: 10),
+              // 💡 그림자는 Container가, 배경색과 테두리는 Material이 그립니다.
+              //    색을 가진 DecoratedBox가 타일과 Material 사이에 끼면 탭 잉크가 가려지고,
+              //    Flutter 3.47부터는 디버그 빌드에서 assertion으로 잡힙니다. 겹치는 순서는 그대로입니다.
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.62),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.88),
-                  ),
                   boxShadow: [
                     BoxShadow(
                       color: AppDesignTokens.navy.withValues(alpha: 0.05),
@@ -269,25 +268,35 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                     ),
                   ],
                 ),
-                child: SwitchListTile(
-                  value: _isEvent,
-                  activeTrackColor: AppDesignTokens.blue,
-                  title: const Text(
-                    '캘린더에 함께 표시',
-                    style: TextStyle(
-                      color: AppDesignTokens.navy,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                child: Material(
+                  color: Colors.white.withValues(alpha: 0.62),
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.88),
                     ),
                   ),
-                  subtitle: const Text(
-                    '공지 기간을 학사일정에도 등록합니다.',
-                    style: TextStyle(
-                      color: AppDesignTokens.muted,
-                      fontSize: 12,
+                  child: SwitchListTile(
+                    value: _isEvent,
+                    activeTrackColor: AppDesignTokens.blue,
+                    title: const Text(
+                      '캘린더에 함께 표시',
+                      style: TextStyle(
+                        color: AppDesignTokens.navy,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+                    subtitle: const Text(
+                      '공지 기간을 학사일정에도 등록합니다.',
+                      style: TextStyle(
+                        color: AppDesignTokens.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onChanged: (value) => setState(() => _isEvent = value),
                   ),
-                  onChanged: (value) => setState(() => _isEvent = value),
                 ),
               ),
               if (_isEvent) ...[

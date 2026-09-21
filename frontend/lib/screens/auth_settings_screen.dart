@@ -203,11 +203,15 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
                 style: TextStyle(color: AppDesignTokens.muted, fontSize: 13),
               ),
               const SizedBox(height: 18),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppDesignTokens.surface,
+              // 💡 ListTile 계열이 잉크를 그릴 Material이 되도록 Card를 씁니다. (Container 금지)
+              Card(
+                margin: EdgeInsets.zero,
+                elevation: 0,
+                clipBehavior: Clip.antiAlias,
+                color: AppDesignTokens.surface,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppDesignTokens.divider),
+                  side: const BorderSide(color: AppDesignTokens.divider),
                 ),
                 child: Column(
                   children: [

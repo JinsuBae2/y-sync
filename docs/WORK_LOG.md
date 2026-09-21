@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-09-21 - Flutter 3.41.4 → 3.47.5 업그레이드
+
+- 누가: 프론트엔드
+- 무엇을: Flutter SDK를 3.41.4(2026-03)에서 3.47.5(2026-09-18, 현재 최신 stable)로 올리고, 새 버전이 잡아낸 UI 결함 6건을 고쳤습니다.
+- 왜: 반년 가까이 묵은 버전이라 `flutter_riverpod` 등 의존성 Dependabot PR이 최신 버전을 해석하지 못하고 계속 실패하고 있었습니다.
+- 어떻게:
+  - 로컬 SDK를 올리고, CI(`ci.yml`)와 배포(`deploy-production.yml`)의 `flutter-version` 핀을 `3.47.5`로 맞췄습니다. 두 곳 모두 바꿔야 로컬과 CI가 갈라지지 않습니다.
+  - `pubspec.yaml`의 Dart SDK 제약을 `^3.11.1`에서 `^3.13.4`로 올렸습니다. `pubspec.lock`은 SDK가 고정하는 패키지들이 패치·마이너 단위로 7개 갱신됐습니다(major 변경 없음).
+  - **Flutter 3.47이 새로 잡는 assertion 때문에 테스트 3건이 깨졌습니다.** 원인은 하나였습니다.
+    > `ListTile background color or ink splashes may be invisible.`
+    `ListTile`은 가장 가까운 `Material`에 배경과 잉크를 그리는데, 그 사이에 배경색을 가진 `DecoratedBox`(= `Container(decoration:)`)가 끼면 탭 잉크가 가려집니다. **실제 UI 결함이고**, 지금까지는 조용히 잘못 그려지고 있었습니다.
+  - 해당 지점 6곳을 고쳤습니다. 배경을 `Container`가 아니라 `Material`이 그리도록 바꾸는 방식입니다.
+    - 단순한 4곳(`academic_calendar_view`, `auth_settings_screen`, `notification_settings_screen`의 `_SettingGroup`, `help_screen`의 FAQ 묶음)은 `Card(elevation: 0, shape: RoundedRectangleBorder(...))`로 바꿨습니다. `admin_feedback_screen`과 `admin_post_management_screen`이 이미 쓰던 방식이라 저장소 관례를 따랐습니다.
+    - 커스텀 그림자가 있는 2곳(`notice_form_screen`, `community_form_screen`의 `SwitchListTile`)은 `Card`로 옮기면 그림자 모양이 달라지므로, 그림자는 `Container`에 두고 배경색·테두리만 `Material`로 옮겼습니다. 겹치는 순서가 같아 보이는 결과는 동일합니다.
+    - 모두 `clipBehavior: Clip.antiAlias`를 넣어 둥근 모서리 밖으로 잉크가 새지 않게 했습니다.
+  - `flutter pub get`이 `analysis_options.yaml`에 `analyzer.exclude`(build·android·ios·web)를 자동 추가했습니다. 새 프로젝트 템플릿의 기본값이고, 해당 경로에는 서드파티 빌드 산출물 외에 우리 Dart 코드가 없어 그대로 뒀습니다.
+- 언제·어디서: 2026-09-21, `chore/flutter-3-47-5` 브랜치.
+- 검증:
+  - `flutter analyze` 경고 0건, Flutter 테스트 78개 통과, JavaScript 테스트 6개 통과.
+  - `flutter build web --release` 성공.
+  - **CSP 재확인.** 빌드 산출물을 운영과 같은 CSP 헤더로 로컬 서빙해 브라우저로 직접 띄웠습니다. 앱이 정상 부팅하고 Firebase 초기화까지 통과했으며 **CSP 위반 0건**입니다(콘솔의 CORS 오류는 localhost에서 운영 API를 부른 탓이라 무관). `index.html`에 인라인 스크립트가 없고 외부 출처도 `www.gstatic.com` 하나라 기존 CSP로 충분합니다.
+- 남은 일: 막혀 있던 의존성 Dependabot PR들이 이제 해석될 수 있습니다. `flutter pub outdated` 기준 30개가 제약 밖에 있는데, 이건 SDK 업그레이드와 분리해서 따로 봅니다.
+
+---
+
 ## 2026-09-21 - `ddl-auto`를 validate로 전환
 
 - 누가: 백엔드·운영 DB
