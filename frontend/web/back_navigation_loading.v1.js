@@ -3,14 +3,10 @@
   let token = 0;
   let timer;
   let panel;
-  const record = detail => {
-    try { window.ysyncSwipeDiagnostics?.record('back_loading', detail); } catch (_) {}
-  };
-  function hide(reason) {
+  function hide() {
     clearTimeout(timer);
     if (panel && !panel.hidden) {
       panel.hidden = true;
-      record(reason);
     }
   }
   window.ysyncBackLoading = {
@@ -18,7 +14,7 @@
     complete(expected) {
       if (!expected || expected !== token) return;
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (expected === token) hide('frame_ready');
+        if (expected === token) hide();
       }));
     },
   };
@@ -36,9 +32,8 @@
     token++;
     clearTimeout(timer);
     panel.hidden = false;
-    record('shown');
     const expected = token;
-    timer = setTimeout(() => { if (expected === token) hide('timeout'); }, 2000);
+    timer = setTimeout(() => { if (expected === token) hide(); }, 2000);
   });
-  addEventListener('pagehide', () => { token++; hide('page_hidden'); });
+  addEventListener('pagehide', () => { token++; hide(); });
 })();

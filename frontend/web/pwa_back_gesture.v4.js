@@ -14,20 +14,12 @@
   window.ysyncPwaBackGesture.enabled = ios && standalone;
   if (!ios || !standalone) return;
   document.addEventListener('touchstart', event => {
-    let outcome;
-    if (event.touches.length !== 1) {
-      outcome = 'multi_touch';
-    } else if (!(event.touches[0].clientX >= 0 && event.touches[0].clientX <= window.ysyncPwaBackGesture.edgeWidth)) {
-      outcome = 'outside_edge';
-    } else if (!event.cancelable) {
-      outcome = 'not_cancelable';
-    } else {
-      // Do not stop propagation: Flutter still needs the pointer/gesture stream.
-      event.preventDefault();
-      outcome = event.defaultPrevented ? 'prevented' : 'not_prevented';
-    }
-    try {
-      window.ysyncSwipeDiagnostics?.record('guard_touch', outcome);
-    } catch (_) { /* Diagnostics must never interrupt touch handling. */ }
+    // 다중 터치는 확대·축소 같은 다른 동작이므로 건드리지 않습니다.
+    if (event.touches.length !== 1) return;
+    const x = event.touches[0].clientX;
+    if (!(x >= 0 && x <= window.ysyncPwaBackGesture.edgeWidth)) return;
+    if (!event.cancelable) return;
+    // Do not stop propagation: Flutter still needs the pointer/gesture stream.
+    event.preventDefault();
   }, { passive: false });
 })();

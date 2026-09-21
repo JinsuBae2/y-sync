@@ -34,4 +34,12 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
 
     // 💡 특정 기간(예: 조회하려는 월)에 걸쳐 있는 일정이 등록된 공지사항을 조회합니다.
     List<Notice> findAllByEventStartDateLessThanEqualAndEventEndDateGreaterThanEqual(java.time.LocalDate endDate, java.time.LocalDate startDate);
+
+
+    // 💡 조회수는 DB에서 직접 올립니다. 엔티티 필드를 읽어 +1 하고 저장하면 두 사람이 동시에 열었을 때
+    //    둘 다 같은 값을 읽어 1만 증가합니다(lost update). 댓글 수가 이미 쓰고 있는 방식과 같습니다.
+    //    clearAutomatically로 영속성 컨텍스트를 비워, 직후 조회가 갱신된 값을 읽게 합니다.
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Notice n SET n.viewCount = n.viewCount + 1 WHERE n.id = :id")
+    int incrementViewCount(@Param("id") Long id);
 }
