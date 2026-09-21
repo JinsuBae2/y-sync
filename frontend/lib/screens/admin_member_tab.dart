@@ -936,11 +936,15 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(
-          '학생 정보 삭제',
+          '학생 탈퇴 처리',
           style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          '정말 ${member.name} (${member.loginId}) 학생을 목록에서 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.',
+          '${member.name} (${member.loginId}) 학생을 탈퇴 처리하시겠습니까?\n\n'
+          '학번·이름·이메일이 지워지고 다시 로그인할 수 없게 됩니다. '
+          '작성한 글과 댓글은 삭제하지 않고 "탈퇴한 학생" 이름으로 남습니다. '
+          '함께 지우면 그 글에 달린 다른 학생의 댓글까지 사라지기 때문입니다.\n\n'
+          '이 작업은 되돌릴 수 없습니다.',
         ),
         actions: [
           TextButton(
@@ -955,7 +959,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                     .deleteMember(member.id);
                 if (context.mounted) {
                   Navigator.pop(context);
-                  _showSuccessSnackBar('학생이 성공적으로 삭제되었습니다.');
+                  _showSuccessSnackBar('학생을 탈퇴 처리했습니다.');
                 }
               } catch (e) {
                 _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
@@ -965,7 +969,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('삭제'),
+            child: const Text('탈퇴 처리'),
           ),
         ],
       ),

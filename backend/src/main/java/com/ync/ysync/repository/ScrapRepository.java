@@ -29,4 +29,7 @@ public interface ScrapRepository extends JpaRepository<Scrap, Long> {
     // 💡 대상 글이 하드 삭제될 때 그 글을 가리키던 스크랩을 함께 정리합니다.
     //    scrap.target_id 에는 FK가 없어 DB가 막아 주지 않습니다.
     void deleteAllByTargetTypeAndTargetId(TargetType targetType, Long targetId);
+
+    // 💡 탈퇴 처리 시 스크랩을 모두 지웁니다. 본인만 보는 데이터라 남길 이유가 없습니다.
+    void deleteAllByMemberId(Long memberId);
 }

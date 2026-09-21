@@ -57,7 +57,31 @@ ALTER TABLE report ADD CONSTRAINT uq_report UNIQUE (reporter_id, target_type, ta
   - 알림(`notification`)은 정리하지 않았습니다. 이미 발송된 수신 기록이라 지우면 사용자 이력이 사라집니다.
 - 언제·어디서: 2026-09-21, `fix/hard-delete-orphans` 브랜치.
 - 검증: 백엔드 테스트 전체 통과. 정리 호출을 일부러 주석 처리해 추가한 테스트 3건이 실제로 `ConstraintViolationException`으로 실패하는 것을 확인한 뒤 원복했습니다. 실제 DELETE가 DB까지 도달해야 FK 위반을 볼 수 있으므로 테스트 클래스에 `@Transactional`을 걸지 않았습니다.
-- 남은 일: `MemberService.deleteMemberByAdmin`도 같은 계열의 문제를 갖고 있습니다. `member`를 참조하는 FK가 8개(admin_request, comment, community_post, notice, notification, personal_timetable_entry, report, scrap)라 글이나 댓글을 쓴 적 있는 회원은 삭제할 수 없습니다. 다만 해결 방향이 "딸린 글까지 함께 삭제"인지 "계정만 익명화"인지는 서비스 정책 판단이 필요해 이번 범위에 넣지 않았습니다.
+- 남은 일: `MemberService.deleteMemberByAdmin`도 같은 계열의 문제를 갖고 있습니다. `member`를 참조하는 FK가 8개(admin_request, comment, community_post, notice, notification, personal_timetable_entry, report, scrap)라 글이나 댓글을 쓴 적 있는 회원은 삭제할 수 없습니다. 다만 해결 방향이 "딸린 글까지 함께 삭제"인지 "계정만 익명화"인지는 서비스 정책 판단이 필요해 이 브랜치에는 넣지 않았고, 같은 날 "계정만 익명화"로 정해 아래 항목에서 처리했습니다.
+
+---
+
+## 2026-09-21 - 관리자 회원 삭제를 계정 익명화로 전환
+
+- 누가: 백엔드·프론트엔드 공통 작업
+- 무엇을: `DELETE /admin/members/{id}`가 회원 행을 지우는 대신 계정을 익명화하도록 바꿨습니다.
+- 왜:
+  - 운영 DB 조회 결과 `member`를 참조하는 외래키가 8개였습니다(admin_request, comment, community_post, notice, notification, personal_timetable_entry, report, scrap).
+  - 기존 구현은 회원 행을 그대로 지웠기 때문에 **글이나 댓글을 쓴 적 있는 회원은 관리자도 삭제할 수 없었고** 500이 났습니다.
+  - 딸린 데이터까지 함께 지우는 방식은 택하지 않았습니다. 그 회원의 글에 달린 **다른 학생의 댓글까지 사라지고** 대화 맥락이 끊깁니다.
+- 어떻게:
+  - `Member.withdraw(...)`가 개인을 특정할 수 있는 값을 모두 지웁니다. 학번, 이메일, 이름, 소셜 ID, FCM 토큰, 알림 설정, 권한입니다.
+  - `loginId`는 NOT NULL·UNIQUE라 비울 수 없어 `withdrawn-{id}`로 바꿉니다. 학번이 풀리므로 같은 학생을 다시 사전 등록할 수 있습니다.
+  - 다시 로그인할 수 없도록 비밀번호를 어떤 입력과도 일치하지 않는 값으로 바꾸고, `isActivated=false`, `authVersion`을 올려 이미 발급된 JWT를 무효화합니다.
+  - 본인만 보는 데이터는 함께 지웁니다. 수신 알림, 스크랩, 개인 시간표, 권한 신청 이력입니다.
+  - 신고 이력은 남깁니다. 신고자 식별 정보가 이미 지워졌고, 지우면 누적 신고 수가 줄어 처리 중인 건의 판단이 바뀝니다.
+  - 관리자 회원 목록은 사전 등록 명단을 겸하므로 탈퇴 계정을 제외합니다. 행 자체는 글·댓글의 작성자로 남습니다.
+  - 정리와 익명화가 한 트랜잭션에서 함께 커밋되도록 `MemberWithdrawer`를 `@Transactional(propagation = MANDATORY)`로 두었습니다.
+  - 관리자 화면의 확인 문구와 API 설명을 실제 동작에 맞게 고쳤습니다. "완전히 삭제"라고 안내하면서 익명화하면 관리자가 잘못 이해합니다.
+  - 삭제 로그에서 학번을 뺐습니다. 지운 개인정보를 로그에 다시 적으면 익명화한 의미가 없습니다.
+- 언제·어디서: 2026-09-21, `fix/member-anonymization` 브랜치.
+- 검증: 백엔드 테스트 전체 통과, Flutter 78개 통과, 분석 경고 0건. 익명화를 기존 `memberRepository.delete(member)`로 되돌려 추가한 테스트 6건 중 5건이 실제로 실패하는 것을 확인한 뒤 원복했습니다.
+- 남은 일: 익명화는 개인정보를 계정에서 지우지만 회원 행 자체는 남습니다. 완전 파기를 요구하는 기준이 따로 있다면 별도 판단이 필요합니다.
 
 ---
 

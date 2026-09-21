@@ -51,6 +51,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final MemberWithdrawer memberWithdrawer;
 
     // 💡 인증번호는 한 번 발급된 뒤 5분간 고정되므로, 시도 횟수를 제한하지 않으면 6자리(10^6)를
     //    무차별 대입할 수 있습니다. 아래 상수로 challenge당 시도 횟수와 재발급 간격을 제한합니다.
@@ -538,10 +539,12 @@ public class MemberService {
      */
     @Transactional(readOnly = true)
     public Page<Member> getMembers(Pageable pageable, String search) {
+        // 💡 이 목록은 사전 등록 명단을 겸하므로 탈퇴 처리된 계정은 보여주지 않습니다.
+        //    행 자체는 글·댓글의 작성자로 남아 있습니다.
         if (search == null || search.trim().isEmpty()) {
-            return memberRepository.findAll(pageable);
+            return memberRepository.findAllNotWithdrawn(pageable);
         }
-        return memberRepository.findByLoginIdContainingOrNameContaining(search, search, pageable);
+        return memberRepository.searchNotWithdrawn(search, pageable);
     }
 
     /**
@@ -848,7 +851,10 @@ public class MemberService {
     }
 
     /**
-     * 관리자 권한 회원 삭제
+     * 관리자 권한 회원 탈퇴 처리
+     *
+     * 💡 행을 지우지 않고 익명화합니다. 이유는 {@link MemberWithdrawer} 주석을 보십시오.
+     *    요약하면, 글·댓글을 쓴 회원은 FK 때문에 삭제가 실패하고 억지로 지우면 다른 학생의 댓글까지 사라집니다.
      */
     @Transactional
     public void deleteMemberByAdmin(Long id) {
@@ -856,8 +862,15 @@ public class MemberService {
         if (member.getRole() == MemberRole.SUPER_ADMIN) {
             throw new IllegalArgumentException("SUPER_ADMIN 계정은 삭제할 수 없습니다.");
         }
-        memberRepository.delete(member);
-        log.info("관리자 회원 삭제 완료 - ID: {}, 학번: {}", id, member.getLoginId());
+        if (member.isWithdrawn()) {
+            throw new IllegalArgumentException("이미 탈퇴 처리된 계정입니다.");
+        }
+
+        memberWithdrawer.withdraw(member);
+        memberRepository.save(member);
+
+        // 💡 학번은 남기지 않습니다. 지운 개인정보를 로그에 다시 적으면 익명화한 의미가 없습니다.
+        log.info("관리자 회원 탈퇴 처리 완료 - ID: {}", id);
     }
 
     /**

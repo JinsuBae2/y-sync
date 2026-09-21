@@ -94,11 +94,15 @@ public class AdminMemberController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "학생 삭제", description = "특정 학생 정보를 완전히 삭제합니다.")
+    @Operation(summary = "학생 탈퇴 처리",
+            description = "학생 계정의 개인정보(학번·이름·이메일)를 지우고 다시 로그인할 수 없게 만듭니다. "
+                    + "작성한 글과 댓글은 '탈퇴한 학생' 이름으로 남습니다. "
+                    + "글을 함께 지우면 그 글에 달린 다른 학생의 댓글까지 사라지기 때문입니다.")
     public ResponseEntity<?> deleteMember(@PathVariable Long id) {
         try {
             memberService.deleteMemberByAdmin(id);
-            return ResponseEntity.ok(Map.of("message", "회원이 성공적으로 삭제되었습니다."));
+            return ResponseEntity.ok(Map.of("message",
+                    "회원을 탈퇴 처리했습니다. 작성한 글과 댓글은 '탈퇴한 학생' 이름으로 남습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

@@ -53,11 +53,14 @@ class MemberVerificationCodeHardeningTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailService emailService;
 
+    @Mock
+    private MemberWithdrawer memberWithdrawer;
+
     private MemberService memberService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberService(memberRepository, passwordEncoder, emailService);
+        memberService = new MemberService(memberRepository, passwordEncoder, emailService, memberWithdrawer);
         when(memberRepository.findByLoginId(LOGIN_ID)).thenReturn(Optional.of(pendingMember()));
         when(memberRepository.findByEmail(anyString())).thenReturn(Optional.empty());
     }
