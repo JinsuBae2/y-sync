@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-09-21 - 스크랩·신고 중복행 차단 (UNIQUE 제약)
+
+- 누가: 백엔드·운영 DB 공통 작업
+- 무엇을: `scrap`과 `report`에 UNIQUE 제약을 추가하고, 중복키 위반이 500이 아닌 정상 응답으로 처리되게 했습니다.
+- 왜:
+  - 두 서비스 모두 "조회 후 INSERT" 구조라 같은 요청이 동시에 들어오면 애플리케이션 검사를 둘 다 통과해 중복행이 생깁니다.
+  - 스크랩은 중복행이 한 번 생기면 `findByMemberIdAndTargetTypeAndTargetId`가 `IncorrectResultSizeDataAccessException`으로 깨져 **그 사용자는 해당 글의 스크랩 토글에서 영구히 500을 받습니다.**
+  - 신고는 한 사람의 신고가 여러 건으로 세어져, 자동 블라인드 임계(5회)가 실제 5명보다 적은 인원으로 도달합니다.
+  - 제약 추가 전에 운영 DB에 중복행이 있으면 DDL 자체가 실패하므로 확인이 선행 조건이었습니다.
+- 어떻게:
+  - 운영 MySQL에서 중복행을 먼저 조회했습니다. `scrap` 0건, `report` 0건이라 정리 없이 제약을 추가할 수 있었습니다.
+  - `report`의 사용자 식별 컬럼은 `member_id`가 아니라 **`reporter_id`** 입니다. 확인 쿼리를 이 컬럼으로 실행했습니다.
+  - 엔티티에 `@Table(uniqueConstraints = ...)`를 선언했습니다. `uq_scrap(member_id, target_type, target_id)`, `uq_report(reporter_id, target_type, target_id)`.
+  - 중복키 예외는 트랜잭션 경계 **밖**인 컨트롤러에서 잡습니다. 서비스 안에서 잡으면 이미 롤백 표시된 트랜잭션을 커밋하려다 `UnexpectedRollbackException`이 납니다.
+    - 스크랩: 경쟁에서 진 요청도 "스크랩됨"이라는 결과는 달성됐으므로 200으로 응답합니다.
+    - 신고: 사전 검사와 같은 "이미 신고한 대상입니다." 400으로 응답합니다.
+  - `GlobalExceptionHandler`에 `DataIntegrityViolationException` 핸들러를 마지막 방어선으로 추가했습니다(409). 제약 위반은 서버 결함이 아니라 데이터 상태이므로 500으로 내보내지 않습니다.
+- 운영 DDL: 배포 전에 운영 DB에 먼저 적용합니다. 현재 `ddl-auto=update`라 적용하지 않아도 기동 시 Hibernate가 같은 인덱스를 만들지만, 스키마 변경 시점을 배포에 맡기지 않기 위해 수동 적용을 먼저 합니다.
+
+```sql
+-- 적용 직전 재확인 (둘 다 0행이어야 합니다)
+SELECT member_id, target_type, target_id, COUNT(*) c
+FROM scrap GROUP BY member_id, target_type, target_id HAVING c > 1;
+SELECT reporter_id, target_type, target_id, COUNT(*) c
+FROM report GROUP BY reporter_id, target_type, target_id HAVING c > 1;
+
+ALTER TABLE scrap  ADD CONSTRAINT uq_scrap  UNIQUE (member_id, target_type, target_id);
+ALTER TABLE report ADD CONSTRAINT uq_report UNIQUE (reporter_id, target_type, target_id);
+```
+
+- 언제·어디서: 2026-09-21, `fix/scrap-report-unique` 브랜치.
+- 검증: 백엔드 테스트 통과. 같은 회원·대상으로 두 번째 행을 저장하면 `DataIntegrityViolationException`이 나는지, 8개 스레드가 동시에 토글·신고해도 스크랩 행이 2건 이상으로 늘지 않고 신고가 정확히 1건만 적재되는지 실제 커밋으로 확인했습니다. 중복행이 있을 때만 나는 `IncorrectResultSizeDataAccessException`이 한 건도 발생하지 않는 것도 함께 고정했습니다.
+- 남은 일: `ddl-auto`를 `validate`로 전환하는 작업은 별도입니다. 전환 시 이 두 제약이 스키마에 실제로 존재해야 기동에 실패하지 않습니다.
+
+---
+
 ## 2026-09-21 - 분석 경고 정리, CI 게이트, 관리자 API 테스트, DB 기동 순서
 
 - 누가: 프론트엔드·백엔드·인프라 공통 정리
