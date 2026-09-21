@@ -120,7 +120,7 @@ class ScrapReportUniqueConstraintTest {
                 .hasSizeLessThanOrEqualTo(1);
         // 중복 INSERT는 DataIntegrityViolationException으로만 떨어져야 하며(컨트롤러가 성공으로 흡수합니다),
         // 중복행이 생겼을 때 나타나는 조회 실패는 한 건도 없어야 합니다.
-        assertThat(unexpected).isEmpty();
+        assertThat(unexpected).as("예상하지 못한 예외: %s", unexpected).isEmpty();
 
         // 중복행이 남았다면 이 조회가 IncorrectResultSizeDataAccessException으로 깨집니다.
         assertThatCode(() -> scrapRepository.findByMemberIdAndTargetTypeAndTargetId(
@@ -138,7 +138,7 @@ class ScrapReportUniqueConstraintTest {
 
         assertThat(reportRepository.countByTargetTypeAndTargetId(Report.TargetType.POST, post.getId()))
                 .isEqualTo(1);
-        assertThat(unexpected).isEmpty();
+        assertThat(unexpected).as("예상하지 못한 예외: %s", unexpected).isEmpty();
         // 신고 1건이 여러 건으로 세어지지 않으므로 자동 블라인드가 잘못 발동하지 않습니다.
         assertThat(communityPostRepository.findById(post.getId()).orElseThrow().isDeleted()).isFalse();
     }

@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,32 +28,33 @@ public class ScrapService {
 
     @Transactional
     public void toggleScrap(Long memberId, TargetType targetType, Long targetId) {
+        // 💡 해제는 조건부 DELETE 한 문장으로 처리합니다. 지워진 행이 없으면 아직 스크랩하지 않은 상태입니다.
+        //    조회해서 엔티티를 지우면, 같은 해제 요청이 동시에 들어왔을 때(버튼 연타 등)
+        //    한쪽이 "expected row count 1 but was 0"으로 500을 받습니다.
+        if (scrapRepository.deleteByMemberIdAndTargetTypeAndTargetId(memberId, targetType, targetId) > 0) {
+            return;
+        }
+
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다."));
 
-        Optional<Scrap> existingScrap = scrapRepository.findByMemberIdAndTargetTypeAndTargetId(memberId, targetType, targetId);
-
-        if (existingScrap.isPresent()) {
-            scrapRepository.delete(existingScrap.get());
-        } else {
-            // 게시글 존재 검증 (삭제된 글인지 체크 등)
-            if (targetType == TargetType.NOTICE) {
-                if(noticeRepository.findById(targetId).isEmpty()) {
-                    throw new IllegalArgumentException("공지사항을 찾을 수 없습니다.");
-                }
-            } else {
-                CommunityPost post = communityPostRepository.findById(targetId)
-                        .orElseThrow(() -> new IllegalArgumentException("커뮤니티 게시글을 찾을 수 없습니다."));
-                if(post.isDeleted()) throw new IllegalArgumentException("삭제된 게시글은 스크랩할 수 없습니다.");
+        // 게시글 존재 검증 (삭제된 글인지 체크 등)
+        if (targetType == TargetType.NOTICE) {
+            if(noticeRepository.findById(targetId).isEmpty()) {
+                throw new IllegalArgumentException("공지사항을 찾을 수 없습니다.");
             }
-
-            Scrap scrap = Scrap.builder()
-                    .member(member)
-                    .targetType(targetType)
-                    .targetId(targetId)
-                    .build();
-            scrapRepository.save(scrap);
+        } else {
+            CommunityPost post = communityPostRepository.findById(targetId)
+                    .orElseThrow(() -> new IllegalArgumentException("커뮤니티 게시글을 찾을 수 없습니다."));
+            if(post.isDeleted()) throw new IllegalArgumentException("삭제된 게시글은 스크랩할 수 없습니다.");
         }
+
+        // 💡 추가 쪽 경쟁은 uq_scrap 이 막습니다. 중복키 예외는 컨트롤러가 "스크랩됨"으로 흡수합니다.
+        scrapRepository.save(Scrap.builder()
+                .member(member)
+                .targetType(targetType)
+                .targetId(targetId)
+                .build());
     }
 
     public List<ScrapResponseDto> getMyScraps(Long memberId) {

@@ -17,6 +17,7 @@
   - 운영 MySQL에서 중복행을 먼저 조회했습니다. `scrap` 0건, `report` 0건이라 정리 없이 제약을 추가할 수 있었습니다.
   - `report`의 사용자 식별 컬럼은 `member_id`가 아니라 **`reporter_id`** 입니다. 확인 쿼리를 이 컬럼으로 실행했습니다.
   - 엔티티에 `@Table(uniqueConstraints = ...)`를 선언했습니다. `uq_scrap(member_id, target_type, target_id)`, `uq_report(reporter_id, target_type, target_id)`.
+  - 스크랩 **해제**는 조건부 DELETE 한 문장으로 바꿨습니다. 엔티티를 조회해서 지우면 같은 해제 요청이 동시에 들어왔을 때(버튼 연타) 한쪽이 `ObjectOptimisticLockingFailureException`("expected row count 1 but was 0")으로 500을 받습니다. "0행 삭제"는 오류가 아니므로 이 방식은 경쟁에서 져도 실패하지 않습니다. 동시성 테스트를 CI에서 돌리다 실제로 발견해 함께 고쳤습니다.
   - 중복키 예외는 트랜잭션 경계 **밖**인 컨트롤러에서 잡습니다. 서비스 안에서 잡으면 이미 롤백 표시된 트랜잭션을 커밋하려다 `UnexpectedRollbackException`이 납니다.
     - 스크랩: 경쟁에서 진 요청도 "스크랩됨"이라는 결과는 달성됐으므로 200으로 응답합니다.
     - 신고: 사전 검사와 같은 "이미 신고한 대상입니다." 400으로 응답합니다.
@@ -35,7 +36,7 @@ ALTER TABLE report ADD CONSTRAINT uq_report UNIQUE (reporter_id, target_type, ta
 ```
 
 - 언제·어디서: 2026-09-21, `fix/scrap-report-unique` 브랜치.
-- 검증: 백엔드 테스트 통과. 같은 회원·대상으로 두 번째 행을 저장하면 `DataIntegrityViolationException`이 나는지, 8개 스레드가 동시에 토글·신고해도 스크랩 행이 2건 이상으로 늘지 않고 신고가 정확히 1건만 적재되는지 실제 커밋으로 확인했습니다. 중복행이 있을 때만 나는 `IncorrectResultSizeDataAccessException`이 한 건도 발생하지 않는 것도 함께 고정했습니다.
+- 검증: 백엔드 테스트 통과. 동시성 테스트는 10회 반복 실행해 흔들리지 않는 것을 확인했습니다. 같은 회원·대상으로 두 번째 행을 저장하면 `DataIntegrityViolationException`이 나는지, 8개 스레드가 동시에 토글·신고해도 스크랩 행이 2건 이상으로 늘지 않고 신고가 정확히 1건만 적재되는지 실제 커밋으로 확인했습니다. 중복행이 있을 때만 나는 `IncorrectResultSizeDataAccessException`이 한 건도 발생하지 않는 것도 함께 고정했습니다.
 - 남은 일: `ddl-auto`를 `validate`로 전환하는 작업은 별도입니다. 전환 시 이 두 제약이 스키마에 실제로 존재해야 기동에 실패하지 않습니다.
 
 ---
