@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/scrap.dart';
 import 'api_client_provider.dart';
 import 'session_provider.dart';
+import 'package:flutter/foundation.dart';
 
 // 💡 내 스크랩 목록을 서버에서 가져옵니다.
 final scrapsProvider = FutureProvider<List<Scrap>>((ref) async {
@@ -30,7 +31,7 @@ class ScrapNotifier {
       ref.invalidate(scrapsProvider);
     } catch (e) {
       // 에러 처리 (필요 시)
-      print('Scrap toggle error: $e');
+      debugPrint('Scrap toggle error: $e');
     }
   }
 }

@@ -147,6 +147,8 @@ jobs:
 
       - name: Analyze Flutter
         working-directory: frontend
+        # 💡 여기는 완화된 상태로 둡니다. 같은 검사를 PR CI가 이미 엄격하게 수행하므로,
+        #    배포 시점에 같은 이유로 실패하면 얻는 것 없이 배포만 막힙니다.
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Test and Build Flutter Web

@@ -4,6 +4,7 @@ import '../models/member.dart';
 import '../models/notice_grade_preference.dart';
 import 'api_client_provider.dart';
 import 'session_provider.dart';
+import 'package:flutter/foundation.dart';
 
 import '../services/push_notification_service.dart'; // 💡 FCM 추가
 
@@ -22,10 +23,10 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       final token = await PushNotificationService().getToken();
       if (token != null) {
         await dio.post('/auth/fcm-token', data: {'fcmToken': token});
-        print('FCM Token sent successfully');
+        debugPrint('FCM Token sent successfully');
       }
     } catch (e) {
-      print('Failed to send FCM token to backend: $e');
+      debugPrint('Failed to send FCM token to backend: $e');
     }
   }
 
@@ -142,7 +143,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
           'name': name,
           'socialId': socialId,
           'provider': provider,
-          if (password != null) 'password': password,
+          'password': ?password,
         },
       );
 
@@ -324,7 +325,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
 
       state = const AsyncValue.data(null);
     } catch (e) {
-      print('Logout API call failed: $e');
+      debugPrint('Logout API call failed: $e');
       final storage = ref.read(secureStorageProvider);
       await storage.delete(key: 'jwt_token');
       state = const AsyncValue.data(null);

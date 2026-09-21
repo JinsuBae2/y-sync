@@ -57,7 +57,9 @@ jobs:
 
       - name: Analyze Flutter
         working-directory: frontend
-        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+        # 💡 경고와 정보를 모두 CI 실패로 다룹니다. 이전에는 둘 다 무시해서 경고가 26건까지
+        #    쌓여도 CI가 통과했습니다. 지금은 0건이므로 이 시점에 게이트를 조입니다.
+        run: flutter analyze
 
       - name: Run Web Gesture and Diagnostics Tests
         working-directory: frontend
