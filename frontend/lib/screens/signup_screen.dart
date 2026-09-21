@@ -26,6 +26,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _isStudentInfoVerified = false; // 1차 정보 대조 확인 완료 여부
   bool _isEmailSent = false; // 2차 이메일 인증코드 발송 여부
   bool _isVerified = false; // 이메일 인증 최종 통과 여부
+  // 💡 인증을 통과한 주체임을 증명하는 값입니다. 가입 요청에만 쓰고 저장소에는 남기지 않습니다.
+  String? _verificationGrant;
   NoticeGradePreference? _noticeGradePreference; // 💡 공지 알림 수신 대상 선택
 
   Timer? _timer;
@@ -211,13 +213,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final isSuccess = await ref
+      final grant = await ref
           .read(authProvider.notifier)
           .verifyCode(loginId, code);
-      if (isSuccess) {
+      if (grant != null && grant.isNotEmpty) {
         _timer?.cancel();
         setState(() {
           _isVerified = true;
+          _verificationGrant = grant;
         });
         _showSuccessSnackBar('본인 이메일 인증에 성공했습니다!');
       } else {
@@ -245,7 +248,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       return;
     }
 
-    if (!_isVerified) {
+    final grant = _verificationGrant;
+    if (!_isVerified || grant == null || grant.isEmpty) {
       _showWarningSnackBar('이메일 인증을 완료해주세요.');
       return;
     }
@@ -284,6 +288,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             loginId,
             password,
             name,
+            verificationGrant: grant,
             noticeGradePreference: _noticeGradePreference,
           );
       if (mounted) {

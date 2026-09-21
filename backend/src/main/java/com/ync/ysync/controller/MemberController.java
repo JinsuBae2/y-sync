@@ -47,6 +47,7 @@ public class MemberController {
                 request.getLoginId(),
                 request.getPassword(),
                 request.getName(),
+                request.getVerificationGrant(),
                 request.getNoticeGradePreference(),
                 request.getNoticeGradePreference() == null ? null : noticeGradeService.currentAcademicYear());
         return ResponseEntity.ok("회원가입 성공");
@@ -106,8 +107,13 @@ public class MemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 인증 코드를 모두 입력해 주세요."));
         }
         try {
-            boolean isSuccess = memberService.verifySignupCode(loginId, code);
-            return ResponseEntity.ok(Map.of("success", isSuccess, "message", "인증이 성공적으로 완료되었습니다."));
+            // 💡 증표는 인증을 통과한 이 응답에만 실려 나갑니다. 클라이언트는 이 값을 가입 요청에
+            //    그대로 제시해야 하며, 저장하지 않고 메모리로만 들고 있다가 버립니다.
+            String verificationGrant = memberService.verifySignupCode(loginId, code);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "verificationGrant", verificationGrant,
+                    "message", "인증이 성공적으로 완료되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -193,6 +199,8 @@ public class MemberController {
         private String loginId;
         private String password;
         private String name;
+        // 💡 인증 코드 검증 응답으로 받은 증표입니다. 이 값이 없으면 가입이 거부됩니다.
+        private String verificationGrant;
         private NoticeGradePreference noticeGradePreference;
     }
 

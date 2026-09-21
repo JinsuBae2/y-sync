@@ -205,14 +205,19 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     }
   }
 
-  Future<bool> verifyCode(String loginId, String code) async {
+  /// 💡 인증번호를 확인하고 가입 증표를 돌려받습니다.
+  ///
+  /// 증표는 인증을 통과한 이 응답에만 실려 옵니다. 가입 요청에 이 값을 제시해야 하며,
+  /// 저장소에 남기지 않고 가입 화면이 메모리로만 들고 있다가 버립니다.
+  Future<String?> verifyCode(String loginId, String code) async {
     try {
       final dio = ref.read(dioProvider);
       final response = await dio.post(
         '/auth/verify-student/verify-code',
         data: {'loginId': loginId, 'code': code},
       );
-      return response.data['success'] ?? false;
+      if (response.data['success'] != true) return null;
+      return response.data['verificationGrant'] as String?;
     } catch (e) {
       if (e is DioException &&
           e.response?.data is Map &&
@@ -241,6 +246,7 @@ class AuthNotifier extends AsyncNotifier<Member?> {
     String loginId,
     String password,
     String name, {
+    required String verificationGrant,
     NoticeGradePreference? noticeGradePreference,
   }) async {
     try {
@@ -251,6 +257,8 @@ class AuthNotifier extends AsyncNotifier<Member?> {
           'loginId': loginId,
           'password': password,
           'name': name,
+          // 💡 인증을 통과한 주체임을 증명하는 값입니다. 없으면 서버가 가입을 거부합니다.
+          'verificationGrant': verificationGrant,
           // 💡 확인 학년도는 보내지 않습니다. 단말기 시각과 무관하게 서버가 계산합니다.
           if (noticeGradePreference != null)
             'noticeGradePreference': noticeGradePreference.wireValue,

@@ -107,6 +107,18 @@ public class MemberService {
         private final LocalDateTime expiredAt;
         private final String email;
         private final VerificationPurpose purpose;
+        // 💡 인증을 통과한 주체에게만 발급하는 증표입니다. 이 값이 없으면 통과 기록이 학번만으로
+        //    식별되어, 학번과 이름만 아는 제3자가 남의 인증 결과로 가입을 완료할 수 있습니다.
+        private final String grant;
+    }
+
+    /** 💡 가입 증표 판정 결과입니다. {@code compute} 안에서 예외를 던지지 않기 위해 분리합니다. */
+    private enum GrantOutcome {
+        NOT_FOUND,
+        EXPIRED,
+        PURPOSE_MISMATCH,
+        GRANT_MISMATCH,
+        SUCCESS
     }
 
     /**
@@ -172,13 +184,91 @@ public class MemberService {
     /**
      * 인증번호 검증
      */
-    public boolean verifySignupCode(String loginId, String code) {
+    public String verifySignupCode(String loginId, String code) {
         VerificationInfo consumed = verifyCode(loginId, code, VerificationPurpose.SIGNUP);
-        // 가입은 인증과 최종 제출이 분리된 흐름이므로 통과 기록을 남깁니다.
+
+        // 💡 가입은 인증과 최종 제출이 분리된 흐름이라 통과 기록을 남겨야 합니다. 이때 학번만 남기면
+        //    누가 인증했는지 알 수 없으므로, 추측할 수 없는 증표를 함께 발급해 인증한 주체에게만 돌려줍니다.
+        //    가입 요청은 이 증표를 제시해야 하며(`signup`), 증표는 한 번 쓰면 즉시 폐기됩니다.
+        String grant = issueSignupGrant();
         verifiedStudents.put(loginId, new VerifiedInfo(
                 LocalDateTime.now().plusMinutes(SIGNUP_GRANT_TTL_MINUTES),
-                consumed.getEmail(), VerificationPurpose.SIGNUP));
-        return true;
+                consumed.getEmail(), VerificationPurpose.SIGNUP, grant));
+        purgeExpiredSignupGrants();
+        return grant;
+    }
+
+    /** 💡 추측 불가능한 가입 증표를 만듭니다. 256비트 난수를 URL 안전 형식으로 인코딩합니다. */
+    private String issueSignupGrant() {
+        byte[] bytes = new byte[32];
+        secureRandom.nextBytes(bytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /**
+     * 💡 만료된 통과 기록을 정리합니다.
+     *
+     * 이 맵은 소비되거나 만료로 걸러질 때만 비워지므로, 인증만 하고 가입하지 않는 요청이 쌓이면
+     * 항목이 남습니다. 키가 학번이라 상한은 회원 수지만, 불필요한 증표를 유효 시간 이상 들고 있지
+     * 않도록 발급 시점에 함께 청소합니다.
+     */
+    private void purgeExpiredSignupGrants() {
+        LocalDateTime now = LocalDateTime.now();
+        verifiedStudents.values().removeIf(info -> info.getExpiredAt().isBefore(now));
+    }
+
+    /**
+     * 💡 제시된 증표를 원자적으로 검증하고 소비합니다.
+     *
+     * 같은 증표로 거의 동시에 들어온 요청이 둘 다 통과하지 않도록, 조회·검증·삭제를
+     * {@code compute} 한 번으로 묶어 최대 한 번만 성공하게 합니다.
+     */
+    private VerifiedInfo consumeSignupGrant(String loginId, String grant) {
+        AtomicReference<GrantOutcome> outcome = new AtomicReference<>();
+        AtomicReference<VerifiedInfo> consumed = new AtomicReference<>();
+
+        verifiedStudents.compute(loginId, (key, info) -> {
+            if (info == null) {
+                outcome.set(GrantOutcome.NOT_FOUND);
+                return null;
+            }
+            if (info.getExpiredAt().isBefore(LocalDateTime.now())) {
+                outcome.set(GrantOutcome.EXPIRED);
+                return null;
+            }
+            if (info.getPurpose() != VerificationPurpose.SIGNUP) {
+                outcome.set(GrantOutcome.PURPOSE_MISMATCH);
+                return info;
+            }
+            // 💡 틀린 증표는 통과 기록을 지우지 않습니다. 제3자가 아무 값이나 보내서
+            //    정상 사용자의 인증 결과를 날려버리는 것을 막기 위함입니다.
+            if (!constantTimeEquals(info.getGrant(), grant)) {
+                outcome.set(GrantOutcome.GRANT_MISMATCH);
+                return info;
+            }
+            outcome.set(GrantOutcome.SUCCESS);
+            consumed.set(info);
+            return null; // 소비 후 폐기. 재사용을 막습니다.
+        });
+
+        switch (outcome.get()) {
+            case NOT_FOUND, EXPIRED ->
+                    throw new IllegalArgumentException("이메일 인증이 완료되지 않았거나 인증 시간이 초과되었습니다.");
+            case PURPOSE_MISMATCH, GRANT_MISMATCH ->
+                    throw new IllegalArgumentException("가입 인증 정보가 올바르지 않습니다. 인증을 다시 진행해 주세요.");
+            case SUCCESS -> { /* 계속 진행 */ }
+        }
+        return consumed.get();
+    }
+
+    /** 💡 증표 비교는 길이·내용 모두 시간 정보를 흘리지 않도록 상수 시간으로 수행합니다. */
+    private boolean constantTimeEquals(String expected, String actual) {
+        if (expected == null || actual == null) {
+            return false;
+        }
+        return java.security.MessageDigest.isEqual(
+                expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                actual.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     /**
@@ -238,8 +328,8 @@ public class MemberService {
      * 최종 회원가입 및 계정 활성화
      */
     @Transactional
-    public Member signup(String loginId, String password, String name) {
-        return signup(loginId, password, name, null, null);
+    public Member signup(String loginId, String password, String name, String verificationGrant) {
+        return signup(loginId, password, name, verificationGrant, null, null);
     }
 
     /**
@@ -250,20 +340,18 @@ public class MemberService {
      *    이전 버전 클라이언트 호환을 위해 선택값이 없으면 미설정으로 둡니다.
      */
     @Transactional
-    public Member signup(String loginId, String password, String name,
+    public Member signup(String loginId, String password, String name, String verificationGrant,
                          NoticeGradePreference noticeGradePreference, Integer academicYear) {
         // 💡 비밀번호 정책은 인증 상태를 확인하기 전에 검사합니다. 정책 위반 같은 단순 입력 오류로
         //    이메일 인증 결과가 소모되지 않아야 사용자가 같은 인증으로 다시 시도할 수 있습니다.
         //    기존에는 이 검사가 비밀번호 재설정에만 있어 회원가입에서는 한 글자 비밀번호도 허용됐습니다.
         validatePassword(password);
 
-        // 1. 이메일 인증 통과 여부 검증
-        VerifiedInfo verifiedInfo = verifiedStudents.get(loginId);
-        if (verifiedInfo == null || verifiedInfo.getExpiredAt().isBefore(LocalDateTime.now())
-                || verifiedInfo.getPurpose() != VerificationPurpose.SIGNUP) {
-            verifiedStudents.remove(loginId);
-            throw new IllegalArgumentException("이메일 인증이 완료되지 않았거나 인증 시간이 초과되었습니다.");
-        }
+        // 1. 인증 증표 검증 및 소비
+        // 💡 이전 구현은 통과 기록을 학번만으로 조회해, 다른 사람이 인증을 마친 뒤 그 유효 시간 안에
+        //    학번과 이름만 아는 제3자가 가입을 완료할 수 있었습니다. 이제 인증한 주체만 가진 증표를
+        //    요구하며, 소비는 원자적이라 같은 증표로 두 번 가입할 수 없습니다.
+        VerifiedInfo verifiedInfo = consumeSignupGrant(loginId, verificationGrant);
 
         // 2. 사전 등록 계정 조회
         Member member = memberRepository.findByLoginId(loginId)
@@ -288,8 +376,6 @@ public class MemberService {
             member.setGradeConfirmedYear(academicYear);
         }
 
-        // 인증 성공 만료 처리
-        verifiedStudents.remove(loginId);
         // 💡 학교 메일 주소는 학번에서 유도할 수 없으므로(사용자 정의 ID) 가입 주체를 서버가 사전에 검증할 수 없습니다.
         //    대신 어떤 메일 계정이 어떤 학번으로 가입했는지를 남겨, 도용 신고 시 가해자를 특정할 수 있게 합니다.
         log.info("회원 가입 완료 - 학번: {}, 이름: {}, 인증 메일: {}", loginId, name, verifiedInfo.getEmail());
