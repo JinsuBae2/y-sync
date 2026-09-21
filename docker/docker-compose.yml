@@ -21,6 +21,14 @@ services:
       resources:
         limits:
           memory: 350M                      # MySQL 컨테이너가 사용할 수 있는 최대 물리 메모리 강제 제한
+    # 💡 컨테이너가 떴다는 것과 DB가 접속을 받을 준비가 됐다는 것은 다릅니다. 이 검사가 없으면
+    #    백엔드가 먼저 붙으려다 실패하고, 재시작 루프를 도는 동안 배포 헬스체크까지 흔들립니다.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
     restart: unless-stopped
     networks:
       - ysync-network
@@ -55,7 +63,8 @@ services:
       - ./firebase-adminsdk.json:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 로컬 호스트의 파이어베이스 키 파일을 컨테이너 내부로 바인드 마운트
       - ./uploads:/app/uploads  # 💡 [업로드 마운트] 이미지 보존을 위해 볼륨 바인딩
     depends_on:
-      - ysync-mysql
+      ysync-mysql:
+        condition: service_healthy
     deploy:
       resources:
         limits:

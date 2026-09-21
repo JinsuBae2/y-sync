@@ -45,7 +45,7 @@ class CalendarNotifier {
     final dio = ref.read(dioProvider);
     await dio.post('/calendar', data: {
       'title': title,
-      if (description != null) 'description': description,
+      'description': ?description,
       'startDate': startDate,
       'endDate': endDate,
       'color': color,
@@ -57,7 +57,7 @@ class CalendarNotifier {
     final dio = ref.read(dioProvider);
     await dio.put('/calendar/$id', data: {
       'title': title,
-      if (description != null) 'description': description,
+      'description': ?description,
       'startDate': startDate,
       'endDate': endDate,
       'color': color,
