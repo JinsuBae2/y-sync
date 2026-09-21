@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-09-21 - `ddl-auto`를 validate로 전환
+
+- 누가: 백엔드·운영 DB
+- 무엇을: 운영 프로파일의 `spring.jpa.hibernate.ddl-auto`를 `update`에서 `validate`로 바꿨습니다.
+- 왜: `update`는 Hibernate가 기동할 때마다 운영 스키마를 자동으로 바꾼다는 뜻입니다. 코드 한 줄이 배포와 함께 운영 DB 구조를 조용히 변경할 수 있었습니다. `docs/TROUBLESHOOTING.md` 4번의 `NoticeType` ENUM 장애가 이 계열의 사고입니다.
+- 어떻게:
+  - 운영 스키마를 `mysqldump --no-data --skip-comments --no-tablespaces`로 덤프해 로컬 MySQL 8.0 컨테이너(포트 3307)에 올렸습니다. 데이터는 넣지 않았고 운영 DB는 읽기만 했습니다.
+  - 그 복제본을 향해 `SPRING_PROFILES_ACTIVE=prod`, `SPRING_JPA_HIBERNATE_DDL_AUTO=validate`로 기동했습니다.
+  - **불일치 0건으로 정상 기동했습니다.** `update`로 오래 운영됐지만 엔티티와 어긋난 컬럼·타입·인덱스가 없었습니다. 수동 DDL이 필요 없었습니다.
+  - 검증 장치 자체가 동작하는지 확인했습니다. 복제본에서 `member.withdrawn_at`을 일부러 지우고 다시 기동해 `SchemaManagementException: missing column [withdrawn_at] in table [member]`로 실패하는 것을 본 뒤, 컬럼을 복구하고 다시 정상 기동을 확인했습니다. 이 확인이 없으면 "그냥 떴다"가 "validate가 적용되지 않았다"와 구분되지 않습니다.
+  - `application-prod.properties`의 주석을 전환 이후 기준으로 고쳤습니다. 이제 엔티티를 바꾸면 운영 DDL을 먼저 적용해야 하고, 순서가 뒤집히면 배포가 기동 실패로 끝난다는 점을 적었습니다.
+  - `docs/DDL_AUTO_MIGRATION.md`는 "전환 절차"에서 "엔티티 변경 시 영향을 미리 확인하는 절차"로 용도를 바꿔 기록했습니다.
+  - 복제 컨테이너는 확인 후 제거했습니다.
+- 언제·어디서: 2026-09-21, `chore/ddl-auto-validate` 브랜치.
+- 검증: 복제 환경에서 `validate` 정상 기동, 일부러 만든 불일치가 기동을 실패시키는 것까지 확인. 백엔드 테스트 전체 통과.
+- 남은 일: 스키마 변경 수단이 없어졌으므로 **Flyway 또는 Liquibase 도입**을 검토합니다. 현재 스키마를 baseline으로 잡고 이후 변경만 마이그레이션으로 관리하는 방식이 전환 비용이 가장 낮습니다. 그전까지는 엔티티를 바꿀 때마다 `docs/DDL_AUTO_MIGRATION.md` 3~4단계로 영향을 먼저 확인합니다.
+
+---
+
 ## 2026-09-21 - 스크랩·신고 중복행 차단 (UNIQUE 제약)
 
 - 누가: 백엔드·운영 DB 공통 작업
