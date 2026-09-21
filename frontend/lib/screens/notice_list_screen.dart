@@ -15,7 +15,20 @@ import '../widgets/notification_action_button.dart';
 import 'notice_form_screen.dart';
 
 class NoticeListScreen extends ConsumerStatefulWidget {
-  const NoticeListScreen({super.key});
+  const NoticeListScreen({
+    super.key,
+    this.newNoticePollInterval = defaultNewNoticePollInterval,
+  });
+
+  /// 💡 새 공지를 확인하는 주기입니다. 공지는 자주 올라오지 않으므로 짧게 잡을 이유가 없습니다.
+  static const defaultNewNoticePollInterval = Duration(seconds: 60);
+
+  /// null이면 주기 확인을 걸지 않습니다.
+  ///
+  /// 위젯 테스트에서 끄기 위한 이음새입니다. `Timer.periodic`이 살아 있으면 `pumpAndSettle`이
+  /// 가상 시간을 진행하다 타이머를 깨우고, 그 결과 상태가 바뀌어 다시 프레임이 잡히는 일이
+  /// 반복돼 영원히 안정되지 않습니다. 앱 복귀(`resumed`)와 당겨서 새로고침은 이 값과 무관합니다.
+  final Duration? newNoticePollInterval;
 
   @override
   ConsumerState<NoticeListScreen> createState() => _NoticeListScreenState();
@@ -27,8 +40,12 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
   final _scrollController = ScrollController();
   Timer? _newNoticeTimer;
 
-  /// 💡 새 공지를 확인하는 주기입니다. 공지는 자주 올라오지 않으므로 짧게 잡을 이유가 없습니다.
-  static const _newNoticePollInterval = Duration(seconds: 60);
+  /// 💡 "새 공지" 칩을 띄울 만큼 내려왔는지입니다.
+  ///
+  ///    스크롤 리스너에서 setState를 부르면 스크롤 한 틱마다 화면 전체가 다시 그려집니다.
+  ///    목록이 길수록 비싸고, 위젯 테스트에서는 pumpAndSettle이 프레임을 계속 잡아 멈추지
+  ///    않습니다. 값이 실제로 바뀔 때만 알리도록 분리했습니다.
+  final _isScrolledDown = ValueNotifier<bool>(false);
 
   /// 바닥에서 이만큼 남았을 때 미리 다음 페이지를 불러옵니다. 바닥에 닿은 뒤 부르면 빈 화면이 보입니다.
   static const _loadMoreThreshold = 400.0;
@@ -48,10 +65,13 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScroll);
-    _newNoticeTimer = Timer.periodic(
-      _newNoticePollInterval,
-      (_) => ref.read(noticeFeedProvider.notifier).checkForNewNotices(),
-    );
+    final interval = widget.newNoticePollInterval;
+    if (interval != null) {
+      _newNoticeTimer = Timer.periodic(
+        interval,
+        (_) => ref.read(noticeFeedProvider.notifier).checkForNewNotices(),
+      );
+    }
   }
 
   @override
@@ -60,6 +80,7 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
     _newNoticeTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _isScrolledDown.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -76,10 +97,10 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     if (_scrollController.position.extentAfter < _loadMoreThreshold) {
+      // 더 받을 게 없거나 이미 받는 중이면 Notifier가 알아서 무시합니다.
       ref.read(noticeFeedProvider.notifier).loadMore();
     }
-    // 칩 노출 조건이 스크롤 위치에 걸려 있어 다시 그려야 합니다.
-    setState(() {});
+    _isScrolledDown.value = _scrollController.offset > _chipVisibleOffset;
   }
 
   Future<void> _goToTopAndRefresh() async {
@@ -181,18 +202,28 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
                     Positioned.fill(child: _buildNoticeList(feedAsync)),
                     // 💡 스크롤을 내린 상태에서만 띄웁니다. 최상단에서는 당겨서 새로고침이면 충분하고,
                     //    읽는 중에 목록을 자동으로 밀어 넣으면 보던 자리를 잃습니다.
-                    if (_shouldShowNewNoticeChip(feedAsync))
-                      Positioned(
-                        top: 8,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: _NewNoticeChip(
-                            count: feedAsync.value!.newCount,
-                            onTap: _goToTopAndRefresh,
-                          ),
-                        ),
+                    Positioned(
+                      top: 8,
+                      left: 0,
+                      right: 0,
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: _isScrolledDown,
+                        builder: (context, isScrolledDown, _) {
+                          final feed = feedAsync.value;
+                          if (!isScrolledDown ||
+                              feed == null ||
+                              feed.newCount <= 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Center(
+                            child: _NewNoticeChip(
+                              count: feed.newCount,
+                              onTap: _goToTopAndRefresh,
+                            ),
+                          );
+                        },
                       ),
+                    ),
                     if (feedAsync.isRefreshing)
                       const Positioned(
                         top: 0,
@@ -212,14 +243,6 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
         ),
       ),
     );
-  }
-
-  /// 칩은 "새 공지가 있고" + "스크롤을 내려둔 상태"일 때만 띄웁니다.
-  bool _shouldShowNewNoticeChip(AsyncValue<NoticeFeedState> feedAsync) {
-    final feed = feedAsync.value;
-    if (feed == null || feed.newCount <= 0) return false;
-    if (!_scrollController.hasClients) return false;
-    return _scrollController.offset > _chipVisibleOffset;
   }
 
   Widget _buildNoticeList(AsyncValue<NoticeFeedState> feedAsync) {

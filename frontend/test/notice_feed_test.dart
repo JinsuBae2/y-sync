@@ -21,20 +21,6 @@ import 'package:y_sync/screens/notice_list_screen.dart';
 /// 이전에는 목록이 서버 기본 20건에서 끊기고 더 볼 수단이 없어, 21번째 공지부터는
 /// DB에 있어도 학생이 도달할 수 없었습니다.
 
-Notice _notice(int id) => Notice(
-  id: id,
-  title: '공지 $id',
-  content: '내용 $id',
-  authorName: '관리자',
-  noticeType: 'NOTICE',
-  createdAt: DateTime(2026, 9, 1).toIso8601String(),
-  targetGrade: 'ALL',
-  isPinned: false,
-  viewCount: 0,
-  commentCount: 0,
-  attachments: const [],
-);
-
 /// 커서 한 번에 10건씩 두 페이지를 주는 가짜 서버입니다.
 class _FakeFeedAdapter implements HttpClientAdapter {
   final List<String> requestedPaths = [];
@@ -193,7 +179,10 @@ void main() {
   });
 
   group('공지 목록 화면', () {
-    Future<void> pumpScreen(WidgetTester tester, _FakeFeedAdapter adapter) async {
+    Future<void> pumpScreen(
+      WidgetTester tester,
+      _FakeFeedAdapter adapter,
+    ) async {
       tester.view.physicalSize = const Size(390, 780);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -209,7 +198,11 @@ void main() {
             scrapsProvider.overrideWith((ref) async => []),
             unreadNotificationCountProvider.overrideWithValue(0),
           ],
-          child: const MaterialApp(home: NoticeListScreen()),
+          // 주기 폴링은 끕니다. 켜 두면 pumpAndSettle이 가상 시간을 진행하다 타이머를 깨워
+          // 영원히 안정되지 않습니다. 새 공지 확인은 테스트가 직접 호출합니다.
+          child: const MaterialApp(
+            home: NoticeListScreen(newNoticePollInterval: null),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -223,8 +216,12 @@ void main() {
 
       await tester.drag(find.byType(ListView), const Offset(0, -4000));
       await tester.pumpAndSettle();
-
       expect(adapter.requestedCursors, contains('CURSOR-2'));
+
+      // 2페이지가 붙으면서 바닥이 다시 아래로 밀립니다. ListView는 보이는 항목만 만들므로
+      // 끝까지 한 번 더 내려가야 마지막 칸이 트리에 올라옵니다.
+      await tester.drag(find.byType(ListView), const Offset(0, -4000));
+      await tester.pumpAndSettle();
       expect(find.text('마지막 공지입니다'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -233,18 +230,25 @@ void main() {
       final adapter = _FakeFeedAdapter()..newCount = 5;
       await pumpScreen(tester, adapter);
 
-      await tester.element(find.byType(ListView));
+      // 💡 이 테스트에서는 pumpAndSettle을 쓰지 않습니다. 스크롤 탄성 구간을 끝까지 정착시키는
+      //    동안 loadMore가 새 페이지를 붙이고 그게 다시 프레임을 잡아 안정 판정이 나지 않습니다.
+      //    확인하려는 것은 애니메이션이 아니라 "칩이 보이는가"라서 프레임 몇 장이면 충분합니다.
       final container = ProviderScope.containerOf(
         tester.element(find.byType(NoticeListScreen)),
+        listen: false,
       );
-      await container.read(noticeFeedProvider.notifier).checkForNewNotices();
-      await tester.pumpAndSettle();
+      // 💡 runAsync로 감쌉니다. testWidgets 본문은 가짜 시계 위에서 돌아가므로, 펌프 밖에서
+      //    실제 비동기 작업을 그냥 await 하면 시계가 진행되지 않아 영원히 완료되지 않습니다.
+      await tester.runAsync(
+        () => container.read(noticeFeedProvider.notifier).checkForNewNotices(),
+      );
+      await tester.pump();
 
-      // 최상단에서는 당겨서 새로고침이면 충분합니다.
+      // 최상단에서는 당겨서 새로고침이면 충분하므로 띄우지 않습니다.
       expect(find.byKey(const ValueKey('notice-new-chip')), findsNothing);
 
       await tester.drag(find.byType(ListView), const Offset(0, -600));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(find.byKey(const ValueKey('notice-new-chip')), findsOneWidget);
       expect(find.text('새 공지 5개'), findsOneWidget);
