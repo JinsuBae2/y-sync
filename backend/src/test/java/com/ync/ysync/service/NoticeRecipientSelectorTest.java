@@ -76,7 +76,7 @@ class NoticeRecipientSelectorTest {
         when(memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue())
                 .thenReturn(allPreferenceMembers());
 
-        List<Member> recipients = selector.selectRecipients(notice(Grade.valueOf(targetGrade)));
+        List<Member> recipients = selector.selectRecipients(notice(Grade.valueOf(targetGrade)), null);
 
         assertThat(recipients).extracting(Member::getLoginId)
                 .containsExactlyInAnyOrder(expected.split(","));
@@ -88,7 +88,7 @@ class NoticeRecipientSelectorTest {
                 member("admin1", NoticeGradePreference.GRADE_1, MemberRole.ADMIN),
                 member("admin2", NoticeGradePreference.GRADE_2, MemberRole.SUPER_ADMIN)));
 
-        assertThat(selector.selectRecipients(notice(Grade.GRADE_1)))
+        assertThat(selector.selectRecipients(notice(Grade.GRADE_1), null))
                 .extracting(Member::getLoginId).containsExactly("admin1");
     }
 
@@ -97,7 +97,7 @@ class NoticeRecipientSelectorTest {
         when(memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue())
                 .thenReturn(allPreferenceMembers());
 
-        assertThat(selector.selectRecipients(notice(null))).hasSize(5);
+        assertThat(selector.selectRecipients(notice(null), null)).hasSize(5);
     }
 
     @Test
@@ -107,6 +107,48 @@ class NoticeRecipientSelectorTest {
                 .thenReturn(allPreferenceMembers());
 
         // 도입 1단계와 장애 시 복구 경로. 학년 공지도 기존처럼 전원에게 나간다.
-        assertThat(selector.selectRecipients(notice(Grade.GRADE_1))).hasSize(5);
+        assertThat(selector.selectRecipients(notice(Grade.GRADE_1), null)).hasSize(5);
+    }
+
+    @Test
+    void 공지를_쓴_사람은_자기_공지_알림을_받지_않는다() {
+        // 💡 댓글 알림은 이미 자기 제외를 하고 있었는데(CommentEventListener) 공지 경로에만 빠져 있었습니다.
+        Member author = memberWithId(1L, "2305001");
+        Member other = memberWithId(2L, "2305002");
+        when(memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue())
+                .thenReturn(List.of(author, other));
+
+        assertThat(selector.selectRecipients(notice(Grade.ALL), author.getId()))
+                .containsExactly(other);
+    }
+
+    @Test
+    void 학년_필터가_꺼져_있어도_작성자는_제외한다() {
+        // 필터 설정과 무관하게 적용돼야 합니다.
+        ReflectionTestUtils.setField(selector, "gradeFilterEnabled", false);
+        Member author = memberWithId(1L, "2305001");
+        Member other = memberWithId(2L, "2305002");
+        when(memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue())
+                .thenReturn(List.of(author, other));
+
+        assertThat(selector.selectRecipients(notice(Grade.ALL), author.getId()))
+                .containsExactly(other);
+    }
+
+    @Test
+    void 작성자를_알_수_없으면_아무도_제외하지_않는다() {
+        Member first = memberWithId(1L, "2305001");
+        Member second = memberWithId(2L, "2305002");
+        when(memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue())
+                .thenReturn(List.of(first, second));
+
+        assertThat(selector.selectRecipients(notice(Grade.ALL), null))
+                .containsExactly(first, second);
+    }
+
+    private Member memberWithId(Long id, String loginId) {
+        Member member = member(loginId, NoticeGradePreference.GENERAL_ONLY, MemberRole.USER);
+        ReflectionTestUtils.setField(member, "id", id);
+        return member;
     }
 }
