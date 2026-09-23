@@ -38,7 +38,7 @@ public class NoticeEventListener {
         // 💡 0. 수신자를 한 번만 선정합니다. 앱 알림함과 푸시가 같은 목록을 사용해야 학년 판정이 어긋나지 않습니다.
         List<Member> recipients;
         try {
-            recipients = noticeRecipientSelector.selectRecipients(notice);
+            recipients = noticeRecipientSelector.selectRecipients(notice, event.getAuthorId());
         } catch (Exception e) {
             log.error("[Notification] 공지 수신자 선정 실패 - Notice ID: {}, 사유: {}", notice.getId(), e.getMessage(), e);
             return;

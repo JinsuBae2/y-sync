@@ -193,7 +193,7 @@ public class NoticeService {
         Notice savedNotice = noticeRepository.save(notice);
 
         // 💡 비동기 이벤트를 발행하여 FCM 알림 발송 (Loose Coupling)
-        eventPublisher.publishEvent(new NoticeCreatedEvent(this, savedNotice));
+        eventPublisher.publishEvent(new NoticeCreatedEvent(this, savedNotice, author.getId()));
 
         return savedNotice;
     }

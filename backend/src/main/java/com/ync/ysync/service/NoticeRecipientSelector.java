@@ -37,8 +37,17 @@ public class NoticeRecipientSelector {
     @Value("${ysync.notification.grade-filter.enabled:false}")
     private boolean gradeFilterEnabled;
 
-    public List<Member> selectRecipients(Notice notice) {
-        List<Member> candidates = memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue();
+    /**
+     * @param authorId 공지를 쓴 회원. 수신자에서 제외합니다. null이면 아무도 제외하지 않습니다.
+     */
+    public List<Member> selectRecipients(Notice notice, Long authorId) {
+        // 💡 작성자는 자기 공지 알림을 받지 않습니다. 본인이 방금 올린 글이라 알릴 이유가 없고,
+        //    공지를 연달아 올리는 학기 초에는 알림함이 자기 글로 채워집니다.
+        //    댓글 알림은 이미 같은 규칙을 따릅니다(CommentEventListener의 "본인 글에 본인이 남긴 댓글" 스킵).
+        //    학년 필터보다 먼저 겁니다. 필터를 켜든 끄든 작성자 제외는 항상 적용돼야 합니다.
+        List<Member> candidates = memberRepository.findAllByIsActivatedTrueAndNoticeEnabledTrue().stream()
+                .filter(member -> authorId == null || !authorId.equals(member.getId()))
+                .toList();
 
         if (!gradeFilterEnabled) {
             return candidates;
@@ -51,7 +60,7 @@ public class NoticeRecipientSelector {
                         member.getNoticeGradePreference(), notice.getTargetGrade()))
                 .toList();
 
-        log.info("[Notification] 공지 수신자 선정 - 공지 ID: {}, 대상 학년: {}, 후보: {}명, 수신: {}명",
+        log.info("[Notification] 공지 수신자 선정 - 공지 ID: {}, 대상 학년: {}, 작성자 제외 후보: {}명, 수신: {}명",
                 notice.getId(), notice.getTargetGrade(), candidates.size(), recipients.size());
         return recipients;
     }
