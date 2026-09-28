@@ -2,7 +2,13 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate, Trend } from 'k6/metrics';
-import { buildRequest, buildSummary, buildTestProfile, endpointTypes } from './public-read-helpers.mjs';
+import {
+  buildRequest,
+  buildSummary,
+  buildTestProfile,
+  endpointTypes,
+  transportPhases,
+} from './public-read-helpers.mjs';
 
 const stages = buildTestProfile(__ENV.TEST_PROFILE);
 
@@ -22,6 +28,10 @@ const endpointMetrics = Object.fromEntries(
     timeout: new Counter(`timeout_endpoint_${endpoint.type}`),
     duration: new Trend(`duration_endpoint_${endpoint.type}`, true),
   }]),
+);
+
+const transportMetrics = Object.fromEntries(
+  transportPhases.map((phase) => [phase.metric, new Trend(phase.metric, true)]),
 );
 
 export const options = {
@@ -71,6 +81,11 @@ export default function () {
   endpoint.requests.add(1);
   endpoint.failed.add(!ok);
   endpoint.duration.add(response.timings.duration);
+  transportMetrics.transport_blocked.add(response.timings.blocked);
+  transportMetrics.transport_connecting.add(response.timings.connecting);
+  transportMetrics.transport_tls_handshaking.add(response.timings.tls_handshaking);
+  transportMetrics.transport_waiting.add(response.timings.waiting);
+  transportMetrics.transport_receiving.add(response.timings.receiving);
   if (response.status === 0 || response.error_code) {
     metrics.timeout.add(1);
     endpoint.timeout.add(1);

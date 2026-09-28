@@ -72,3 +72,23 @@ test('부하 테스트 요약은 요청 종류별 병목 지표를 출력한다'
   assert.match(summary, /요청 종류별 결과/);
   assert.match(summary, /공지 검색 \| 0\.50 \| 150\.0 ms \| 250\.0 ms \| 350\.0 ms \| 2\.00% \| 3/);
 });
+
+test('부하 테스트 요약은 전송 단계별 지연을 출력한다', () => {
+  const summary = buildSummary({
+    metrics: {
+      requests_soak_50_vu: { values: { count: 600 } },
+      transport_blocked: { values: { avg: 1.1, 'p(95)': 2.2, 'p(99)': 3.3 } },
+      transport_connecting: { values: { avg: 4.4, 'p(95)': 5.5, 'p(99)': 6.6 } },
+      transport_tls_handshaking: { values: { avg: 7.7, 'p(95)': 8.8, 'p(99)': 9.9 } },
+      transport_waiting: { values: { avg: 10.1, 'p(95)': 11.2, 'p(99)': 12.3 } },
+      transport_receiving: { values: { avg: 13.4, 'p(95)': 14.5, 'p(99)': 15.6 } },
+    },
+  }, [{ name: 'soak_50_vu', label: '50 VU / 10분 지속', seconds: 600 }], []);
+
+  assert.match(summary, /전송 단계별 지연/);
+  assert.match(summary, /연결 대기 \| 1\.1 ms \| 2\.2 ms \| 3\.3 ms/);
+  assert.match(summary, /TCP 연결 \| 4\.4 ms \| 5\.5 ms \| 6\.6 ms/);
+  assert.match(summary, /TLS 협상 \| 7\.7 ms \| 8\.8 ms \| 9\.9 ms/);
+  assert.match(summary, /서버 응답 대기 \| 10\.1 ms \| 11\.2 ms \| 12\.3 ms/);
+  assert.match(summary, /응답 수신 \| 13\.4 ms \| 14\.5 ms \| 15\.6 ms/);
+});

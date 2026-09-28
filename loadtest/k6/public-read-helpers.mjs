@@ -19,6 +19,14 @@ export const endpointTypes = [
   { type: 'health', label: '상태 확인' },
 ];
 
+export const transportPhases = [
+  { metric: 'transport_blocked', label: '연결 대기' },
+  { metric: 'transport_connecting', label: 'TCP 연결' },
+  { metric: 'transport_tls_handshaking', label: 'TLS 협상' },
+  { metric: 'transport_waiting', label: '서버 응답 대기' },
+  { metric: 'transport_receiving', label: '응답 수신' },
+];
+
 export function buildTestProfile(profile) {
   return profile === 'soak' ? soakProfile : stagedProfile;
 }
@@ -97,6 +105,22 @@ export function buildSummary(data, stages, endpoints = endpointTypes) {
       `${formatMs(value(data, `duration_endpoint_${endpoint.type}`, 'p(95)'))} | ` +
       `${formatMs(value(data, `duration_endpoint_${endpoint.type}`, 'p(99)'))} | ` +
       `${(failedRate * 100).toFixed(2)}% | ${timeoutCount}`,
+    );
+  }
+
+  lines.push(
+    '',
+    '전송 단계별 지연',
+    '',
+    '단계 | 평균 | p95 | p99',
+    '--- | ---: | ---: | ---:',
+  );
+
+  for (const phase of transportPhases) {
+    lines.push(
+      `${phase.label} | ${formatMs(value(data, phase.metric, 'avg'))} | ` +
+      `${formatMs(value(data, phase.metric, 'p(95)'))} | ` +
+      `${formatMs(value(data, phase.metric, 'p(99)'))}`,
     );
   }
 
