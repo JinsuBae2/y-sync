@@ -20,6 +20,7 @@ jobs:
     name: 공개 조회 단계별 부하 테스트
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: production
     env:
       BASE_URL: ${{ inputs.base_url }}
 
