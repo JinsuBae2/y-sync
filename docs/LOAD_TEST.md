@@ -44,8 +44,11 @@
 - HTTP 실패율
 - timeout/전송 오류 수
 - 공지 목록·공지 검색·상태 확인별 RPS, 평균, p95, p99, 실패율, timeout 수
+- 연결 대기, TCP 연결, TLS 협상, 서버 응답 대기, 응답 수신 단계별 평균·p95·p99
 
 기본 threshold는 `HTTP 실패율 < 1%`, `p95 < 1000ms`입니다. threshold가 실패해도 k6 summary를 먼저 출력한 뒤 workflow를 실패 처리합니다.
+
+TCP 연결과 TLS 협상은 기존 연결을 재사용한 요청에서 0ms로 기록됩니다. 따라서 평균값만으로 판단하지 않고 p95·p99와 서버 응답 대기 시간을 함께 비교합니다.
 
 ## GitHub Actions에서 실행
 
