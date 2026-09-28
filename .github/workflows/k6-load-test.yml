@@ -7,6 +7,14 @@ on:
         description: '운영 API 주소 (예: https://api.example.com)'
         required: true
         type: string
+      test_profile:
+        description: '테스트 유형: 단계형 또는 50 VU 10분 지속형'
+        required: true
+        default: staged
+        type: choice
+        options:
+          - staged
+          - soak
 
 permissions:
   contents: read
@@ -17,12 +25,13 @@ concurrency:
 
 jobs:
   k6:
-    name: 공개 조회 단계별 부하 테스트
+    name: 공개 조회 부하 테스트
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     environment: production
     env:
       BASE_URL: ${{ inputs.base_url }}
+      TEST_PROFILE: ${{ inputs.test_profile }}
 
     steps:
       - name: 소스 코드 받기
@@ -44,7 +53,7 @@ jobs:
             exit 1
           fi
 
-      - name: 단계별 k6 테스트 및 서버 자원 측정
+      - name: k6 테스트 및 서버 자원 측정
         id: k6
         continue-on-error: true
         env:
@@ -55,6 +64,7 @@ jobs:
           ssh_key="$RUNNER_TEMP/ysync-load-test-key"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$ssh_key"
           chmod 600 "$ssh_key"
+          test_started_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
           (
             sample=1
@@ -77,12 +87,22 @@ jobs:
           set +e
           docker run --rm \
             --env BASE_URL \
+            --env TEST_PROFILE \
             --volume "$GITHUB_WORKSPACE:/work:ro" \
             grafana/k6:0.54.0 run /work/loadtest/k6/public-read.js \
             2>&1 | tee k6-output.txt
           status=${PIPESTATUS[0]}
           kill "$monitor_pid" 2>/dev/null || true
           wait "$monitor_pid" 2>/dev/null || true
+
+          ssh \
+            -i "$ssh_key" \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            "$SERVER_USER@$SERVER_IP" \
+            "echo '=== 컨테이너 종료 상태 ==='; docker inspect --format '{{.Name}} RestartCount={{.RestartCount}} OOMKilled={{.State.OOMKilled}} Status={{.State.Status}}' ysync-backend ysync-mysql ysync-nginx; echo; echo '=== 테스트 구간 백엔드 경고/오류 로그 (최근 200줄) ==='; docker logs --since '$test_started_at' ysync-backend 2>&1 | grep -Ei 'warn|error|exception|timeout|hikari|connection' | tail -200" \
+            > server-diagnostic-output.txt 2>&1 \
+            || echo '서버 종료 진단 수집 실패' > server-diagnostic-output.txt
           rm -f "$ssh_key"
           trap - EXIT
 
@@ -95,6 +115,12 @@ jobs:
             echo ''
             echo '```text'
             cat server-resource-output.txt
+            echo '```'
+            echo ''
+            echo '## 운영 서버 종료 진단'
+            echo ''
+            echo '```text'
+            cat server-diagnostic-output.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"

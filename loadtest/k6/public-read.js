@@ -2,15 +2,9 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate, Trend } from 'k6/metrics';
-import { buildRequestUrl, buildSummary } from './public-read-helpers.mjs';
+import { buildRequest, buildSummary, buildTestProfile, endpointTypes } from './public-read-helpers.mjs';
 
-const stages = [
-  { name: 'stage_5_vu', label: '5 VU / 1분', vus: 5, duration: '1m', seconds: 60 },
-  { name: 'stage_10_vu', label: '10 VU / 2분', vus: 10, duration: '2m', seconds: 120 },
-  { name: 'stage_20_vu', label: '20 VU / 2분', vus: 20, duration: '2m', seconds: 120 },
-  { name: 'stage_30_vu', label: '30 VU / 2분', vus: 30, duration: '2m', seconds: 120 },
-  { name: 'stage_50_vu', label: '50 VU / 2분', vus: 50, duration: '2m', seconds: 120 },
-];
+const stages = buildTestProfile(__ENV.TEST_PROFILE);
 
 const stageMetrics = Object.fromEntries(
   stages.map((stage) => [stage.name, {
@@ -18,6 +12,15 @@ const stageMetrics = Object.fromEntries(
     failed: new Rate(`failed_${stage.name}`),
     timeout: new Counter(`timeout_${stage.name}`),
     duration: new Trend(`duration_${stage.name}`, true),
+  }]),
+);
+
+const endpointMetrics = Object.fromEntries(
+  endpointTypes.map((endpoint) => [endpoint.type, {
+    requests: new Counter(`requests_endpoint_${endpoint.type}`),
+    failed: new Rate(`failed_endpoint_${endpoint.type}`),
+    timeout: new Counter(`timeout_endpoint_${endpoint.type}`),
+    duration: new Trend(`duration_endpoint_${endpoint.type}`, true),
   }]),
 );
 
@@ -33,8 +36,14 @@ export const options = {
     }]),
   ),
   thresholds: {
-    http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<1000'],
+    http_req_failed: [
+      'rate<0.01',
+      { threshold: 'rate<0.05', abortOnFail: true, delayAbortEval: '1m' },
+    ],
+    http_req_duration: [
+      'p(95)<1000',
+      { threshold: 'p(95)<3000', abortOnFail: true, delayAbortEval: '1m' },
+    ],
   },
 };
 
@@ -46,14 +55,12 @@ function baseUrl() {
   return value;
 }
 
-function requestForUser(url) {
-  return buildRequestUrl(url, Math.random(), Math.random(), Math.random());
-}
-
 export default function () {
   const stageName = exec.scenario.name;
   const metrics = stageMetrics[stageName];
-  const response = http.get(requestForUser(baseUrl()), { timeout: '10s' });
+  const request = buildRequest(baseUrl(), Math.random(), Math.random(), Math.random());
+  const endpoint = endpointMetrics[request.type];
+  const response = http.get(request.url, { timeout: '10s', tags: { endpoint_type: request.type } });
   const ok = check(response, {
     '공개 조회 API가 2xx를 반환함': (res) => res.status >= 200 && res.status < 300,
   });
@@ -61,8 +68,12 @@ export default function () {
   metrics.requests.add(1);
   metrics.failed.add(!ok);
   metrics.duration.add(response.timings.duration);
+  endpoint.requests.add(1);
+  endpoint.failed.add(!ok);
+  endpoint.duration.add(response.timings.duration);
   if (response.status === 0 || response.error_code) {
     metrics.timeout.add(1);
+    endpoint.timeout.add(1);
   }
 
   // Keep a modest think time so the test approximates browsing rather than a tight loop.
@@ -70,5 +81,5 @@ export default function () {
 }
 
 export function handleSummary(data) {
-  return { stdout: buildSummary(data, stages) };
+  return { stdout: buildSummary(data, stages, endpointTypes) };
 }
