@@ -70,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
                     onAction: onOpenSchedule,
                   ),
                   const SizedBox(height: 12),
-                  _buildUpcomingEvents(eventsAsync),
+                  _buildUpcomingEvents(ref, eventsAsync),
                   const SizedBox(height: 32),
                   _SectionHeader(
                     title: '최근 공지',
@@ -130,7 +130,10 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildUpcomingEvents(AsyncValue<List<CalendarEvent>> eventsAsync) {
+  Widget _buildUpcomingEvents(
+    WidgetRef ref,
+    AsyncValue<List<CalendarEvent>> eventsAsync,
+  ) {
     return eventsAsync.when(
       data: (events) {
         final upcoming = _upcomingEvents(events).take(2).toList();
@@ -155,7 +158,9 @@ class HomeScreen extends ConsumerWidget {
         );
       },
       loading: () => const _LoadingRows(count: 2),
-      error: (error, stackTrace) => _InlineError(onRetry: onOpenSchedule),
+      error: (error, stackTrace) => _InlineError(
+        onRetry: () => ref.invalidate(homeCalendarEventsProvider),
+      ),
     );
   }
 

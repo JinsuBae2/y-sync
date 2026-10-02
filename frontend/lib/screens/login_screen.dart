@@ -652,7 +652,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(height: 16),
                               _buildSocialButton(
                                 iconPath: '',
-                                label: 'Google로 계속',
+                                label: 'Google 로그인 (준비 중)',
                                 color: Colors.white.withValues(alpha: 0.08),
                                 textColor: Colors.white,
                                 borderColor: Colors.white.withValues(
@@ -708,12 +708,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           children: [
             Icon(iconFallback, color: textColor, size: 22),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: textColor,
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
               ),
             ),
           ],

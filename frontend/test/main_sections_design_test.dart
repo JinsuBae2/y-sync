@@ -112,6 +112,10 @@ void main() {
     expect(find.text('전체 학년'), findsOneWidget);
     expect(find.text(_imagePost.title), findsOneWidget);
     expect(find.text(_post.title), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('community-post-thumbnail-1')),
+      findsNothing,
+    );
 
     final imageBookmark = tester.getRect(
       find.byKey(const ValueKey('community-post-bookmark-2')),
@@ -228,7 +232,7 @@ void main() {
 
     final scheduleTabs = tester.widget<TabBar>(find.byType(TabBar).first);
     final scheduleIndicator = scheduleTabs.indicator! as BoxDecoration;
-    expect(scheduleIndicator.color, const Color(0xFF164687));
+    expect(scheduleIndicator.color, const Color(0xFF246BFD));
     expect(scheduleTabs.labelColor, Colors.white);
 
     expect(find.text('학과 시간표'), findsOneWidget);
