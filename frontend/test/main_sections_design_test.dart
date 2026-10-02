@@ -307,6 +307,8 @@ void main() {
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('요일별'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('timetable-day-0')));
     await tester.pumpAndSettle();
     expect(
@@ -390,6 +392,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.tap(find.text('시간표'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('요일별'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('timetable-day-0')));
       await tester.pumpAndSettle();
