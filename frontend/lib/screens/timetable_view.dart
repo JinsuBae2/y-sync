@@ -424,19 +424,21 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
       padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
       child: Column(
         children: [
-          Wrap(
-            spacing: 18,
-            runSpacing: 8,
+          Row(
             children: [
-              _buildModeOption(
-                label: '학과 시간표',
-                selected: !_isPersonal,
-                onTap: () => setState(() => _isPersonal = false),
+              Expanded(
+                child: _buildModeOption(
+                  label: '학과 시간표',
+                  selected: !_isPersonal,
+                  onTap: () => setState(() => _isPersonal = false),
+                ),
               ),
-              _buildModeOption(
-                label: '개인 시간표',
-                selected: _isPersonal,
-                onTap: () => setState(() => _isPersonal = true),
+              Expanded(
+                child: _buildModeOption(
+                  label: '개인 시간표',
+                  selected: _isPersonal,
+                  onTap: () => setState(() => _isPersonal = true),
+                ),
               ),
             ],
           ),
