@@ -36,18 +36,28 @@ class _DeletionReasonDialogState extends State<DeletionReasonDialog> {
           children: [
             const Text('삭제 사유를 선택해주세요:'),
             const SizedBox(height: 12),
-            ..._reasons.map((reason) => RadioListTile<String>(
-              title: Text(reason),
-              value: reason,
+            // 💡 RadioListTile의 groupValue·onChanged는 폐기되었습니다. 선택 상태는 RadioGroup이
+            //    관리하고 각 타일은 값만 갖습니다.
+            RadioGroup<String>(
               groupValue: _selectedReason,
               onChanged: (value) {
                 setState(() {
                   _selectedReason = value;
                 });
               },
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-            )),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _reasons
+                    .map((reason) => RadioListTile<String>(
+                          title: Text(reason),
+                          value: reason,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ))
+                    .toList(),
+              ),
+            ),
             if (_selectedReason == '기타')
               Padding(
                 padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),

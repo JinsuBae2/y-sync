@@ -74,10 +74,10 @@ class LinkifyText extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF164687).withOpacity(0.08), // 브랜드 블루 옅은 8% 배경
+                  color: const Color(0xFF164687).withValues(alpha: 0.08), // 브랜드 블루 옅은 8% 배경
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: const Color(0xFF164687).withOpacity(0.2), // 테두리 라인
+                    color: const Color(0xFF164687).withValues(alpha: 0.2), // 테두리 라인
                     width: 0.5,
                   ),
                 ),

@@ -31,9 +31,20 @@ public class DataInitializer implements CommandLineRunner {
     private final TimetableEntryRepository timetableEntryRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // 💡 로컬·테스트 시드 계정 비밀번호입니다. 소스에 평문으로 두면 깃 히스토리에 영구히 남으므로
+    //    설정에서 주입받습니다. 이 클래스는 @Profile("!prod")라 운영에서는 실행되지 않습니다.
+    @org.springframework.beans.factory.annotation.Value("${ysync.seed.password:}")
+    private String seedPassword;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        if (seedPassword == null || seedPassword.isBlank()) {
+            log.warn("시드 계정 비밀번호가 설정되지 않아 초기 데이터 생성을 건너뜁니다. "
+                    + "로컬에서 테스트 계정이 필요하면 YSYNC_SEED_PASSWORD 환경 변수를 설정하세요.");
+            return;
+        }
+
         // --- 0. 기존 DB 회원 마이그레이션 (안전장치) ---
         // 이미 유효한 암호화된 비밀번호를 가진 계정들은 isActivated = true로 일괄 마이그레이션합니다.
         memberRepository.findAll().forEach(member -> {
@@ -48,21 +59,21 @@ public class DataInitializer implements CommandLineRunner {
         
         // 1. 마스터 관리자 (배진수)
         Member admin = memberRepository.findByLoginId("2305009").orElseGet(() -> 
-                Member.builder().loginId("2305009").password(passwordEncoder.encode("ync2305009!")).name("배진수").isActivated(true).build());
+                Member.builder().loginId("2305009").password(passwordEncoder.encode(seedPassword)).name("배진수").isActivated(true).build());
         admin.setRole(MemberRole.SUPER_ADMIN); // 💡 항상 SUPER_ADMIN으로 보장
         admin.setActivated(true);
         memberRepository.save(admin);
 
         // 2. 테스트 학생 1
         Member student1 = memberRepository.findByLoginId("2300001").orElseGet(() -> 
-                Member.builder().loginId("2300001").password(passwordEncoder.encode("test1234!")).name("김철수").isActivated(true).build());
+                Member.builder().loginId("2300001").password(passwordEncoder.encode(seedPassword)).name("김철수").isActivated(true).build());
         student1.setRole(MemberRole.USER);
         student1.setActivated(true);
         memberRepository.save(student1);
 
         // 3. 테스트 학생 2
         Member student2 = memberRepository.findByLoginId("2300002").orElseGet(() -> 
-                Member.builder().loginId("2300002").password(passwordEncoder.encode("test1234!")).name("이영희").isActivated(true).build());
+                Member.builder().loginId("2300002").password(passwordEncoder.encode(seedPassword)).name("이영희").isActivated(true).build());
         student2.setRole(MemberRole.USER);
         student2.setActivated(true);
         memberRepository.save(student2);

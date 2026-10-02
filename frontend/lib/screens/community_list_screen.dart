@@ -57,22 +57,17 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
 
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppDesignTokens.blue,
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        tooltip: '글쓰기',
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CommunityFormScreen()),
         ),
-        child: FloatingActionButton(
-          backgroundColor: AppDesignTokens.blue,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          tooltip: '글쓰기',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CommunityFormScreen()),
-          ),
-          child: const Icon(Icons.edit_outlined),
-        ),
+        child: const Icon(Icons.edit_outlined),
       ),
       body: SafeArea(
         bottom: false,
@@ -164,7 +159,7 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
           color: AppDesignTokens.blue,
           onRefresh: () async => ref.invalidate(communityPostsProvider),
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             itemCount: posts.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) => CommunityPostCard(

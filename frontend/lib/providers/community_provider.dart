@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 import '../models/community_post.dart';
 import '../utils/platform_file_multipart.dart';
-import 'notice_provider.dart';
+import 'api_client_provider.dart';
 
 // 💡 현재 선택된 커뮤니티 카테고리를 관리합니다. (Riverpod 3.x 호환 Notifier 사용)
 class CommunityCategoryNotifier extends Notifier<String> {

@@ -20,4 +20,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // 본인 소유의 알림인지 검증하여 삭제하기 위한 메소드
     void deleteByIdAndMemberId(Long id, Long memberId);
+
+    // 💡 탈퇴 처리 시 수신 알림을 모두 지웁니다.
+    void deleteAllByMemberId(Long memberId);
 }

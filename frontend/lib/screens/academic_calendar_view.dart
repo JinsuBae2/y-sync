@@ -196,12 +196,7 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
             physics: scrollWithPage
                 ? const NeverScrollableScrollPhysics()
                 : const BouncingScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              20,
-              12,
-              20,
-              MediaQuery.sizeOf(context).width < 900 ? 116 : 24,
-            ),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
             itemCount: selectedDayEvents.length,
             itemBuilder: (context, index) {
               final event = selectedDayEvents[index];
@@ -253,12 +248,17 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
     required bool isNoticeLink,
     required bool isAdmin,
   }) {
-    return Container(
+    // 💡 배경색을 Container가 아니라 Material(Card)이 그립니다.
+    //    ListTile은 가장 가까운 Material에 배경과 잉크를 그리므로, 사이에 색을 가진
+    //    DecoratedBox가 끼면 탭 잉크가 가려집니다. Flutter 3.47부터 assertion으로 잡힙니다.
+    return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppDesignTokens.surface,
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      color: AppDesignTokens.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppDesignTokens.divider),
+        side: const BorderSide(color: AppDesignTokens.divider),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
@@ -502,20 +502,15 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
         },
       ),
       floatingActionButton: isAdmin
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
+          ? FloatingActionButton(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: FloatingActionButton(
-                backgroundColor: AppDesignTokens.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onPressed: () => _showAddEditEventDialog(),
-                tooltip: '학사 일정 추가',
-                child: const Icon(Icons.add),
-              ),
+              onPressed: () => _showAddEditEventDialog(),
+              tooltip: '학사 일정 추가',
+              child: const Icon(Icons.add),
             )
           : null,
     );

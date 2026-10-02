@@ -49,9 +49,8 @@ Future<ContentDetailResult?> openContentDetail(
     Navigator.of(context, rootNavigator: true).pop();
     await loadingDialog;
     if (!context.mounted) return null;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('게시글을 불러올 수 없습니다.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('게시글을 불러올 수 없습니다.')));
     return null;
   }
 }

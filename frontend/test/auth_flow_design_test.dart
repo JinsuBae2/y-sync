@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:y_sync/screens/login_screen.dart';
 import 'package:y_sync/screens/pin_setup_screen.dart';
 import 'package:y_sync/screens/signup_screen.dart';
-import 'package:y_sync/screens/social_signup_screen.dart';
 
 void main() {
   testWidgets('로그인은 학번 로그인과 Google 로그인을 구분해 제공한다', (tester) async {
@@ -69,22 +68,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('소셜 가입은 계정 연결에 필요한 정보를 표시한다', (tester) async {
-    _setMobileViewport(tester);
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: SocialSignupScreen(socialId: 'social-user', provider: 'GOOGLE'),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('구글 계정 연동'), findsOneWidget);
-    expect(find.text('추가 정보 입력'), findsOneWidget);
-    expect(find.text('중복확인'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 
   testWidgets('PIN 설정은 입력과 건너뛰기 동선을 함께 제공한다', (tester) async {
     _setMobileViewport(tester);

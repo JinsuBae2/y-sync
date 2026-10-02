@@ -11,6 +11,7 @@ import '../providers/home_provider.dart';
 import '../providers/notice_provider.dart';
 import '../providers/timetable_provider.dart';
 import '../utils/content_detail_navigation.dart';
+import '../utils/time_remaining_formatter.dart';
 import '../widgets/brand_logo.dart';
 import '../widgets/notification_action_button.dart';
 
@@ -57,12 +58,7 @@ class HomeScreen extends ConsumerWidget {
               onRefresh: () => _refresh(ref),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  22,
-                  20,
-                  MediaQuery.sizeOf(context).width < 900 ? 116 : 36,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
                 children: [
                   _HomeHeader(memberName: memberName),
                   const SizedBox(height: 26),
@@ -544,7 +540,7 @@ class _TodayClassHero extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${info.minutesUntil}분 후',
+                            formatMinutesUntil(info.minutesUntil!),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,

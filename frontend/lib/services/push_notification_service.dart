@@ -11,7 +11,7 @@ import '../screens/deep_link_loading_screen.dart'; // 💡 딥링크 라우팅�
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
+  debugPrint("Handling a background message: ${message.messageId}");
 }
 
 class PushNotificationService {
@@ -37,13 +37,13 @@ class PushNotificationService {
         );
 
         if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-          print('FCM 권한 승인됨');
+          debugPrint('FCM 권한 승인됨');
         } else {
-          print('FCM 권한 거부 또는 미지원 (status: ${settings.authorizationStatus}). 알림 기능을 건너뜁니다.');
+          debugPrint('FCM 권한 거부 또는 미지원 (status: ${settings.authorizationStatus}). 알림 기능을 건너뜁니다.');
         }
       } catch (e) {
         // 💡 모바일 사파리(비-PWA) 등에서 권한 요청 자체가 예외를 던질 수 있음 → 로그만 남기고 진행
-        print('FCM 권한 요청 실패 (브라우저 미지원 가능): $e');
+        debugPrint('FCM 권한 요청 실패 (브라우저 미지원 가능): $e');
       }
 
       // 2. 백그라운드 메시지 수신 등록
@@ -125,7 +125,7 @@ class PushNotificationService {
           });
         }
       } catch (e) {
-        print('FCM 초기 메시지 조회 실패: $e');
+        debugPrint('FCM 초기 메시지 조회 실패: $e');
       }
 
       // 7. 앱이 백그라운드에 있다가 배너를 눌러 가져와진 경우
@@ -138,13 +138,13 @@ class PushNotificationService {
         try {
           await _fcm.subscribeToTopic('all');
         } catch (e) {
-          print('FCM 토픽 구독 실패: $e');
+          debugPrint('FCM 토픽 구독 실패: $e');
         }
       }
       */
     } catch (e) {
       // 💡 최상위 방어: 어떤 예외가 발생해도 앱 자체는 절대 멈추지 않습니다.
-      print('PushNotificationService 초기화 중 예외 발생 (앱 실행에 영향 없음): $e');
+      debugPrint('PushNotificationService 초기화 중 예외 발생 (앱 실행에 영향 없음): $e');
     }
   }
 
@@ -162,7 +162,7 @@ class PushNotificationService {
       final targetType = data['targetType'] ?? data['type'];
       final targetId = data['targetId'] ?? data['postId'];
       
-      print('FCM Routing -> Type: $targetType, ID: $targetId');
+      debugPrint('FCM Routing -> Type: $targetType, ID: $targetId');
       
       if (targetType != null && targetId != null && navigatorKey.currentState != null) {
          // 💡 화면 텔레포트 (원하는 상세 화면으로 라우팅 처리)
@@ -176,7 +176,7 @@ class PushNotificationService {
          );
       }
     } catch (e) {
-      print('FCM Payload Parse Error: $e');
+      debugPrint('FCM Payload Parse Error: $e');
     }
   }
 
@@ -193,7 +193,7 @@ class PushNotificationService {
         
         // VAPID 키가 비어있는 경우
         if (vapidKey.isEmpty) {
-          print('FCM 웹 VAPID Key가 비어있어, 웹 브라우저 토큰 요청을 건너뜁니다.');
+          debugPrint('FCM 웹 VAPID Key가 비어있어, 웹 브라우저 토큰 요청을 건너뜁니다.');
           return null;
         }
         
@@ -201,7 +201,7 @@ class PushNotificationService {
       }
       return await _fcm.getToken();
     } catch (e) {
-      print('FCM 토큰 발급 실패: $e');
+      debugPrint('FCM 토큰 발급 실패: $e');
       return null;
     }
   }

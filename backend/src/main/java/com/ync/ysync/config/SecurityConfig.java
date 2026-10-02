@@ -44,7 +44,10 @@ public class SecurityConfig {
                 .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED))
             )
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/**").permitAll()
+                // 💡 공지 목록·검색·상세만 비로그인 공개합니다. 단일 세그먼트 패턴(`/*`)이므로
+                //    `/api/v1/notices/{id}/comments`는 포함되지 않습니다. 댓글 응답에는 작성자 실명과
+                //    회원 ID가 들어 있어 이전의 `/**` 패턴에서는 비로그인 수집이 가능했습니다.
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/*").permitAll()
                 .requestMatchers("/api/v1/hello", "/api/v1/auth/**", "/uploads/**", "/s3-uploads/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             )

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/comment.dart';
+import 'api_client_provider.dart';
 import 'notice_provider.dart';
 import 'community_provider.dart'; // 💡 [Bug4 Fix] 커뮤니티 목록 갱신을 위해 추가
 import 'mypage_provider.dart';

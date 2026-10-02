@@ -5,6 +5,7 @@ import '../models/timetable_entry.dart';
 import '../providers/timetable_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/selection_highlight.dart';
 
 // 💡 학과 공용 시간표와 학생 개인 시간표를 전환해 보여주는 뷰입니다.
 class TimetableView extends ConsumerStatefulWidget {
@@ -59,20 +60,21 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
     return days[index];
   }
 
-  Color _getCourseBackground(String subjectName) {
-    return switch (subjectName.hashCode.abs() % 3) {
-      0 => AppDesignTokens.paleBlue,
-      1 => AppDesignTokens.navy.withValues(alpha: 0.07),
-      _ => AppDesignTokens.blue.withValues(alpha: 0.08),
-    };
-  }
+  static const _coursePalette = [
+    (background: Color(0xFFE8F0FF), accent: Color(0xFF5378B9)),
+    (background: Color(0xFFE9F4F1), accent: Color(0xFF4F8177)),
+    (background: Color(0xFFF2ECF8), accent: Color(0xFF80669A)),
+    (background: Color(0xFFFFF1E7), accent: Color(0xFFA66F45)),
+    (background: Color(0xFFE9F3F8), accent: Color(0xFF4D7E96)),
+    (background: Color(0xFFF7ECEF), accent: Color(0xFF986579)),
+  ];
 
-  Color _getCourseBorder(String subjectName) {
-    return switch (subjectName.hashCode.abs() % 3) {
-      0 => AppDesignTokens.blue.withValues(alpha: 0.48),
-      1 => AppDesignTokens.navy.withValues(alpha: 0.36),
-      _ => AppDesignTokens.blue.withValues(alpha: 0.28),
-    };
+  ({Color background, Color accent}) _courseColor(String subjectName) {
+    var hash = 0x811C9DC5;
+    for (final codeUnit in subjectName.codeUnits) {
+      hash = ((hash ^ codeUnit) * 0x01000193) & 0xFFFFFFFF;
+    }
+    return _coursePalette[hash % _coursePalette.length];
   }
 
   @override
@@ -90,292 +92,287 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
         (currentUser.role == 'ADMIN' || currentUser.role == 'SUPER_ADMIN');
     final isMobile = MediaQuery.sizeOf(context).width < 600;
 
+    final controls = <Widget>[
+      _buildTopControls(
+        selectedGrade: selectedGrade,
+        selectedClass: selectedClass,
+      ),
+      if (isMobile) _buildMobileViewControls(),
+    ];
+    final timetableContent = timetableAsync.when(
+      loading: () => const SizedBox(
+        height: 240,
+        child: Center(
+          child: CircularProgressIndicator(color: AppDesignTokens.blue),
+        ),
+      ),
+      error: (err, stack) => const SizedBox(
+        height: 240,
+        child: Center(
+          child: Text(
+            '시간표를 불러오지 못했습니다.',
+            style: TextStyle(color: AppDesignTokens.muted),
+          ),
+        ),
+      ),
+      data: (entries) {
+        if (isMobile && !_showWeeklyGrid) {
+          return _buildMobileDayList(entries, isAdmin: isAdmin);
+        }
+        final planner = _buildWeeklyPlanner(
+          entries,
+          isAdmin: isAdmin,
+          isMobile: isMobile,
+        );
+        return isMobile
+            ? SizedBox(height: _mobileWeeklyPlannerHeight, child: planner)
+            : planner;
+      },
+    );
+
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
-      body: Column(
-        children: [
-          Container(
-            height: 44,
-            margin: const EdgeInsets.fromLTRB(20, 4, 20, 10),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: AppDesignTokens.paleBlue,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
+      body: isMobile
+          ? SingleChildScrollView(
+              key: const ValueKey('mobile-timetable-page-scroll'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [...controls, timetableContent],
+              ),
+            )
+          : Column(
               children: [
-                _buildModeOption(
-                  label: '학과 시간표',
-                  icon: Icons.school_outlined,
-                  selected: !_isPersonal,
-                  onTap: () => setState(() => _isPersonal = false),
+                ...controls,
+                Expanded(child: timetableContent),
+              ],
+            ),
+      floatingActionButton: currentUser != null && (_isPersonal || isAdmin)
+          ? FloatingActionButton(
+              backgroundColor: AppDesignTokens.blue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              onPressed: _isPersonal
+                  ? _showPersonalAddOptions
+                  : () => _showAddEditEntryDialog(),
+              tooltip: _isPersonal ? '내 수업 추가' : '학과 수업 추가',
+              child: const Icon(Icons.add),
+            )
+          : null,
+    );
+  }
+
+  static const int _plannerStartHour = 9;
+  static const int _plannerEndHour = 18;
+  static const int _mobilePlannerCellHeight = 70;
+  static const double _mobileWeeklyPlannerHeight =
+      51 +
+      ((_plannerEndHour - _plannerStartHour) * _mobilePlannerCellHeight) +
+      80;
+
+  Widget _buildWeeklyPlanner(
+    List<TimetableEntry> entries, {
+    required bool isAdmin,
+    required bool isMobile,
+  }) {
+    final tasks = entries.map((entry) {
+      final dayIndex = _getDayIndex(entry.dayOfWeek);
+      final startHour = 9 + (entry.startPeriod - 1);
+      final durationMinutes = (entry.endPeriod - entry.startPeriod + 1) * 60;
+      final courseColor = _courseColor(entry.subjectName);
+      final isCurrent = _isCurrentClass(entry, useEntryDay: true);
+
+      return TimePlannerTask(
+        color: courseColor.background,
+        dateTime: TimePlannerDateTime(
+          day: dayIndex,
+          hour: startHour,
+          minutes: 0,
+        ),
+        minutesDuration: durationMinutes,
+        child: GestureDetector(
+          onTap: () {
+            if (_isPersonal || isAdmin) {
+              _showAddEditEntryDialog(entry: entry);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(7, 6, 5, 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isCurrent
+                    ? AppDesignTokens.blue
+                    : courseColor.accent.withValues(alpha: 0.55),
+                width: isCurrent ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.subjectName,
+                  style: TextStyle(
+                    color: AppDesignTokens.navy,
+                    fontWeight: FontWeight.bold,
+                    fontSize: isMobile ? 11 : 12,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                _buildModeOption(
-                  label: '개인 시간표',
-                  icon: Icons.person_outline_rounded,
-                  selected: _isPersonal,
-                  onTap: () => setState(() => _isPersonal = true),
-                ),
+                const Spacer(),
+                if (entry.classroom.isNotEmpty)
+                  Text(
+                    entry.classroom,
+                    style: TextStyle(
+                      color: AppDesignTokens.muted,
+                      fontSize: isMobile ? 9 : 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                if (entry.professorName.isNotEmpty)
+                  Text(
+                    entry.professorName,
+                    style: TextStyle(
+                      color: AppDesignTokens.subtle,
+                      fontSize: isMobile ? 8 : 9,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
-          if (!_isPersonal)
-            Container(
-              height: 44,
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignTokens.divider),
-              ),
-              child: Row(
-                children: List.generate(_gradeOptions.length, (idx) {
-                  final isSelected = _gradeOptions[idx] == selectedGrade;
-                  return Expanded(
-                    child: Material(
-                      color: isSelected
-                          ? AppDesignTokens.paleBlue
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(9),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(9),
-                        onTap: () {
-                          if (idx < 2 && selectedClass > 2) {
-                            ref
-                                .read(selectedTimetableClassProvider.notifier)
-                                .updateClass(1);
-                          }
-                          ref
-                              .read(selectedTimetableGradeProvider.notifier)
-                              .updateGrade(_gradeOptions[idx]);
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Text(
-                            _gradeLabels[idx],
-                            style: TextStyle(
-                              color: isSelected
-                                  ? AppDesignTokens.navy
-                                  : AppDesignTokens.muted,
-                              fontSize: 13,
-                              letterSpacing: -0.2,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          if (!_isPersonal)
-            Container(
-              key: const ValueKey('department-class-selector'),
-              height: 42,
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignTokens.divider),
-              ),
-              child: Row(
-                children: List.generate(selectedGrade == 'GRADE_3' ? 3 : 2, (
-                  index,
-                ) {
-                  final classNumber = index + 1;
-                  final isSelected = selectedClass == classNumber;
-                  return Expanded(
-                    child: Material(
-                      color: isSelected
-                          ? AppDesignTokens.paleBlue
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(9),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(9),
-                        onTap: () => ref
-                            .read(selectedTimetableClassProvider.notifier)
-                            .updateClass(classNumber),
-                        child: Center(
-                          child: Text(
-                            '$classNumber반',
-                            style: TextStyle(
-                              color: isSelected
-                                  ? AppDesignTokens.navy
-                                  : AppDesignTokens.muted,
-                              fontSize: 13,
-                              letterSpacing: -0.2,
-                              fontWeight: isSelected
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          if (isMobile) _buildMobileViewControls(),
-          Expanded(
-            child: timetableAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppDesignTokens.blue),
-              ),
-              error: (err, stack) => const Center(
-                child: Text(
-                  '시간표를 불러오지 못했습니다.',
-                  style: TextStyle(color: AppDesignTokens.muted),
-                ),
-              ),
-              data: (entries) {
-                if (isMobile && !_showWeeklyGrid) {
-                  return _buildMobileDayList(entries, isAdmin: isAdmin);
-                }
-                final List<TimePlannerTask> tasks = entries.map((entry) {
-                  final dayIndex = _getDayIndex(entry.dayOfWeek);
-                  // 1교시 = 9시, 2교시 = 10시 ... N교시 = 9 + (N - 1)
-                  final startHour = 9 + (entry.startPeriod - 1);
-                  final durationMinutes =
-                      (entry.endPeriod - entry.startPeriod + 1) * 60;
+        ),
+      );
+    }).toList();
 
-                  final bgColor = _getCourseBackground(entry.subjectName);
-                  final borderColor = _getCourseBorder(entry.subjectName);
+    return LayoutBuilder(
+      builder: (context, constraints) => TimePlanner(
+        startHour: _plannerStartHour,
+        endHour: _plannerEndHour,
+        use24HourFormat: true,
+        currentTimeAnimation: false,
+        style: TimePlannerStyle(
+          cellWidth: isMobile
+              ? 104
+              : ((constraints.maxWidth - 60) / 6).clamp(104, 180).floor(),
+          cellHeight: isMobile ? _mobilePlannerCellHeight : 76,
+          horizontalTaskPadding: 5,
+          dividerColor: AppDesignTokens.divider.withValues(alpha: 0.65),
+          backgroundColor: AppDesignTokens.surface,
+          interstitialOddColor: AppDesignTokens.surface,
+          interstitialEvenColor: AppDesignTokens.surface,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        headers: const [
+          TimePlannerTitle(title: '월', titleStyle: _gridDayStyle),
+          TimePlannerTitle(title: '화', titleStyle: _gridDayStyle),
+          TimePlannerTitle(title: '수', titleStyle: _gridDayStyle),
+          TimePlannerTitle(title: '목', titleStyle: _gridDayStyle),
+          TimePlannerTitle(title: '금', titleStyle: _gridDayStyle),
+          TimePlannerTitle(title: '토', titleStyle: _gridDayStyle),
+        ],
+        tasks: tasks,
+      ),
+    );
+  }
 
-                  return TimePlannerTask(
-                    color: bgColor,
-                    dateTime: TimePlannerDateTime(
-                      day: dayIndex,
-                      hour: startHour,
-                      minutes: 0,
-                    ),
-                    minutesDuration: durationMinutes,
-                    child: GestureDetector(
-                      onTap: () {
-                        if (_isPersonal || isAdmin) {
-                          _showAddEditEntryDialog(entry: entry);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: borderColor, width: 1),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.subjectName,
-                              style: TextStyle(
-                                color: AppDesignTokens.navy,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const Spacer(),
-                            if (entry.classroom.isNotEmpty)
-                              Text(
-                                entry.classroom,
-                                style: TextStyle(
-                                  color: AppDesignTokens.muted,
-                                  fontSize: 10,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            if (entry.professorName.isNotEmpty)
-                              Text(
-                                entry.professorName,
-                                style: TextStyle(
-                                  color: AppDesignTokens.subtle,
-                                  fontSize: 9,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList();
-
-                return LayoutBuilder(
-                  builder: (context, constraints) => TimePlanner(
-                    startHour: 9,
-                    endHour: 18,
-                    use24HourFormat: true,
-                    style: TimePlannerStyle(
-                      cellWidth: isMobile
-                          ? 96
-                          : (constraints.maxWidth - 60) ~/ 6,
-                      cellHeight: 76,
-                      horizontalTaskPadding: 4,
-                      dividerColor: AppDesignTokens.divider,
-                      backgroundColor: AppDesignTokens.surface,
-                      interstitialOddColor: AppDesignTokens.background,
-                      interstitialEvenColor: AppDesignTokens.surface,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    headers: const [
-                      TimePlannerTitle(title: '월', titleStyle: _gridDayStyle),
-                      TimePlannerTitle(title: '화', titleStyle: _gridDayStyle),
-                      TimePlannerTitle(title: '수', titleStyle: _gridDayStyle),
-                      TimePlannerTitle(title: '목', titleStyle: _gridDayStyle),
-                      TimePlannerTitle(title: '금', titleStyle: _gridDayStyle),
-                      TimePlannerTitle(title: '토', titleStyle: _gridDayStyle),
-                    ],
-                    tasks: tasks,
-                  ),
-                );
-              },
-            ),
+  Widget _buildTopControls({
+    required String selectedGrade,
+    required int selectedClass,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildModeOption(
+                label: '학과 시간표',
+                selected: !_isPersonal,
+                onTap: () => setState(() => _isPersonal = false),
+              ),
+              const SizedBox(width: 18),
+              _buildModeOption(
+                label: '개인 시간표',
+                selected: _isPersonal,
+                onTap: () => setState(() => _isPersonal = true),
+              ),
+            ],
           ),
+          if (!_isPersonal) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimetableDropdown<String>(
+                    key: const ValueKey('timetable-grade-dropdown'),
+                    value: selectedGrade,
+                    items: List.generate(_gradeOptions.length, (index) {
+                      final grade = _gradeOptions[index];
+                      return DropdownMenuItem(
+                        key: ValueKey('timetable-grade-option-$grade'),
+                        value: grade,
+                        child: Text(_gradeLabels[index]),
+                      );
+                    }),
+                    onChanged: (grade) {
+                      if (grade == null) return;
+                      if (grade != 'GRADE_3' && selectedClass > 2) {
+                        ref
+                            .read(selectedTimetableClassProvider.notifier)
+                            .updateClass(1);
+                      }
+                      ref
+                          .read(selectedTimetableGradeProvider.notifier)
+                          .updateGrade(grade);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _TimetableDropdown<int>(
+                    key: const ValueKey('timetable-class-dropdown'),
+                    value: selectedClass,
+                    items: List.generate(selectedGrade == 'GRADE_3' ? 3 : 2, (
+                      index,
+                    ) {
+                      final classNumber = index + 1;
+                      return DropdownMenuItem(
+                        key: ValueKey('timetable-class-option-$classNumber'),
+                        value: classNumber,
+                        child: Text('$classNumber반'),
+                      );
+                    }),
+                    onChanged: (classNumber) {
+                      if (classNumber == null) return;
+                      ref
+                          .read(selectedTimetableClassProvider.notifier)
+                          .updateClass(classNumber);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
-      floatingActionButton: currentUser != null && (_isPersonal || isAdmin)
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.sizeOf(context).width < 900 ? 76 : 0,
-              ),
-              child: FloatingActionButton(
-                backgroundColor: AppDesignTokens.blue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                onPressed: _isPersonal
-                    ? _showPersonalAddOptions
-                    : () => _showAddEditEntryDialog(),
-                tooltip: _isPersonal ? '내 수업 추가' : '학과 수업 추가',
-                child: const Icon(Icons.add),
-              ),
-            )
-          : null,
     );
   }
 
   Widget _buildMobileViewControls() {
     const dayLabels = ['월', '화', '수', '목', '금', '토'];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: Column(
         children: [
           Container(
             key: const ValueKey('timetable-view-mode'),
-            width: double.infinity,
-            height: 42,
+            width: 168,
+            height: 38,
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: AppDesignTokens.surface,
@@ -400,24 +397,21 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
             ),
           ),
           if (!_showWeeklyGrid) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Container(
-              height: 44,
-              padding: const EdgeInsets.all(4),
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
-                color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppDesignTokens.divider),
+                border: const Border(
+                  bottom: BorderSide(color: AppDesignTokens.divider),
+                ),
               ),
               child: Row(
                 children: List.generate(dayLabels.length, (index) {
                   final selected = index == _selectedDayIndex;
                   return Expanded(
                     child: Material(
-                      color: selected
-                          ? AppDesignTokens.blue
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(9),
+                      color: Colors.transparent,
                       child: InkWell(
                         key: ValueKey('timetable-day-$index'),
                         borderRadius: BorderRadius.circular(9),
@@ -427,7 +421,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                             dayLabels[index],
                             style: TextStyle(
                               color: selected
-                                  ? Colors.white
+                                  ? AppDesignTokens.navy
                                   : AppDesignTokens.muted,
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -454,7 +448,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
   }) {
     return Expanded(
       child: Material(
-        color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
           onTap: onTap,
@@ -468,15 +462,18 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
               ),
               const SizedBox(width: 7),
-              Text(
-                label,
-                style: TextStyle(
-                  color: selected
-                      ? AppDesignTokens.navy
-                      : AppDesignTokens.muted,
-                  fontSize: 13,
-                  letterSpacing: -0.2,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              SelectionHighlight(
+                selected: selected,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? AppDesignTokens.navy
+                        : AppDesignTokens.muted,
+                    fontSize: 13,
+                    letterSpacing: -0.2,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -498,154 +495,137 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
             .toList()
           ..sort((a, b) => a.startPeriod.compareTo(b.startPeriod));
     if (dayEntries.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.event_available_outlined,
-              size: 38,
-              color: AppDesignTokens.subtle,
-            ),
-            SizedBox(height: 10),
-            Text(
-              '이날은 등록된 수업이 없어요.',
-              style: TextStyle(color: AppDesignTokens.muted),
-            ),
-          ],
+      return const SizedBox(
+        height: 180,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.event_available_outlined,
+                size: 38,
+                color: AppDesignTokens.subtle,
+              ),
+              SizedBox(height: 10),
+              Text(
+                '이날은 등록된 수업이 없어요.',
+                style: TextStyle(color: AppDesignTokens.muted),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return ListView.separated(
+    return Padding(
       key: const ValueKey('mobile-timetable-day-list'),
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 116),
-      itemCount: dayEntries.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final entry = dayEntries[index];
-        final isCurrent = _isCurrentClass(entry);
-        final accentColor = _getCourseBorder(entry.subjectName);
-        return Material(
-          color: AppDesignTokens.surface,
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            onTap: _isPersonal || isAdmin
-                ? () => _showAddEditEntryDialog(entry: entry)
-                : null,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppDesignTokens.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isCurrent
-                      ? AppDesignTokens.blue
-                      : AppDesignTokens.divider,
-                  width: isCurrent ? 1.5 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppDesignTokens.navy.withValues(alpha: 0.035),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      key: ValueKey('timetable-course-accent-${entry.id}'),
-                      width: 5,
-                      color: isCurrent ? AppDesignTokens.blue : accentColor,
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppDesignTokens.paleBlue,
-                                    borderRadius: BorderRadius.circular(9),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.schedule_rounded,
-                                        size: 14,
-                                        color: AppDesignTokens.blue,
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        '${_periodStart(entry.startPeriod)} - ${_periodEnd(entry.endPeriod)}',
-                                        style: const TextStyle(
-                                          color: AppDesignTokens.blue,
-                                          fontSize: 12,
-                                          letterSpacing: -0.15,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Spacer(),
-                                if (isCurrent) const _CurrentClassBadge(),
-                              ],
-                            ),
-                            const SizedBox(height: 13),
-                            Text(
-                              entry.subjectName,
-                              style: const TextStyle(
-                                color: AppDesignTokens.navy,
-                                fontSize: 17,
-                                height: 1.25,
-                                letterSpacing: -0.35,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 11),
-                            if (entry.classroom.isNotEmpty)
-                              _TimetableMeta(
-                                icon: Icons.location_on_outlined,
-                                text: entry.classroom,
-                              ),
-                            if (entry.classroom.isNotEmpty &&
-                                entry.professorName.isNotEmpty)
-                              const SizedBox(height: 6),
-                            if (entry.professorName.isNotEmpty)
-                              _TimetableMeta(
-                                icon: Icons.person_outline_rounded,
-                                text: '${entry.professorName} 교수',
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 16),
+      child: Column(
+        children: [
+          for (final (index, entry) in dayEntries.indexed) ...[
+            if (index > 0) const SizedBox(height: 8),
+            _buildMobileDayCard(entry, isAdmin: isAdmin),
+          ],
+        ],
+      ),
     );
   }
 
-  bool _isCurrentClass(TimetableEntry entry) {
+  Widget _buildMobileDayCard(TimetableEntry entry, {required bool isAdmin}) {
+    final isCurrent = _isCurrentClass(entry);
+    final accentColor = _courseColor(entry.subjectName).accent;
+    return Material(
+      key: ValueKey('timetable-entry-${entry.id}'),
+      color: AppDesignTokens.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: _isPersonal || isAdmin
+            ? () => _showAddEditEntryDialog(entry: entry)
+            : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppDesignTokens.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isCurrent ? AppDesignTokens.blue : AppDesignTokens.divider,
+              width: isCurrent ? 1.5 : 1,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  key: ValueKey('timetable-course-accent-${entry.id}'),
+                  width: 4,
+                  color: isCurrent ? AppDesignTokens.blue : accentColor,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '${_periodStart(entry.startPeriod)} - ${_periodEnd(entry.endPeriod)}',
+                              style: const TextStyle(
+                                color: AppDesignTokens.muted,
+                                fontSize: 12,
+                                letterSpacing: -0.15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (isCurrent) const _CurrentClassBadge(),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          entry.subjectName,
+                          style: const TextStyle(
+                            color: AppDesignTokens.navy,
+                            fontSize: 16,
+                            height: 1.25,
+                            letterSpacing: -0.35,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (entry.classroom.isNotEmpty)
+                          _TimetableMeta(
+                            icon: Icons.location_on_outlined,
+                            text: entry.classroom,
+                          ),
+                        if (entry.classroom.isNotEmpty &&
+                            entry.professorName.isNotEmpty)
+                          const SizedBox(height: 6),
+                        if (entry.professorName.isNotEmpty)
+                          _TimetableMeta(
+                            icon: Icons.person_outline_rounded,
+                            text: '${entry.professorName} 교수',
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isCurrentClass(TimetableEntry entry, {bool useEntryDay = false}) {
     final now = DateTime.now();
-    if (now.weekday - 1 != _selectedDayIndex) return false;
+    final dayIndex = useEntryDay
+        ? _getDayIndex(entry.dayOfWeek)
+        : _selectedDayIndex;
+    if (now.weekday - 1 != dayIndex) return false;
     final start = DateTime(now.year, now.month, now.day, 8 + entry.startPeriod);
     final end = DateTime(now.year, now.month, now.day, 9 + entry.endPeriod);
     return !now.isBefore(start) && now.isBefore(end);
@@ -659,47 +639,25 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
 
   Widget _buildModeOption({
     required String label,
-    required IconData icon,
     required bool selected,
     required VoidCallback onTap,
   }) {
-    return Expanded(
-      child: Material(
-        color: selected ? AppDesignTokens.surface : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              border: selected
-                  ? Border.all(color: AppDesignTokens.divider)
-                  : null,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 17,
-                  color: selected
-                      ? AppDesignTokens.blue
-                      : AppDesignTokens.muted,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: selected
-                        ? AppDesignTokens.navy
-                        : AppDesignTokens.muted,
-                    fontSize: 13,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                  ),
-                ),
-              ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 40),
+          alignment: Alignment.center,
+          child: SelectionHighlight(
+            selected: selected,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? AppDesignTokens.navy : AppDesignTokens.muted,
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -1325,6 +1283,53 @@ class _CurrentClassBadge extends StatelessWidget {
           color: AppDesignTokens.blue,
           fontSize: 11,
           fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _TimetableDropdown<T> extends StatelessWidget {
+  const _TimetableDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppDesignTokens.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFF164687).withValues(alpha: 0.4),
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Color(0xFF164687),
+          ),
+          dropdownColor: AppDesignTokens.surface,
+          borderRadius: BorderRadius.circular(10),
+          style: const TextStyle(
+            color: AppDesignTokens.navy,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+          items: items,
+          onChanged: onChanged,
         ),
       ),
     );

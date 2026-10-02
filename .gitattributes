@@ -1,0 +1,20 @@
+# 줄바꿈을 저장소에서 고정합니다.
+# 설정하지 않으면 core.autocrlf 값이 사람마다 달라, 편집하지 않은 파일이
+# 계속 수정된 것으로 보입니다. (gradlew.bat이 실제로 그런 상태였습니다.)
+
+# 기본: 텍스트 파일은 저장소에 LF로 보관합니다.
+* text=auto eol=lf
+
+# Windows 배치 파일은 체크아웃할 때 CRLF여야 실행됩니다.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 바이너리는 변환하지 않습니다.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.jar binary
+*.keystore binary

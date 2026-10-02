@@ -2,7 +2,8 @@ package com.ync.ysync.controller;
 
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.MemberRole;
-import com.ync.ysync.service.MemberService;
+import com.ync.ysync.service.MemberAdminService;
+import com.ync.ysync.service.MemberSpreadsheetImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,9 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')") // 💡 학과 관리자 이상 권한만 호출 가능
 public class AdminMemberController {
 
-    private final MemberService memberService;
+    private final MemberAdminService memberAdminService;
+    private final MemberSpreadsheetImportService spreadsheetImportService;
+    private final com.ync.ysync.service.NoticeGradeService noticeGradeService;
 
     @GetMapping
     @Operation(summary = "회원 목록 조회", description = "학과 회원 목록을 페이징 및 이름/학번 검색으로 조회합니다.")
@@ -34,8 +37,8 @@ public class AdminMemberController {
             @RequestParam(defaultValue = "15") int size,
             @RequestParam(required = false) String search) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<AdminMemberResponse> members = memberService.getMembers(pageRequest, search)
-                .map(AdminMemberResponse::from);
+        Page<AdminMemberResponse> members = memberAdminService.getMembers(pageRequest, search)
+                .map(member -> AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         return ResponseEntity.ok(members);
     }
 
@@ -46,9 +49,9 @@ public class AdminMemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
         }
         try {
-            Member member = memberService.createMemberByAdmin(
+            Member member = memberAdminService.createMemberByAdmin(
                     request.getLoginId(), request.getName(), request.getRole(), currentRole(authentication));
-            return ResponseEntity.ok(AdminMemberResponse.from(member));
+            return ResponseEntity.ok(AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -61,7 +64,7 @@ public class AdminMemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "파일이 비어있습니다."));
         }
         try {
-            MemberService.CsvImportResult result = memberService.createMembersBySpreadsheet(
+            MemberSpreadsheetImportService.CsvImportResult result = spreadsheetImportService.importMembers(
                     file.getInputStream(), file.getOriginalFilename(), currentRole(authentication));
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -70,25 +73,38 @@ public class AdminMemberController {
         }
     }
 
+    @GetMapping("/notice-grade-stats")
+    @Operation(summary = "공지 알림 학년 선택 현황",
+            description = "학년별 알림 전환 시점을 판단하기 위한 집계입니다. 전환하면 미설정 회원은 학년 공지 알림을 받지 못합니다.")
+    public ResponseEntity<NoticeGradeStatsResponse> getNoticeGradeStats() {
+        return ResponseEntity.ok(noticeGradeService.collectStats());
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "학생 정보 수정", description = "학생의 이름 및 권한을 수정합니다.")
     public ResponseEntity<?> updateMember(@PathVariable Long id, @RequestBody AdminUpdateMemberRequest request,
             Authentication authentication) {
         try {
-            Member member = memberService.updateMemberByAdmin(
-                    id, request.getName(), request.getRole(), currentRole(authentication));
-            return ResponseEntity.ok(AdminMemberResponse.from(member));
+            Member member = memberAdminService.updateMemberByAdmin(
+                    id, request.getName(), request.getRole(), currentRole(authentication),
+                    request.getNoticeGradePreference(),
+                    request.getNoticeGradePreference() == null ? null : noticeGradeService.currentAcademicYear());
+            return ResponseEntity.ok(AdminMemberResponse.from(member, noticeGradeService.currentAcademicYear()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "학생 삭제", description = "특정 학생 정보를 완전히 삭제합니다.")
+    @Operation(summary = "학생 탈퇴 처리",
+            description = "학생 계정의 개인정보(학번·이름·이메일)를 지우고 다시 로그인할 수 없게 만듭니다. "
+                    + "작성한 글과 댓글은 '탈퇴한 학생' 이름으로 남습니다. "
+                    + "글을 함께 지우면 그 글에 달린 다른 학생의 댓글까지 사라지기 때문입니다.")
     public ResponseEntity<?> deleteMember(@PathVariable Long id) {
         try {
-            memberService.deleteMemberByAdmin(id);
-            return ResponseEntity.ok(Map.of("message", "회원이 성공적으로 삭제되었습니다."));
+            memberAdminService.deleteMemberByAdmin(id);
+            return ResponseEntity.ok(Map.of("message",
+                    "회원을 탈퇴 처리했습니다. 작성한 글과 댓글은 '탈퇴한 학생' 이름으로 남습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -98,7 +114,7 @@ public class AdminMemberController {
     @Operation(summary = "비밀번호 재설정 안내 발송", description = "회원의 등록 이메일로 비밀번호 재설정 인증번호를 전송합니다. 계정 데이터와 권한은 변경하지 않습니다.")
     public ResponseEntity<?> sendPasswordResetEmail(@PathVariable Long id) {
         try {
-            memberService.requestPasswordResetByAdmin(id);
+            memberAdminService.requestPasswordResetByAdmin(id);
             return ResponseEntity.ok(Map.of("message", "등록된 이메일로 비밀번호 재설정 안내를 발송했습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -109,7 +125,7 @@ public class AdminMemberController {
     @Operation(summary = "계정 재등록 초기화", description = "이메일과 비밀번호를 초기화하고 가입 대기 상태로 전환합니다. 게시글, 댓글, 권한과 정지 상태는 유지합니다.")
     public ResponseEntity<?> resetRegistration(@PathVariable Long id) {
         try {
-            memberService.resetMemberRegistration(id);
+            memberAdminService.resetMemberRegistration(id);
             return ResponseEntity.ok(Map.of("message", "계정이 재등록 대기 상태로 초기화되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -127,7 +143,7 @@ public class AdminMemberController {
     @Operation(summary = "회원 차단", description = "특정 회원을 차단(정지) 상태로 설정합니다.")
     public ResponseEntity<?> suspendMember(@PathVariable Long id) {
         try {
-            memberService.suspendMember(id);
+            memberAdminService.suspendMember(id);
             return ResponseEntity.ok(Map.of("message", "회원이 성공적으로 차단되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -138,7 +154,7 @@ public class AdminMemberController {
     @Operation(summary = "회원 차단 해제", description = "특정 회원의 차단(정지) 상태를 해제합니다.")
     public ResponseEntity<?> unsuspendMember(@PathVariable Long id) {
         try {
-            memberService.unsuspendMember(id);
+            memberAdminService.unsuspendMember(id);
             return ResponseEntity.ok(Map.of("message", "회원의 차단이 성공적으로 해제되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -156,6 +172,8 @@ public class AdminMemberController {
     public static class AdminUpdateMemberRequest {
         private String name;
         private MemberRole role;
+        // 💡 문의로 들어온 예외 상황을 지원하기 위한 학년 수정입니다. 값이 없으면 기존 선택을 유지합니다.
+        private com.ync.ysync.domain.NoticeGradePreference noticeGradePreference;
     }
 
     private MemberRole currentRole(Authentication authentication) {

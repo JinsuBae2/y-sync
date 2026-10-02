@@ -1,5 +1,11 @@
 import 'dart:ui';
 
+import '../widgets/app_root_back_guard.dart';
+import '../widgets/notice_grade_prompt.dart';
+import '../utils/pwa_back_gesture_stub.dart'
+    if (dart.library.js_interop) '../utils/pwa_back_gesture_web.dart'
+    as platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_design_tokens.dart';
@@ -72,7 +78,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
       const MyPageScreen(),
     ];
 
-    return LayoutBuilder(
+    final content = LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 900;
 
@@ -164,7 +170,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
         }
 
         return Scaffold(
-          extendBody: true,
+          extendBody: false,
           body: PageView(
             controller: pageController,
             onPageChanged: (index) {
@@ -262,6 +268,14 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
           ),
         );
       },
+    );
+    // 💡 학년 확인 안내는 로그인 후 첫 화면에서 한 번만 뜹니다. 탭을 옮길 때마다 뜨지 않도록
+    //    화면 단위가 아니라 이 최상위 화면에 한 번만 붙입니다.
+    return NoticeGradePrompt(
+      child: AppRootBackGuard(
+        enabled: platform.isIosStandalonePwa(),
+        child: content,
+      ),
     );
   }
 

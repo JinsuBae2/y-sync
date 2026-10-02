@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           java-version: '21'
           distribution: temurin
@@ -137,7 +137,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          flutter-version: '3.41.4'
+          flutter-version: '3.47.5'
           channel: stable
           cache: true
 
@@ -147,6 +147,8 @@ jobs:
 
       - name: Analyze Flutter
         working-directory: frontend
+        # 💡 여기는 완화된 상태로 둡니다. 같은 검사를 PR CI가 이미 엄격하게 수행하므로,
+        #    배포 시점에 같은 이유로 실패하면 얻는 것 없이 배포만 막힙니다.
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Test and Build Flutter Web
@@ -193,7 +195,7 @@ jobs:
 
       - name: Copy Backend Artifact via SSH
         if: needs.detect_changes.outputs.backend == 'true'
-        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
@@ -203,9 +205,10 @@ jobs:
 
       - name: Deploy Backend
         if: needs.detect_changes.outputs.backend == 'true'
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          NOTICE_GRADE_FILTER_ENABLED: ${{ vars.NOTICE_GRADE_FILTER_ENABLED }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
@@ -218,7 +221,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DB_PASSWORD,JWT_SECRET,MAIL_USERNAME,MAIL_PASSWORD,STORAGE_PROVIDER,AWS_S3_BUCKET,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
+          envs: DB_PASSWORD,NOTICE_GRADE_FILTER_ENABLED,JWT_SECRET,MAIL_USERNAME,MAIL_PASSWORD,STORAGE_PROVIDER,AWS_S3_BUCKET,AWS_REGION,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY
           script: |
             set -eu
             mkdir -p ~/ysync/app
@@ -256,7 +259,7 @@ jobs:
 
       - name: Deploy Frontend to Firebase Hosting
         if: needs.detect_changes.outputs.frontend == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@7c850a480ce753f4f06f010801fc5a43787740bb # v0
+        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_Y_SYNC_31C03 }}

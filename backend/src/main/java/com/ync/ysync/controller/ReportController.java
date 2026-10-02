@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +43,10 @@ public class ReportController {
             return ResponseEntity.ok("신고가 정상 접수되었습니다.");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            // 💡 중복 신고 사전 검사와 INSERT 사이에 같은 신고가 먼저 저장된 경우입니다.
+            //    uq_report 가 막아 준 것이므로 사전 검사와 같은 응답을 돌려줍니다.
+            return ResponseEntity.badRequest().body("이미 신고한 대상입니다.");
         }
     }
 

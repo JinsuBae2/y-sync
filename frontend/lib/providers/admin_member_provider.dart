@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../models/member.dart';
-import 'notice_provider.dart'; // dioProvider가 있는 곳
+import '../models/notice_grade_preference.dart';
+import '../models/notice_grade_stats.dart';
+import 'api_client_provider.dart';
 
 class CsvImportError {
   final int row;
@@ -143,6 +145,20 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
     }
   }
 
+  // 💡 학년별 알림 전환 시점 판단용 집계 조회
+  //    실패해도 회원 목록 사용을 막지 않도록 null을 돌려줍니다.
+  Future<NoticeGradeStats?> fetchNoticeGradeStats() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get('/admin/members/notice-grade-stats');
+      return NoticeGradeStats.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   // 💡 학생 단건 사전 등록
   Future<void> createMember(String loginId, String name, String role) async {
     try {
@@ -186,11 +202,25 @@ class AdminMemberNotifier extends Notifier<AdminMemberState> {
     }
   }
 
-  // 💡 학생 정보 수정 (이름, 권한)
-  Future<void> updateMember(int id, String name, String role) async {
+  // 💡 학생 정보 수정 (이름, 권한, 공지 알림 대상 학년)
+  //    학년은 문의로 들어온 예외 상황을 지원하기 위한 수단이며, 값을 넘기지 않으면 기존 선택을 유지합니다.
+  Future<void> updateMember(
+    int id,
+    String name,
+    String role, {
+    NoticeGradePreference? noticeGradePreference,
+  }) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.put('/admin/members/$id', data: {'name': name, 'role': role});
+      await dio.put(
+        '/admin/members/$id',
+        data: {
+          'name': name,
+          'role': role,
+          if (noticeGradePreference != null)
+            'noticeGradePreference': noticeGradePreference.wireValue,
+        },
+      );
       await fetchMembers(); // 목록 갱신
     } catch (e) {
       if (e is DioException &&

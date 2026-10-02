@@ -23,6 +23,7 @@ public class CommunityService {
     private final CommunityPostRepository communityPostRepository;
     private final MemberRepository memberRepository;
     private final FileService fileService;
+    private final PostDeletionCleaner postDeletionCleaner;
 
     // 💡 카테고리별 혹은 전체 목록 조회 (고정글 우선, 최신순 필터링)
     public List<CommunityPost> getPosts(String category) {
@@ -42,10 +43,12 @@ public class CommunityService {
 
     @Transactional
     public CommunityPost getPost(Long id) {
-        CommunityPost post = communityPostRepository.findById(id)
+        // 💡 존재 확인과 조회수 증가를 UPDATE 한 문장으로 함께 처리합니다. 갱신된 행이 없으면 없는 글입니다.
+        if (communityPostRepository.incrementViewCount(id) == 0) {
+            throw new IllegalArgumentException("해당 게시글이 존재하지 않습니다.");
+        }
+        return communityPostRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글이 존재하지 않습니다."));
-        post.incrementViewCount(); // 💡 상세 조회 시 조회수 1가
-        return post;
     }
 
     // 💡 파일 이미지를 포함한 게시글 작성을 처리합니다.
@@ -140,7 +143,10 @@ public class CommunityService {
             throw new IllegalArgumentException("게시글 삭제 권한이 없습니다.");
         }
 
-        
+        // 💡 댓글에는 FK가 걸려 있어 먼저 지우지 않으면 삭제 자체가 제약 위반으로 실패합니다.
+        //    스크랩·신고는 FK가 없어 남아도 삭제는 되지만, 가리킬 글이 없는 행이 되므로 함께 정리합니다.
+        postDeletionCleaner.cleanUpCommunityPost(post.getId());
+
         communityPostRepository.delete(post);
     }
 }

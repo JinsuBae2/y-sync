@@ -1,0 +1,132 @@
+name: k6 공개 조회 부하 테스트
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: '운영 API 주소 (예: https://api.example.com)'
+        required: true
+        type: string
+      test_profile:
+        description: '테스트 유형: 단계형 또는 50 VU 10분 지속형'
+        required: true
+        default: staged
+        type: choice
+        options:
+          - staged
+          - soak
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k6-public-read-load-test
+  cancel-in-progress: false
+
+jobs:
+  k6:
+    name: 공개 조회 부하 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: production
+    env:
+      BASE_URL: ${{ inputs.base_url }}
+      TEST_PROFILE: ${{ inputs.test_profile }}
+
+    steps:
+      - name: 소스 코드 받기
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 대상 URL 검사
+        run: |
+          if [[ -z "${BASE_URL//[[:space:]]/}" ]]; then
+            echo 'base_url은 비어 있을 수 없습니다.' >&2
+            exit 1
+          fi
+          if [[ "$BASE_URL" != https://* ]]; then
+            echo '운영 테스트의 base_url은 https:// 주소여야 합니다.' >&2
+            exit 1
+          fi
+          if [[ "$BASE_URL" == *localhost* ]] \
+            || [[ "$BASE_URL" =~ ^https://(127\.[0-9]+\.[0-9]+\.[0-9]+|0\.0\.0\.0|\[::1\])(:|/|$) ]]; then
+            echo 'base_url은 localhost가 아닌 원격 운영 서버를 가리켜야 합니다.' >&2
+            exit 1
+          fi
+
+      - name: k6 테스트 및 서버 자원 측정
+        id: k6
+        continue-on-error: true
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          ssh_key="$RUNNER_TEMP/ysync-load-test-key"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$ssh_key"
+          chmod 600 "$ssh_key"
+          test_started_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+          (
+            sample=1
+            while true; do
+              echo "===== 서버 자원 표본 $sample: $(date -u '+%Y-%m-%dT%H:%M:%SZ') ====="
+              ssh \
+                -i "$ssh_key" \
+                -o StrictHostKeyChecking=accept-new \
+                -o ConnectTimeout=10 \
+                "$SERVER_USER@$SERVER_IP" \
+                'docker stats --no-stream; echo; free -m; echo; docker ps --format "table {{.Names}}\t{{.Status}}"' \
+                || echo '서버 자원 표본 수집 실패'
+              sample=$((sample + 1))
+              sleep 30
+            done
+          ) > server-resource-output.txt 2>&1 &
+          monitor_pid=$!
+          trap 'kill "$monitor_pid" 2>/dev/null || true; rm -f "$ssh_key"' EXIT
+
+          set +e
+          docker run --rm \
+            --env BASE_URL \
+            --env TEST_PROFILE \
+            --volume "$GITHUB_WORKSPACE:/work:ro" \
+            grafana/k6:0.54.0 run /work/loadtest/k6/public-read.js \
+            2>&1 | tee k6-output.txt
+          status=${PIPESTATUS[0]}
+          kill "$monitor_pid" 2>/dev/null || true
+          wait "$monitor_pid" 2>/dev/null || true
+
+          ssh \
+            -i "$ssh_key" \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            "$SERVER_USER@$SERVER_IP" \
+            "echo '=== 컨테이너 종료 상태 ==='; docker inspect --format '{{.Name}} RestartCount={{.RestartCount}} OOMKilled={{.State.OOMKilled}} Status={{.State.Status}}' ysync-backend ysync-mysql ysync-nginx; echo; echo '=== 테스트 구간 백엔드 경고/오류 로그 (최근 200줄) ==='; docker logs --since '$test_started_at' ysync-backend 2>&1 | grep -Ei 'warn|error|exception|timeout|hikari|connection' | tail -200" \
+            > server-diagnostic-output.txt 2>&1 \
+            || echo '서버 종료 진단 수집 실패' > server-diagnostic-output.txt
+          rm -f "$ssh_key"
+          trap - EXIT
+
+          {
+            echo '## k6 공개 조회 부하 테스트'
+            echo ''
+            cat k6-output.txt
+            echo ''
+            echo '## 운영 서버 자원 사용량'
+            echo ''
+            echo '```text'
+            cat server-resource-output.txt
+            echo '```'
+            echo ''
+            echo '## 운영 서버 종료 진단'
+            echo ''
+            echo '```text'
+            cat server-diagnostic-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: k6 임계치 실패 반영
+        if: steps.k6.outcome == 'failure'
+        run: |
+          echo 'k6 실행은 완료됐지만 하나 이상의 임계치를 통과하지 못했습니다.' >&2
+          exit 1

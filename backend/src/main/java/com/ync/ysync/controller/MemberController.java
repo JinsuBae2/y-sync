@@ -3,8 +3,11 @@ package com.ync.ysync.controller;
 import com.ync.ysync.config.JwtUtil;
 import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.Member;
+import com.ync.ysync.domain.NoticeGradePreference;
 import com.ync.ysync.repository.MemberRepository;
 import com.ync.ysync.service.MemberService;
+import com.ync.ysync.service.MemberSignupService;
+import com.ync.ysync.service.NoticeGradeService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -24,20 +27,23 @@ import java.util.Optional;
 public class MemberController {
 
     private final MemberService memberService;
+    private final MemberSignupService memberSignupService;
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
-
-    @GetMapping("/check-duplicate")
-    @Operation(summary = "아이디 중복 확인", description = "입력한 아이디(학번)가 이미 등록되어 있는지 확인합니다.")
-    public ResponseEntity<Map<String, Boolean>> checkDuplicate(@RequestParam String loginId) {
-        boolean isDuplicate = memberRepository.findByLoginId(loginId).isPresent();
-        log.info("아이디 중복 확인 요청 - LoginID: {}, 중복여부: {}", loginId, isDuplicate);
-        return ResponseEntity.ok(Map.of("isDuplicate", isDuplicate));
-    }
+    private final NoticeGradeService noticeGradeService;
 
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
-        memberService.signup(request.getLoginId(), request.getPassword(), request.getName());
+        // 💡 공지 알림 수신 학년은 선택 항목으로 받습니다. 값이 없으면 미설정으로 두어
+        //    학년 선택이 없는 이전 버전 클라이언트의 가입 요청도 그대로 처리됩니다.
+        //    확인 학년도는 클라이언트가 지정하지 않고 서버가 계산합니다.
+        memberSignupService.signup(
+                request.getLoginId(),
+                request.getPassword(),
+                request.getName(),
+                request.getVerificationGrant(),
+                request.getNoticeGradePreference(),
+                request.getNoticeGradePreference() == null ? null : noticeGradeService.currentAcademicYear());
         return ResponseEntity.ok("회원가입 성공");
     }
 
@@ -58,7 +64,7 @@ public class MemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
         }
         try {
-            memberService.verifyStudentForSignup(loginId, name);
+            memberSignupService.verifyStudentForSignup(loginId, name);
             return ResponseEntity.ok(Map.of("message", "학생 정보가 정상적으로 확인되었습니다. 이메일 인증을 진행할 수 있습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -76,7 +82,7 @@ public class MemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번, 이름, 이메일을 모두 입력해 주세요."));
         }
         try {
-            memberService.sendVerificationEmail(loginId, name, email);
+            memberSignupService.sendVerificationEmail(loginId, name, email);
             return ResponseEntity.ok(Map.of("message", "인증 코드가 이메일로 전송되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -95,8 +101,13 @@ public class MemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 인증 코드를 모두 입력해 주세요."));
         }
         try {
-            boolean isSuccess = memberService.verifySignupCode(loginId, code);
-            return ResponseEntity.ok(Map.of("success", isSuccess, "message", "인증이 성공적으로 완료되었습니다."));
+            // 💡 증표는 인증을 통과한 이 응답에만 실려 나갑니다. 클라이언트는 이 값을 가입 요청에
+            //    그대로 제시해야 하며, 저장하지 않고 메모리로만 들고 있다가 버립니다.
+            String verificationGrant = memberSignupService.verifySignupCode(loginId, code);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "verificationGrant", verificationGrant,
+                    "message", "인증이 성공적으로 완료되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -109,7 +120,7 @@ public class MemberController {
             return ResponseEntity.badRequest().body(Map.of("message", "학번과 이름을 모두 입력해 주세요."));
         }
         try {
-            memberService.requestPasswordReset(request.getLoginId(), request.getName());
+            memberSignupService.requestPasswordReset(request.getLoginId(), request.getName());
             return ResponseEntity.ok(Map.of("message", "등록된 학교 이메일로 인증번호를 전송했습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -123,7 +134,7 @@ public class MemberController {
     @Operation(summary = "비밀번호 재설정 완료", description = "이메일 인증번호를 확인하고 새 비밀번호를 저장하며 기존 로그인 세션을 무효화합니다.")
     public ResponseEntity<?> confirmPasswordReset(@RequestBody PasswordResetConfirmRequest request) {
         try {
-            memberService.confirmPasswordReset(request.getLoginId(), request.getCode(), request.getNewPassword());
+            memberSignupService.confirmPasswordReset(request.getLoginId(), request.getCode(), request.getNewPassword());
             return ResponseEntity.ok(Map.of("message", "비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해 주세요."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -182,6 +193,9 @@ public class MemberController {
         private String loginId;
         private String password;
         private String name;
+        // 💡 인증 코드 검증 응답으로 받은 증표입니다. 이 값이 없으면 가입이 거부됩니다.
+        private String verificationGrant;
+        private NoticeGradePreference noticeGradePreference;
     }
 
     @Data

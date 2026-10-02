@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile; // 💡 추가
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -42,6 +43,32 @@ public class NoticeController {
                 
         org.springframework.data.domain.Page<NoticeResponse> responsePage = noticePage.map(NoticeResponse::from);
         return ResponseEntity.ok(responsePage);
+    }
+
+    // 💡 공지 피드 (커서 기반 무한 스크롤)
+    //
+    // 경로를 한 세그먼트로 둔 이유: SecurityConfig의 공개 규칙이 `/api/v1/notices/*`라
+    // `/feed`와 `/feed-updates`는 그 안에 들어오고 `/{id}/comments`는 계속 제외됩니다.
+    // 공지 목록은 원래 비로그인 공개이므로 피드도 같은 범위가 맞습니다.
+    @GetMapping("/feed")
+    public ResponseEntity<NoticeFeedResponse> getFeed(
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false, defaultValue = "ALL") Grade grade,
+            @RequestParam(required = false) String keyword) {
+        return ResponseEntity.ok(
+                NoticeFeedResponse.from(noticeService.getFeed(cursor, size, grade, keyword)));
+    }
+
+    // 💡 클라이언트가 들고 있는 latestId 이후로 올라온 공지 수만 돌려줍니다.
+    //    스크롤 중 "새 공지 N개" 칩을 띄우기 위한 것이라 본문은 내려주지 않습니다.
+    @GetMapping("/feed-updates")
+    public ResponseEntity<Map<String, Object>> getFeedUpdates(
+            @RequestParam Long sinceId,
+            @RequestParam(required = false, defaultValue = "ALL") Grade grade,
+            @RequestParam(required = false) String keyword) {
+        return ResponseEntity.ok(Map.of(
+                "newCount", noticeService.countNewNotices(sinceId, grade, keyword)));
     }
 
     // 💡 키워드를 통한 공지사항 검색 (제목 또는 내용 매칭)

@@ -5,11 +5,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_tab_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/push_notification_service.dart'; // 💡 FCM 추가
 import 'widgets/server_availability_gate.dart';
+import 'utils/back_navigation_loading.dart';
+
+final _backLoadingObserver = BackNavigationLoadingObserver();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,9 +33,12 @@ class YSyncApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
+    // 💡 값을 쓰지는 않지만 구독은 유지해야 합니다. 이 watch가 앱 시작 시 로그인 상태 확인을
+    //    시작시키고, 계정이 바뀌면 앱 셸이 다시 그려집니다. 지우면 두 동작이 사라집니다.
+    ref.watch(authProvider);
 
     return MaterialApp(
+      navigatorObservers: [_backLoadingObserver],
       navigatorKey:
           PushNotificationService.navigatorKey, // 💡 전역 라우팅을 위한 네비게이터 키 등록
       title: 'Y-Sync',
@@ -61,7 +65,7 @@ class YSyncApp extends ConsumerWidget {
         ),
         cardTheme: CardThemeData(
           elevation: 4,
-          shadowColor: Colors.black.withOpacity(0.1),
+          shadowColor: Colors.black.withValues(alpha: 0.1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_design_tokens.dart';
+import '../widgets/selection_highlight.dart';
 import '../widgets/brand_logo.dart';
 import 'admin_approval_tab.dart';
 import 'admin_member_tab.dart';
 import 'admin_post_management_screen.dart';
+import 'admin_feedback_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -31,6 +33,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           icon: Icons.verified_user_outlined,
         ),
         (label: '콘텐츠 관리', description: '게시글과 신고', icon: Icons.article_outlined),
+        (
+          label: '사용자 의견',
+          description: '오류 신고와 개선 제안',
+          icon: Icons.feedback_outlined,
+        ),
       ];
 
   @override
@@ -92,7 +99,7 @@ class _MobileAdminShell extends StatelessWidget {
       bottom: TabBar(
         controller: tabController,
         indicatorColor: AppDesignTokens.blue,
-        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorSize: TabBarIndicatorSize.label,
         labelColor: AppDesignTokens.navy,
         unselectedLabelColor: AppDesignTokens.muted,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
@@ -100,6 +107,7 @@ class _MobileAdminShell extends StatelessWidget {
           Tab(text: '회원'),
           Tab(text: '권한 승인'),
           Tab(text: '콘텐츠'),
+          Tab(text: '의견'),
         ],
       ),
     ),
@@ -109,6 +117,7 @@ class _MobileAdminShell extends StatelessWidget {
         AdminMemberTab(),
         AdminApprovalTab(),
         AdminPostManagementScreen(isTabMode: true),
+        AdminFeedbackScreen(),
       ],
     ),
   );
@@ -251,6 +260,7 @@ class _DesktopAdminShell extends StatelessWidget {
                     AdminMemberTab(isDesktop: true),
                     AdminApprovalTab(isDesktop: true),
                     AdminPostManagementScreen(isTabMode: true),
+                    AdminFeedbackScreen(),
                   ],
                 ),
               ),
@@ -284,7 +294,7 @@ class _SidebarDestination extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
     child: Material(
-      color: selected ? AppDesignTokens.paleBlue : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -299,14 +309,17 @@ class _SidebarDestination extends StatelessWidget {
                 color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
               ),
               const SizedBox(width: 12),
-              Text(
-                destination.label,
-                style: TextStyle(
-                  color: selected
-                      ? AppDesignTokens.navy
-                      : AppDesignTokens.muted,
-                  fontSize: 14,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              SelectionHighlight(
+                selected: selected,
+                child: Text(
+                  destination.label,
+                  style: TextStyle(
+                    color: selected
+                        ? AppDesignTokens.navy
+                        : AppDesignTokens.muted,
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
               ),
             ],

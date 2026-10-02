@@ -15,6 +15,7 @@ import 'my_comments_screen.dart';
 import 'my_posts_screen.dart';
 import 'notification_settings_screen.dart';
 import 'scrap_list_screen.dart';
+import 'help_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -205,6 +206,22 @@ class _ProfileContent extends ConsumerWidget {
                 title: '로그아웃',
                 isDestructive: true,
                 onTap: () => _showLogoutDialog(context, ref),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+          const _GroupTitle(title: '도움말'),
+          const SizedBox(height: 10),
+          _MenuGroup(
+            children: [
+              _ProfileMenuItem(
+                icon: Icons.help_outline_rounded,
+                title: '도움말 및 의견 보내기',
+                subtitle: '사용법 확인 · 오류 신고 · 개선 제안',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HelpScreen()),
+                ),
               ),
             ],
           ),

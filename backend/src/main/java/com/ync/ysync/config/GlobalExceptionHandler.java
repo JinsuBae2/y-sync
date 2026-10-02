@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
@@ -83,6 +84,17 @@ public class GlobalExceptionHandler {
         Map<String, String> response = new HashMap<>();
         response.put("message", "요청한 리소스를 찾을 수 없습니다.");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    // 💡 UNIQUE·FK 등 무결성 제약 위반 처리 (409 Conflict)
+    //    제약 위반은 서버 결함이 아니라 "이미 있는 데이터" 또는 "참조 중인 데이터"라는 상태이므로 500으로 내보내지 않습니다.
+    //    개별 엔드포인트가 더 구체적인 문구를 줄 수 있으면 컨트롤러에서 먼저 잡습니다. 여기는 마지막 방어선입니다.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("🚨 데이터 무결성 제약 위반: {}", e.getMostSpecificCause().getMessage());
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "이미 처리되었거나 다른 데이터가 참조 중이어서 요청을 완료할 수 없습니다.");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     // 💡 데이터베이스 관련 예외 처리 (500 Internal Server Error)

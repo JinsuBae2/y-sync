@@ -9,3 +9,35 @@ updates:
       backend-dependencies:
         patterns:
           - "*"
+
+  # 💡 외부 action은 공급망 보안을 위해 SHA로 고정되어 있습니다. 고정한 만큼 자동 갱신이 없으면
+  #    취약점이 나와도 옛 버전에 머무르므로, github-actions 감시를 반드시 함께 둡니다.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      docker-images:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pub
+    directory: /frontend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+    groups:
+      frontend-dependencies:
+        patterns:
+          - "*"

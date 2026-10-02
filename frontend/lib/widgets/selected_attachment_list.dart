@@ -80,14 +80,19 @@ class _SelectedAttachment extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  _formatBytes(file.size),
-                  style: const TextStyle(
-                    color: AppDesignTokens.muted,
-                    fontSize: 12,
+                // 💡 file_picker 13에는 size가 없습니다. lengthSync()는 피커가 알려준 값을
+                //    I/O 없이 돌려주고, 모르면 null입니다. 빌드 중이라 디스크를 읽지 않고
+                //    모르는 경우에는 크기 줄을 숨깁니다.
+                if (file.lengthSync() case final size?) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    _formatBytes(size),
+                    style: const TextStyle(
+                      color: AppDesignTokens.muted,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -105,12 +110,46 @@ class _SelectedAttachment extends StatelessWidget {
 Widget? _imagePreview(PlatformFile file) {
   const imageExtensions = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'};
   if (!imageExtensions.contains(file.extension?.toLowerCase())) return null;
-  final bytes = file.bytes;
-  if (bytes != null) return Image.memory(bytes, fit: BoxFit.cover);
-  if (!kIsWeb && file.path != null) {
-    return Image.file(File(file.path!), fit: BoxFit.cover);
-  }
-  return null;
+  final path = file.path;
+  if (!kIsWeb && path != null) return Image.file(File(path), fit: BoxFit.cover);
+  // 💡 웹에는 경로가 없고 file_picker 13에는 동기 bytes 게터도 없으므로 한 번 읽어서 씁니다.
+  return _AsyncImagePreview(file: file);
+}
+
+/// 파일 바이트를 한 번만 읽어 미리보기를 그립니다.
+///
+/// build 안에서 readAsBytes()를 부르면 리빌드마다 다시 읽게 되므로 initState에서 한 번만 읽습니다.
+class _AsyncImagePreview extends StatefulWidget {
+  const _AsyncImagePreview({required this.file});
+
+  final PlatformFile file;
+
+  @override
+  State<_AsyncImagePreview> createState() => _AsyncImagePreviewState();
+}
+
+class _AsyncImagePreviewState extends State<_AsyncImagePreview> {
+  late final Future<Uint8List> _bytes = widget.file.readAsBytes();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Uint8List>(
+    future: _bytes,
+    builder: (context, snapshot) {
+      final bytes = snapshot.data;
+      if (bytes != null) return Image.memory(bytes, fit: BoxFit.cover);
+      // 읽지 못했으면 이미지가 아닌 첨부와 같은 모양으로 둡니다. 읽는 중에는 아이콘 없이 배경만 둡니다.
+      final failed = snapshot.connectionState == ConnectionState.done;
+      return ColoredBox(
+        color: AppDesignTokens.paleBlue,
+        child: failed
+            ? const Icon(
+                Icons.insert_drive_file_outlined,
+                color: AppDesignTokens.blue,
+              )
+            : null,
+      );
+    },
+  );
 }
 
 String _formatBytes(int bytes) {

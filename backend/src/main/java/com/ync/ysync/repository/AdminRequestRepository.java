@@ -12,4 +12,7 @@ public interface AdminRequestRepository extends JpaRepository<AdminRequest, Long
     
     // 💡 특정 사용자의 가장 최근 신청 건을 조회합니다. (중복 신청 방지용)
     Optional<AdminRequest> findTopByRequesterIdOrderByRequestedAtDesc(Long requesterId);
+
+    // 💡 탈퇴 처리 시 권한 신청 이력을 모두 지웁니다.
+    void deleteAllByRequesterId(Long requesterId);
 }

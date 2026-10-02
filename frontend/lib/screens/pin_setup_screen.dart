@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../providers/notice_provider.dart'; // secureStorageProvider 참조를 위해 임포트
+import '../providers/api_client_provider.dart';
 import 'main_tab_screen.dart';
 import '../theme/app_design_tokens.dart';
 
