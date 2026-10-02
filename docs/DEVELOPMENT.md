@@ -7,8 +7,8 @@
 ## 1. AI 코딩 어시스턴트 지침 및 강제 규칙 (Guidelines)
 
 ### A. Rich Aesthetics UI 디자인 정책
-* **커스텀 컬러 팔레트 준수**: 단순 브라우저 기본 색상(단순 Red, Blue, Green) 사용을 엄격히 금지합니다. 어두운 네이비 계열의 HSL Tailored Color(`0xFF164687`)와 어우러지는 Amber 포인트 컬러 등을 조화롭게 활용합니다.
-* **디자인 완성도**: 모서리 곡률(`BorderRadius.circular(10)` 이상), 섀도우 블러 효과, 카드 레이아웃의 투명감(Glassmorphism 느낌)을 살려 고급스러운 분위기를 연출해야 합니다.
+* **커스텀 컬러 팔레트 준수**: `AppDesignTokens`의 네이비·블루·코랄 팔레트를 사용합니다. 색상 변경은 토큰과 전역 테마를 함께 갱신합니다.
+* **디자인 완성도**: 정보 카드는 그림자 없이 테두리와 8px 모서리로 구분합니다. 로그인과 탐색 영역의 유리 질감은 본문 가독성을 해치지 않는 범위에서 사용합니다.
 * **마이크로 애니메이션**: 버튼의 Hover 효과, 댓글 들여쓰기 꺾임 선 디자인 등 사용자의 동작에 직관적이고 부드럽게 반응하는 디테일을 포함해야 합니다.
 
 ### B. 작업 격리 및 로컬 커밋 분리 정책 (Git)
@@ -126,20 +126,22 @@
 ### A. 컬러 팔레트 (Color Palette)
 | 색상 구분 | Hex Code | Flutter 표현 | 주로 사용되는 위치 |
 |---|---|---|---|
-| **Primary (Portal Blue)** | `#164687` | `Color(0xFF164687)` | 앱바 배경, 활성화 탭, 메인 액션 버튼, 강조 링크 |
-| **Secondary (Amber)** | `#FFBF00` | `Color(0xFFFFBF00)` | 알림 뱃지, 중요 포인트 아이콘, 서브 강조 요소 |
+| **Primary (Blue)** | `#246BFD` | `AppDesignTokens.blue` | 앱바 배경, 활성화 탭, 메인 액션 버튼, 강조 링크 |
+| **Secondary (Coral)** | `#FF6258` | `AppDesignTokens.coral` | 중요 포인트와 보조 강조 요소 |
+| **Heading (Navy)** | `#10213F` | `AppDesignTokens.navy` | 주요 제목과 브랜드 탐색 영역 |
+| **Metadata** | `#5F6B7D` | `AppDesignTokens.subtle` | 작은 날짜·조회수·댓글 수 텍스트 |
 | **Danger (Alert Red)** | `#E53935` | `Colors.redAccent` | 삭제/신고/블라인드/차단 관련 경고 버튼 및 칩 |
 | **Success (Green)** | `#43A047` | `Colors.green.shade600` | 인증 성공, 복구 완료 스낵바, 정상 상태 칩 |
-| **Background (Light)** | `#F9F9F9` | `Colors.grey.shade50` | 기본 스크롤 스크린 배경색 |
+| **Background (Light)** | `#F5F7FA` | `AppDesignTokens.background` | 기본 스크롤 스크린 배경색 |
 | **Card / Dialog Surface**| `#FFFFFF` | `Colors.white` | 개별 콘텐츠 리스트 카드 타일, 팝업 바디 |
 
 ### B. 타이포그래피 (Typography)
-* **글꼴**: 모바일 및 웹 크로스 플랫폼 렌더링 시 브라우저 기본 서체를 지양하고 `Outfit` 또는 `Inter` 글꼴군을 적용하여 고급스럽고 명확한 가독성을 제공합니다.
+* **글꼴**: 현재는 Flutter 기본 서체와 한국어 fallback을 사용합니다. 지정 서체를 도입할 때에는 한국어 글리프 지원과 모바일 줄바꿈을 함께 검증합니다.
 * **글자 크기 스케일 (Typography Scale)**:
-  - **Header 1 (대제목)**: `fontSize: 18`, `fontWeight: FontWeight.w800` (앱바 타이틀 등)
+  - **Header 1 (주요 탭 제목)**: `fontSize: 28`, `fontWeight: FontWeight.w800`, 왼쪽 정렬. 설명은 14px로 아래에 배치합니다.
   - **Header 2 (게시글 제목)**: `fontSize: 15~16`, `fontWeight: FontWeight.bold`, `color: Colors.black87`
   - **Body (본문/내용)**: `fontSize: 13~14`, `fontWeight: FontWeight.normal`, `color: Colors.black54`
-  - **Caption (메타데이터)**: `fontSize: 11`, `fontWeight: FontWeight.normal`, `color: Colors.black38` (작성 시간, 카테고리 태그 등)
+  - **Caption (메타데이터)**: `fontSize: 12`, `color: AppDesignTokens.subtle` (작성 시간, 조회수·댓글 수 등)
 
 ### C. 컴포넌트 디자인 규칙 (Component Standards)
 * **카드 레이아웃 (Card & Tiles)**: 그림자를 최소화하고 테두리를 정교화하여 Sleek Flat 스타일을 적용합니다. (`elevation: 0`을 사용하고 모서리가 둥근 테두리 선을 룰로 두릅니다.)
@@ -147,16 +149,17 @@
   Card(
     elevation: 0,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(color: Colors.grey.shade200),
+      borderRadius: BorderRadius.circular(8),
+      side: BorderSide(color: AppDesignTokens.divider),
     ),
     child: ...
   )
   ```
-* **간격 규칙 (Spacing Grid)**: 여백(Margin/Padding) 구성 시 ad-hoc 수치 입력을 금하고, **8 / 12 / 16 / 24px 배수** 기반의 패딩을 적용하여 시각적 일관성을 확보합니다.
+* **간격 규칙 (Spacing Grid)**: 공통 화면 가로 여백은 `AppDesignTokens.contentPadding`(20px)을 사용하고, 내부 간격은 8 / 12 / 16 / 24px를 기준으로 배치합니다.
   - 아이콘 간격: `8px`
   - 리스트 아이템 내부 패딩: `12px` or `16px`
-  - 화면 전체 가로 마진: `16px` or `24px`
+  - 화면 전체 가로 마진: `20px`
+* **필터 선택 상태**: 선택 항목은 블루 배경·흰 글자로 표시하고 `Semantics.selected`를 함께 설정합니다.
 
 ### D. 대댓글(답글) 디자인 스펙
 * **들여쓰기(Indent) 폭**: 자식 댓글(대댓글)의 경우 깊이(depth)에 따라 가로 여백을 동적으로 세팅합니다. 단, 모바일 화면 폭을 고려하여 최대 들여쓰기는 `depth * 16.0`을 한계값으로 둡니다.
