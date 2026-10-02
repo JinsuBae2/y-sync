@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../theme/app_design_tokens.dart';
-import 'selection_highlight.dart';
 
 class ContentFilterBar extends StatelessWidget {
   const ContentFilterBar({
@@ -115,7 +114,9 @@ class _FilterOption extends StatelessWidget {
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isGlass
+            color: selected
+                ? AppDesignTokens.blue
+                : isGlass
                 ? Colors.white.withValues(alpha: 0.22)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
@@ -132,31 +133,33 @@ class _FilterOption extends StatelessWidget {
                   ]
                 : null,
           ),
-          child: SelectionHighlight(
-            selected: selected,
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? AppDesignTokens.blue : AppDesignTokens.muted,
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected ? Colors.white : AppDesignTokens.muted,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             ),
           ),
         ),
       ),
     );
 
-    if (!isGlass) return button;
+    final accessibleButton = Semantics(
+      selected: selected,
+      button: true,
+      child: button,
+    );
+    if (!isGlass) return accessibleButton;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: button,
+          child: accessibleButton,
         ),
       ),
     );

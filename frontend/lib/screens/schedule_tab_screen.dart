@@ -81,7 +81,7 @@ class _ScheduleTabScreenState extends State<ScheduleTabScreen>
                     dividerColor: Colors.transparent,
                     indicatorSize: TabBarIndicatorSize.tab,
                     indicator: BoxDecoration(
-                      color: const Color(0xFF164687),
+                      color: AppDesignTokens.blue,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     labelColor: Colors.white,

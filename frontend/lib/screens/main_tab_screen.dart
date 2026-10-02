@@ -65,7 +65,6 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
   Widget build(BuildContext context) {
     const themeColor = AppDesignTokens.blue;
     const darkNavy = AppDesignTokens.navy;
-    final pageController = _getOrCreatePageController(_currentIndex);
     final screens = <Widget>[
       HomeScreen(
         onOpenNotices: () => _selectTab(1),
@@ -169,6 +168,7 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
           );
         }
 
+        final pageController = _getOrCreatePageController(_currentIndex);
         return Scaffold(
           extendBody: false,
           body: PageView(
