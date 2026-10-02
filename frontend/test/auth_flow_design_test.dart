@@ -16,7 +16,7 @@ void main() {
     expect(find.bySemanticsLabel('Y-Sync 천마 로고'), findsOneWidget);
     expect(find.text('학번'), findsOneWidget);
     expect(find.text('로그인'), findsOneWidget);
-    expect(find.text('Google로 계속'), findsOneWidget);
+    expect(find.text('Google 로그인 (준비 중)'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -27,7 +27,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Google로 계속'));
+    await tester.tap(find.text('Google 로그인 (준비 중)'));
     await tester.pumpAndSettle();
 
     expect(find.text('소셜 로그인 준비 중'), findsOneWidget);

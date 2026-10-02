@@ -129,23 +129,6 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
 
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
-      appBar: AppBar(
-        backgroundColor: AppDesignTokens.background,
-        foregroundColor: AppDesignTokens.navy,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        titleSpacing: 0,
-        title: const Text(
-          '공지사항',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: NotificationActionButton(),
-          ),
-        ],
-      ),
       floatingActionButton: isAdmin
           ? FloatingActionButton(
               backgroundColor: AppDesignTokens.blue,
@@ -165,80 +148,73 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
               child: const Icon(Icons.edit_outlined),
             )
           : null,
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppDesignTokens.contentMaxWidth,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 8, 20, 18),
-                child: Text(
-                  '학과의 중요한 소식과 안내를 확인하세요',
-                  style: TextStyle(
-                    color: AppDesignTokens.muted,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+      body: SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppDesignTokens.contentMaxWidth,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _NoticeHeader(),
+                _SearchField(
+                  controller: _searchController,
+                  onSearch: _performSearch,
                 ),
-              ),
-              _SearchField(
-                controller: _searchController,
-                onSearch: _performSearch,
-              ),
-              const SizedBox(height: 14),
-              _GradeFilter(
-                selectedGrade: selectedGrade,
-                onChanged: (grade) =>
-                    ref.read(noticeGradeProvider.notifier).updateGrade(grade),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: _buildNoticeList(feedAsync)),
-                    // 💡 스크롤을 내린 상태에서만 띄웁니다. 최상단에서는 당겨서 새로고침이면 충분하고,
-                    //    읽는 중에 목록을 자동으로 밀어 넣으면 보던 자리를 잃습니다.
-                    Positioned(
-                      top: 8,
-                      left: 0,
-                      right: 0,
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: _isScrolledDown,
-                        builder: (context, isScrolledDown, _) {
-                          final feed = feedAsync.value;
-                          if (!isScrolledDown ||
-                              feed == null ||
-                              feed.newCount <= 0) {
-                            return const SizedBox.shrink();
-                          }
-                          return Center(
-                            child: _NewNoticeChip(
-                              count: feed.newCount,
-                              onTap: _goToTopAndRefresh,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (feedAsync.isRefreshing)
-                      const Positioned(
-                        top: 0,
-                        left: 20,
-                        right: 20,
-                        child: LinearProgressIndicator(
-                          minHeight: 3,
-                          color: AppDesignTokens.blue,
-                          backgroundColor: AppDesignTokens.paleBlue,
+                const SizedBox(height: 14),
+                _GradeFilter(
+                  selectedGrade: selectedGrade,
+                  onChanged: (grade) =>
+                      ref.read(noticeGradeProvider.notifier).updateGrade(grade),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _buildNoticeList(feedAsync)),
+                      // 💡 스크롤을 내린 상태에서만 띄웁니다. 최상단에서는 당겨서 새로고침이면 충분하고,
+                      //    읽는 중에 목록을 자동으로 밀어 넣으면 보던 자리를 잃습니다.
+                      Positioned(
+                        top: 8,
+                        left: 0,
+                        right: 0,
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _isScrolledDown,
+                          builder: (context, isScrolledDown, _) {
+                            final feed = feedAsync.value;
+                            if (!isScrolledDown ||
+                                feed == null ||
+                                feed.newCount <= 0) {
+                              return const SizedBox.shrink();
+                            }
+                            return Center(
+                              child: _NewNoticeChip(
+                                count: feed.newCount,
+                                onTap: _goToTopAndRefresh,
+                              ),
+                            );
+                          },
                         ),
                       ),
-                  ],
+                      if (feedAsync.isRefreshing)
+                        const Positioned(
+                          top: 0,
+                          left: 20,
+                          right: 20,
+                          child: LinearProgressIndicator(
+                            minHeight: 3,
+                            color: AppDesignTokens.blue,
+                            backgroundColor: AppDesignTokens.paleBlue,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -388,6 +364,52 @@ class _NewNoticeChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NoticeHeader extends StatelessWidget {
+  const _NoticeHeader();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 22, 12, 20),
+    child: Row(
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '공지사항',
+                style: TextStyle(
+                  color: AppDesignTokens.navy,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              SizedBox(height: 5),
+              Text(
+                '학과의 중요한 소식과 안내를 확인하세요',
+                style: TextStyle(
+                  color: AppDesignTokens.muted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppDesignTokens.paleBlue,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const NotificationActionButton(),
+        ),
+      ],
+    ),
+  );
 }
 
 class _SearchField extends StatelessWidget {

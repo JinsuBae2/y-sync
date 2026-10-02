@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'screens/splash_screen.dart';
+import 'theme/app_design_tokens.dart';
 import 'services/push_notification_service.dart'; // 💡 FCM 추가
 import 'widgets/server_availability_gate.dart';
 import 'utils/back_navigation_loading.dart';
@@ -53,21 +54,22 @@ class YSyncApp extends ConsumerWidget {
           ServerAvailabilityGate(child: child ?? const SizedBox.shrink()),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF164687), // 브랜드 컬러 #164687
-          primary: const Color(0xFF164687),
-          secondary: const Color(0xFFFFC107), // Amber
+          seedColor: AppDesignTokens.blue,
+          primary: AppDesignTokens.blue,
+          secondary: AppDesignTokens.coral,
         ),
         useMaterial3: true,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF164687),
+          backgroundColor: AppDesignTokens.blue,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
         cardTheme: CardThemeData(
-          elevation: 4,
-          shadowColor: Colors.black.withValues(alpha: 0.1),
+          color: AppDesignTokens.surface,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: AppDesignTokens.divider),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(

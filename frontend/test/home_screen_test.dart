@@ -190,6 +190,44 @@ void main() {
     expect(find.text('30분 후'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('학사일정 다시 시도는 화면 이동 없이 재조회한다', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var requests = 0;
+    var openedSchedule = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (retryCount, error) => null,
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          unreadNotificationCountProvider.overrideWithValue(0),
+          personalTimetableEntriesProvider.overrideWith((ref) async => []),
+          homeNoticesProvider.overrideWith((ref) async => []),
+          homeCommunityPostsProvider.overrideWith((ref) async => []),
+          homeCalendarEventsProvider.overrideWith((ref) async {
+            requests++;
+            if (requests == 1) throw Exception('일시적인 조회 실패');
+            return [];
+          }),
+        ],
+        child: MaterialApp(
+          home: HomeScreen(
+            onOpenNotices: () {},
+            onOpenCommunity: () {},
+            onOpenSchedule: () => openedSchedule = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(requests, 2);
+    expect(openedSchedule, isFalse);
+    expect(find.text('예정된 학사일정이 없습니다.'), findsOneWidget);
+  });
 }
 
 String _apiDate(DateTime date) {

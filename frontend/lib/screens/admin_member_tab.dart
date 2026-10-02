@@ -1558,9 +1558,9 @@ class _NoticeGradeStatsCardState extends ConsumerState<_NoticeGradeStatsCard> {
             const SizedBox(height: 6),
             Text(
               hasUnset
-                  ? '아직 선택하지 않은 ${stats.unsetCount}명은 학년별 알림으로 전환하면 '
-                        '학년 공지 알림을 받지 못합니다.'
-                  : '알림 대상 전원이 선택을 마쳤습니다. 학년별 알림으로 전환할 수 있습니다.',
+                  ? '학년별 알림 적용 시, 아직 선택하지 않은 ${stats.unsetCount}명은 '
+                        '전체 공지만 받습니다.'
+                  : '알림 대상 전원이 선택을 마쳤습니다.',
               style: TextStyle(
                 fontSize: 12.5,
                 height: 1.4,
