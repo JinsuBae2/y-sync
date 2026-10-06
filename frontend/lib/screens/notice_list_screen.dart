@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -563,7 +564,7 @@ class NoticeCard extends ConsumerWidget {
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     tooltip: isScrapped ? '스크랩 해제' : '스크랩',
-                    onPressed: () => ref
+                    onPressed: ref.watch(isDemoAccountProvider) ? null : () => ref
                         .read(scrapNotifierProvider)
                         .toggleScrap('NOTICE', notice.id),
                     icon: Icon(

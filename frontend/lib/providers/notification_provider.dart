@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification.dart';
 import 'api_client_provider.dart';
 import 'session_provider.dart';
+import 'demo_access_provider.dart';
 
 class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
   @override
@@ -20,6 +21,7 @@ class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
 
   // 💡 전체 읽음 처리
   Future<void> markAllAsRead() async {
+    if (ref.read(isDemoAccountProvider)) return;
     final dio = ref.read(dioProvider);
     await dio.put('/notifications/read');
 
@@ -32,6 +34,7 @@ class NotificationNotifier extends AsyncNotifier<List<AppNotification>> {
 
   // 💡 개별 알림 읽음 처리
   Future<void> markAsRead(int notificationId) async {
+    if (ref.read(isDemoAccountProvider)) return;
     try {
       final dio = ref.read(dioProvider);
       await dio.put('/notifications/$notificationId/read');

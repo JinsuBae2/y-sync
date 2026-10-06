@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'dart:ui';
 
 import '../widgets/app_root_back_guard.dart';
@@ -274,7 +275,18 @@ class _MainTabScreenState extends ConsumerState<MainTabScreen> {
     return NoticeGradePrompt(
       child: AppRootBackGuard(
         enabled: platform.isIosStandalonePwa(),
-        child: content,
+        child: ref.watch(isDemoAccountProvider)
+            ? Column(children: [
+                const SafeArea(bottom: false, child: Material(
+                  color: AppDesignTokens.paleBlue,
+                  child: SizedBox(width: double.infinity, child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('데모 계정입니다. 조회만 가능합니다.', textAlign: TextAlign.center),
+                  )),
+                )),
+                Expanded(child: content),
+              ])
+            : content,
       ),
     );
   }

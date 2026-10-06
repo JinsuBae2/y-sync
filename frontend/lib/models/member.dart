@@ -1,6 +1,8 @@
 import 'notice_grade_preference.dart';
 
 class Member {
+  bool get isDemo => role == 'DEMO';
+
   final int id;
   final String loginId;
   final String name;

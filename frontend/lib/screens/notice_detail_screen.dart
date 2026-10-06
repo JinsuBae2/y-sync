@@ -23,6 +23,7 @@ class NoticeDetailScreen extends ConsumerWidget {
     final member = ref.watch(authProvider).asData?.value;
     final canEdit =
         member != null &&
+        !member.isDemo &&
         (member.role == 'ADMIN' ||
             member.role == 'SUPER_ADMIN' ||
             member.name == notice.authorName ||

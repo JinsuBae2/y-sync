@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   bool _isLoading = false;
 
   Future<void> _savePin() async {
+    if (blockDemoChange(context, ref)) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -42,6 +44,10 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   Future<void> _skipPinSetup() async {
+    if (ref.read(isDemoAccountProvider)) {
+      _navigateToMain();
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final storage = ref.read(secureStorageProvider);

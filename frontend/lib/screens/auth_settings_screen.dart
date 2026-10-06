@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +47,7 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
   }
 
   Future<void> _toggleBiometric(bool value) async {
+    if (blockDemoChange(context, ref)) return;
     setState(() => _isLoading = true);
     try {
       if (value) {
@@ -77,6 +79,7 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
   }
 
   Future<void> _setupPin() async {
+    if (blockDemoChange(context, ref)) return;
     if (_usePin) {
       await _storage.delete(key: 'user_pin');
       if (!mounted) return;
@@ -217,7 +220,7 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
                   children: [
                     SwitchListTile(
                       value: _useBiometric,
-                      onChanged: _isLoading ? null : _toggleBiometric,
+                      onChanged: _isLoading || ref.watch(isDemoAccountProvider) ? null : _toggleBiometric,
                       activeTrackColor: AppDesignTokens.blue,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -273,7 +276,7 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
                         ),
                       ),
                       trailing: TextButton(
-                        onPressed: _isLoading ? null : _setupPin,
+                        onPressed: _isLoading || ref.watch(isDemoAccountProvider) ? null : _setupPin,
                         child: Text(_usePin ? '해제' : '설정'),
                       ),
                     ),

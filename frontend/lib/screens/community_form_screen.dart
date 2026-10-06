@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
@@ -170,6 +171,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(isDemoAccountProvider)) return const DemoReadOnlyScreen();
     final isEdit = widget.post != null;
 
     return Scaffold(

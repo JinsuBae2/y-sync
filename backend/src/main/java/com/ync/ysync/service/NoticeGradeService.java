@@ -70,6 +70,7 @@ public class NoticeGradeService {
     }
 
     public boolean confirmationRequired(Member member, int currentAcademicYear) {
+        if (member.getRole() == com.ync.ysync.domain.MemberRole.DEMO) return false;
         return member.getNoticeGradePreference() == null
                 || member.getGradeConfirmedYear() == null
                 || member.getGradeConfirmedYear() < currentAcademicYear;

@@ -35,7 +35,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+            @org.springframework.beans.factory.annotation.Value("${ysync.demo.enabled:false}") boolean demoEnabled) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -51,7 +52,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/hello", "/api/v1/auth/**", "/uploads/**", "/s3-uploads/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(new DemoReadOnlyFilter(demoEnabled), JwtAuthenticationFilter.class);
 
         return http.build();
     }
