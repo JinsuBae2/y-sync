@@ -108,4 +108,3 @@ flutter analyze
 - `docs/WORK_LOG.md`
 - `docs/deployment/demo-account.md`
 - `docs/superpowers/plans/2026-10-06-read-only-demo-account.md`
-
