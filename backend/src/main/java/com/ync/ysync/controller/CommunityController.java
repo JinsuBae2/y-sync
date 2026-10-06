@@ -55,7 +55,8 @@ public class CommunityController {
     // 💡 게시글 단건 상세 조회
     @GetMapping("/{id}")
     public ResponseEntity<CommunityResponse> getPost(@PathVariable Long id) {
-        CommunityPost post = communityService.getPost(id);
+        CommunityPost post = communityService.getPost(id, !com.ync.ysync.config.DemoAccessPolicy.isDemo(
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()));
         return ResponseEntity.ok(CommunityResponse.from(post));
     }
 

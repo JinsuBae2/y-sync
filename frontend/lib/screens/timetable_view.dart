@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -144,7 +145,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 Expanded(child: timetableContent),
               ],
             ),
-      floatingActionButton: currentUser != null && (_isPersonal || isAdmin)
+      floatingActionButton: currentUser != null && !currentUser.isDemo && (_isPersonal || isAdmin)
           ? FloatingActionButton(
               backgroundColor: AppDesignTokens.blue,
               foregroundColor: Colors.white,
@@ -678,7 +679,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
       color: AppDesignTokens.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        onTap: _isPersonal || isAdmin
+        onTap: !ref.watch(isDemoAccountProvider) && (_isPersonal || isAdmin)
             ? () => _showAddEditEntryDialog(entry: entry)
             : null,
         borderRadius: BorderRadius.circular(12),
@@ -805,6 +806,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
   }
 
   Future<void> _showPersonalAddOptions() async {
+    if (blockDemoChange(context, ref)) return;
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -1109,6 +1111,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
 
   // 💡 수업 등록 및 수정 다이얼로그 (중복 검증 오류 대응 탑재)
   void _showAddEditEntryDialog({TimetableEntry? entry}) {
+    if (blockDemoChange(context, ref)) return;
     final currentGrade = ref.read(selectedTimetableGradeProvider);
     final currentClass = ref.read(selectedTimetableClassProvider);
     final isPersonalEntry = _isPersonal;

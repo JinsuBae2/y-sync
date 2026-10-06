@@ -18,6 +18,19 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
+        final isWrite = !['GET', 'HEAD', 'OPTIONS'].contains(options.method.toUpperCase());
+        if (ref.read(sessionIsDemoProvider) && isWrite && options.path != '/auth/logout') {
+          handler.reject(DioException(
+            requestOptions: options,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: options,
+              statusCode: 403,
+              data: {'code': 'DEMO_READ_ONLY', 'message': '데모 계정에서는 변경할 수 없습니다.'},
+            ),
+          ));
+          return;
+        }
         // 💡 매 요청마다 SecureStorage에서 JWT 토큰을 읽어와 Authorization 헤더에 추가합니다.
         final storage = ref.read(secureStorageProvider);
         final token = await storage.read(key: 'jwt_token');

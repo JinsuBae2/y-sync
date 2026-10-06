@@ -40,7 +40,7 @@ class _NoticeGradePromptState extends ConsumerState<NoticeGradePrompt> {
 
   void _maybePrompt(Member? member) {
     if (!mounted || _isDialogOpen || member == null) return;
-    if (!member.gradeConfirmationRequired) return;
+    if (member.isDemo || !member.gradeConfirmationRequired) return;
 
     // 💡 서버가 학년도를 내려주지 않는 구버전 응답이면 안내하지 않습니다.
     //    단말기 시각으로 학년도를 추측하면 잘못된 시점에 안내가 뜰 수 있습니다.

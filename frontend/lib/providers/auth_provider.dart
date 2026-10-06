@@ -43,11 +43,9 @@ class AuthNotifier extends AsyncNotifier<Member?> {
       final dio = ref.read(dioProvider);
       final response = await dio.get('/members/me');
 
-      // 💡 로그인 상태가 확인되면 FCM 토큰을 서버로 전송
-      await _sendFcmToken(dio);
-
       final member = Member.fromJson(response.data);
-      ref.read(sessionMemberIdProvider.notifier).activate(member.id);
+      ref.read(sessionMemberIdProvider.notifier).activate(member.id, isDemo: member.isDemo);
+      if (!member.isDemo) await _sendFcmToken(dio);
       return member;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) {

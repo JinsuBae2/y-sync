@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,7 +58,7 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
 
     return Scaffold(
       backgroundColor: AppDesignTokens.background,
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: ref.watch(isDemoAccountProvider) ? null : FloatingActionButton(
         backgroundColor: AppDesignTokens.blue,
         foregroundColor: Colors.white,
         elevation: 2,
@@ -522,7 +523,7 @@ class CommunityPostCard extends ConsumerWidget {
                       key: ValueKey('community-post-bookmark-${post.id}'),
                       padding: EdgeInsets.zero,
                       tooltip: isScrapped ? '스크랩 해제' : '스크랩',
-                      onPressed: () => ref
+                      onPressed: ref.watch(isDemoAccountProvider) ? null : () => ref
                           .read(scrapNotifierProvider)
                           .toggleScrap('COMMUNITY', post.id),
                       icon: Icon(

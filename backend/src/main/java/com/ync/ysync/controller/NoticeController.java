@@ -84,7 +84,8 @@ public class NoticeController {
 
     @GetMapping("/{id}")
     public ResponseEntity<NoticeResponse> getNotice(@PathVariable Long id) {
-        Notice notice = noticeService.getNotice(id);
+        Notice notice = noticeService.getNotice(id, !com.ync.ysync.config.DemoAccessPolicy.isDemo(
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()));
         return ResponseEntity.ok(NoticeResponse.from(notice));
     }
 

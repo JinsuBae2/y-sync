@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -136,9 +137,9 @@ class _CommentItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = member?.role == 'ADMIN' || member?.role == 'SUPER_ADMIN';
     final isMine = member != null && member!.id == comment.memberId;
-    final canDelete = !comment.isDeleted && (isMine || isAdmin);
+    final canDelete = !(member?.isDemo ?? false) && !comment.isDeleted && (isMine || isAdmin);
     final canReport =
-        member != null && !isMine && !comment.isDeleted && onReport != null;
+        member != null && !member!.isDemo && !isMine && !comment.isDeleted && onReport != null;
     final authorName = comment.isDeleted ? '삭제된 댓글' : comment.authorName;
     final deletedByAdmin = comment.deletedBy == CommentDeletedBy.admin;
     final deletedMessage = deletedByAdmin
@@ -218,13 +219,13 @@ class _CommentItem extends ConsumerWidget {
                         : FontStyle.normal,
                   ),
                 ),
-                if ((!isReply && !comment.isDeleted && member != null) ||
+                if ((!isReply && !comment.isDeleted && member != null && !member!.isDemo) ||
                     canDelete ||
                     canReport) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      if (!isReply && !comment.isDeleted && member != null)
+                      if (!isReply && !comment.isDeleted && member != null && !member!.isDemo)
                         TextButton(
                           onPressed: () => ref
                               .read(activeParentCommentProvider.notifier)
@@ -426,6 +427,12 @@ class _CommentComposerState extends ConsumerState<CommentComposer> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(isDemoAccountProvider)) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('데모 계정에서는 변경할 수 없습니다.'),
+      );
+    }
     final parent = ref.watch(activeParentCommentProvider)[widget.postId];
 
     return Material(

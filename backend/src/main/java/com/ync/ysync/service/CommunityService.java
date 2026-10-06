@@ -43,8 +43,13 @@ public class CommunityService {
 
     @Transactional
     public CommunityPost getPost(Long id) {
+        return getPost(id, true);
+    }
+
+    @Transactional
+    public CommunityPost getPost(Long id, boolean increaseViewCount) {
         // 💡 존재 확인과 조회수 증가를 UPDATE 한 문장으로 함께 처리합니다. 갱신된 행이 없으면 없는 글입니다.
-        if (communityPostRepository.incrementViewCount(id) == 0) {
+        if (increaseViewCount && communityPostRepository.incrementViewCount(id) == 0) {
             throw new IllegalArgumentException("해당 게시글이 존재하지 않습니다.");
         }
         return communityPostRepository.findById(id)

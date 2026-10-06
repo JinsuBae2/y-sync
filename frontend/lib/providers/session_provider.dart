@@ -7,11 +7,28 @@ class SessionMemberIdNotifier extends Notifier<int?> {
   @override
   int? build() => null;
 
-  void activate(int memberId) => state = memberId;
+  void activate(int memberId, {bool isDemo = false}) {
+    ref.read(sessionIsDemoProvider.notifier).setDemo(isDemo);
+    state = memberId;
+  }
 
-  void clear() => state = null;
+  void clear() {
+    ref.read(sessionIsDemoProvider.notifier).setDemo(false);
+    state = null;
+  }
 }
 
 final sessionMemberIdProvider = NotifierProvider<SessionMemberIdNotifier, int?>(
   SessionMemberIdNotifier.new,
+);
+
+// Dio에서는 authProvider를 역참조하지 않고 인증된 세션의 권한만 읽습니다.
+class SessionIsDemoNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void setDemo(bool value) => state = value;
+}
+
+final sessionIsDemoProvider = NotifierProvider<SessionIsDemoNotifier, bool>(
+  SessionIsDemoNotifier.new,
 );

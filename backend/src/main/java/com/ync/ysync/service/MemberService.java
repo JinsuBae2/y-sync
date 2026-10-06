@@ -33,6 +33,9 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${ysync.demo.enabled:false}")
+    private boolean demoEnabled;
+
     /**
      * 로그인 로직
      */
@@ -40,6 +43,10 @@ public class MemberService {
     public Member login(String loginId, String password) {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("아이디 또는 비밀번호가 맞지 않습니다."));
+
+        if (member.getRole() == com.ync.ysync.domain.MemberRole.DEMO && !demoEnabled) {
+            throw new IllegalArgumentException("아이디 또는 비밀번호가 맞지 않습니다.");
+        }
 
         // 가입 완료 여부 검증 (isActivated = false 인 계정은 로그인 차단)
         if (!member.isActivated()) {

@@ -36,6 +36,7 @@ public class MemberSignupService {
      */
     @Transactional(readOnly = true)
     public void verifyStudentForSignup(String loginId, String name) {
+        rejectDemoAccount(loginId);
         // 💡 응답으로 '명단에 있지만 아직 가입하지 않은 학번'을 골라낼 수 없어야 합니다.
         //    그 조합이 곧 타인 명의 가입의 표적이며, 학번을 순서대로 넣어보면 표적 명단이 만들어집니다.
         //    따라서 '등록되지 않은 학번'과 '이름 불일치'를 같은 응답으로 돌려줍니다.
@@ -81,6 +82,7 @@ public class MemberSignupService {
      * 인증번호 검증. 성공 시 가입 요청에 제시할 증표를 반환합니다.
      */
     public String verifySignupCode(String loginId, String code) {
+        rejectDemoAccount(loginId);
         String verifiedEmail = verificationService.consumeCode(
                 loginId, code, MemberVerificationService.Purpose.SIGNUP);
         return verificationService.issueSignupGrant(loginId, verifiedEmail);
@@ -119,7 +121,7 @@ public class MemberSignupService {
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("등록되지 않은 학번입니다. 학과 사무실에 문의하세요."));
 
-        if (member.isActivated()) {
+        if (member.isActivated() || member.getRole() == com.ync.ysync.domain.MemberRole.DEMO) {
             throw new IllegalArgumentException("이미 활성화된 회원입니다.");
         }
 
@@ -146,6 +148,7 @@ public class MemberSignupService {
     }
 
     public void requestPasswordReset(String loginId, String name) {
+        rejectDemoAccount(loginId);
         Member member = memberRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new IllegalArgumentException("등록된 계정 정보를 확인할 수 없습니다."));
 
@@ -163,6 +166,7 @@ public class MemberSignupService {
      * (SUPER_ADMIN 제외, 가입 대기 계정 제외)은 호출하는 쪽에서 판단합니다.
      */
     public void sendPasswordResetCode(Member member) {
+        rejectDemoAccount(member.getLoginId());
         if (member.getEmail() == null || member.getEmail().isBlank()) {
             throw new IllegalArgumentException("등록된 이메일이 없습니다. 계정 재등록 초기화를 이용해 주세요.");
         }
@@ -175,6 +179,7 @@ public class MemberSignupService {
     @Transactional
     public void confirmPasswordReset(String loginId, String code, String newPassword) {
         validatePassword(newPassword);
+        rejectDemoAccount(loginId);
 
         // 💡 인증번호 검증과 비밀번호 변경이 같은 요청에 있으므로 중간 저장소가 필요 없습니다.
         //    소비된 challenge가 인증된 이메일을 들고 있어 회원 이메일과 바로 대조합니다.
@@ -192,6 +197,14 @@ public class MemberSignupService {
         member.setFcmToken(null);
         memberRepository.save(member);
         log.info("비밀번호 재설정 완료 - 학번: {}", loginId);
+    }
+
+    private void rejectDemoAccount(String loginId) {
+        memberRepository.findByLoginId(loginId)
+                .filter(member -> member.getRole() == com.ync.ysync.domain.MemberRole.DEMO)
+                .ifPresent(member -> {
+                    throw new IllegalArgumentException("등록된 계정 정보를 확인할 수 없습니다.");
+                });
     }
 
     private String normalizeSchoolEmail(String email) {

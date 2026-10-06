@@ -49,6 +49,9 @@ services:
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - NOTICE_GRADE_FILTER_ENABLED=${NOTICE_GRADE_FILTER_ENABLED:-false}
+      - YSYNC_DEMO_ENABLED=${YSYNC_DEMO_ENABLED:-false}
+      - YSYNC_DEMO_LOGIN_ID=${YSYNC_DEMO_LOGIN_ID:-}
+      - YSYNC_DEMO_PASSWORD=${YSYNC_DEMO_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - FIREBASE_CONFIG_PATH=file:/app/config/firebase-adminsdk.json  # 💡 [FCM 마운트] 외부 파이어베이스 키 설정 경로 지정
       - MAIL_USERNAME=${MAIL_USERNAME:?MAIL_USERNAME is required}  # 💡 [Gmail 연동] 외부 메일 유저네임 주입
