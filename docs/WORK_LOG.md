@@ -8,9 +8,11 @@
 - 왜: 포트폴리오 방문자가 계정 없이 로그인 화면에 머무르던 문제를 해결하면서 운영 데이터 변경을 막기 위해서입니다.
 - 어떻게: DB 회원 역할에 DEMO를 추가하고 JWT 인증 뒤 정확한 읽기 경로만 허용합니다. 글·댓글·업로드·스크랩·신고·문의·설정 변경, 공개 비밀번호 복구와 관리자 조회를 차단합니다. 조회수·FCM 등록·알림 읽음·학년 저장 부작용과 데모 PIN 안내를 생략합니다. Compose와 배포 워크플로에 production 변수/Secret 전달을 추가했습니다.
 - 검증: 최신 develop 시간표 변경을 보존한 뒤 백엔드 `./gradlew test bootJar`(155개), Flutter 전체 테스트(98개), 정적 분석(문제 없음), Web 릴리스 빌드, Compose 설정 검사를 통과했습니다. 독립 리뷰의 시드 아이디 충돌을 회귀 테스트로 재현하고 예약 아이디를 코드에서 거부했습니다.
-- 추적: 코드 커밋 `169d85a`, 기능 [PR #141](https://github.com/JinsuBae2/y-sync/pull/141); 릴리스·배포 결과는 후속 갱신합니다.
+- 추적: 코드 커밋 `169d85a`, 기능 [PR #141](https://github.com/JinsuBae2/y-sync/pull/141), 이력 동기화 [PR #143](https://github.com/JinsuBae2/y-sync/pull/143), 운영 릴리스 [PR #142](https://github.com/JinsuBae2/y-sync/pull/142). 운영 커밋 `751562a12fcc6e1942c46ddd3d9239349f03e12d`.
 - 운영 준비: 기존 아이디 충돌 없음 확인. 회원 스키마를 `/home/ubuntu/ysync/backups/demo-account-20261006T051009Z/member-schema.sql`에 백업한 뒤 기존 ENUM 값을 유지하고 DEMO만 추가했습니다.
-- 배포 상태: CI/CD 배포 진행 예정. 실제 데모 로그인과 읽기 허용·변경 403·관리자 차단·로그아웃 후 재조회 결과는 배포 후 확인합니다.
+- 배포 상태: 2026-10-06 운영 배포 완료. 최신 main 이력을 동기화한 릴리스 [CI](https://github.com/JinsuBae2/y-sync/actions/runs/37418296980)와 [Production Deploy](https://github.com/JinsuBae2/y-sync/actions/runs/37418507608)가 성공했습니다. 기존 production 승인 절차를 거쳐 Oracle VM과 Firebase Hosting에 반영했습니다.
+- 운영 검증: 실제 로그인과 이름·DEMO 권한, 주요 조회 200, 설정·FCM·삭제·관리자 접근 403, 공개 비밀번호 복구 거부, 공지·게시글 반복 조회 시 조회수 유지, 로그아웃 후 공유 세션 유지를 확인했습니다. 브라우저 수동 화면 검증은 수행하지 않았습니다.
+- 규칙 확인: `docs/DEVELOPMENT.md`의 한국어 Conventional Commits와 `.github/PULL_REQUEST_TEMPLATE.md`를 재확인했습니다. 초기 기능 커밋의 타입 표기와 백엔드·프론트엔드 분리 규칙을 지키지 못했으며, 이미 병합된 이력은 유지했습니다. 후속 커밋·병합은 영문 타입과 한국어 제목으로 작성하고 기능·릴리스 PR 본문을 템플릿에 맞춰 보완했습니다.
 
 ---
 
