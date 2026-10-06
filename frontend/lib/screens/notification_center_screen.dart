@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,7 +32,7 @@ class NotificationCenterScreen extends ConsumerWidget {
                 notifications.any((notification) => !notification.isRead)
                 ? IconButton(
                     tooltip: '모두 읽음',
-                    onPressed: () => _markAllAsRead(context, ref),
+                    onPressed: ref.watch(isDemoAccountProvider) ? null : () => _markAllAsRead(context, ref),
                     icon: const Icon(Icons.done_all_rounded),
                   )
                 : const SizedBox.shrink(),
@@ -129,7 +130,7 @@ class _NotificationRow extends ConsumerWidget {
 
     return Dismissible(
       key: ValueKey('notification_${notification.id}'),
-      direction: DismissDirection.endToStart,
+      direction: ref.watch(isDemoAccountProvider) ? DismissDirection.none : DismissDirection.endToStart,
       onDismissed: (_) {
         ref
             .read(notificationsProvider.notifier)

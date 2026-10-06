@@ -162,6 +162,10 @@ public class MemberController {
             Optional<Member> memberOpt = memberRepository.findByLoginId(loginId);
             if (memberOpt.isPresent()) {
                 Member member = memberOpt.get();
+                if (member.getRole() == com.ync.ysync.domain.MemberRole.DEMO) {
+                    SecurityContextHolder.clearContext();
+                    return ResponseEntity.ok("로그아웃 성공");
+                }
                 member.setFcmToken(null); // 💡 로그아웃 시 FCM 토큰 클리어
                 memberRepository.save(member);
                 log.info("로그아웃 처리 - DB 내 FCM 토큰 삭제 완료: {}", loginId);

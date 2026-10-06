@@ -146,8 +146,13 @@ public class NoticeService {
 
     @Transactional
     public Notice getNotice(Long id) {
+        return getNotice(id, true);
+    }
+
+    @Transactional
+    public Notice getNotice(Long id, boolean increaseViewCount) {
         // 💡 존재 확인과 조회수 증가를 UPDATE 한 문장으로 함께 처리합니다. 갱신된 행이 없으면 없는 글입니다.
-        if (noticeRepository.incrementViewCount(id) == 0) {
+        if (increaseViewCount && noticeRepository.incrementViewCount(id) == 0) {
             throw new IllegalArgumentException("해당 공지사항이 존재하지 않습니다.");
         }
         return noticeRepository.findById(id)

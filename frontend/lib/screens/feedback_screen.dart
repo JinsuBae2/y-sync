@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -98,7 +99,8 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => ref.watch(isDemoAccountProvider)
+      ? const DemoReadOnlyScreen() : Scaffold(
     backgroundColor: AppDesignTokens.background,
     appBar: AppBar(
       title: const Text('의견 보내기'),

@@ -1,3 +1,4 @@
+import '../providers/demo_access_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,7 +104,7 @@ class _NotificationSettingsScreenState
                     title: '공지사항',
                     subtitle: '학과 공지와 긴급 안내를 받습니다.',
                     value: _noticeEnabled,
-                    enabled: !_isLoading,
+                    enabled: !_isLoading && !ref.watch(isDemoAccountProvider),
                     onChanged: (value) =>
                         _updateSettings(value, _commentEnabled),
                   ),
@@ -112,7 +113,7 @@ class _NotificationSettingsScreenState
                     title: '댓글',
                     subtitle: '내 게시글에 새 댓글이 달리면 알려줍니다.',
                     value: _commentEnabled,
-                    enabled: !_isLoading,
+                    enabled: !_isLoading && !ref.watch(isDemoAccountProvider),
                     onChanged: (value) =>
                         _updateSettings(_noticeEnabled, value),
                   ),
@@ -159,6 +160,7 @@ class _NotificationSettingsScreenState
   }
 
   Future<void> _updateSettings(bool noticeEnabled, bool commentEnabled) async {
+    if (blockDemoChange(context, ref)) return;
     setState(() => _isLoading = true);
 
     try {
@@ -323,7 +325,7 @@ class _NoticeGradeSection extends ConsumerWidget {
                 style: const TextStyle(fontSize: 12.5),
               ),
               trailing: TextButton(
-                onPressed: () => showDialog<void>(
+                onPressed: ref.watch(isDemoAccountProvider) ? null : () => showDialog<void>(
                   context: context,
                   barrierDismissible: false,
                   builder: (_) => NoticeGradeDialog(member: member),

@@ -37,6 +37,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       return;
     }
 
+    Member? member;
+    try {
+      member = await ref.read(authProvider.future);
+    } catch (_) {
+      // 서버 장애 시 기존 로컬 인증 흐름을 유지하고 복구 후 인증 상태를 기다립니다.
+    }
+    if (!mounted) return;
+    if (member?.isDemo ?? false) {
+      _isLocalAuthPassed = true;
+      _proceedToMain();
+      return;
+    }
+
     final useBiometric = await _storage.read(key: 'use_biometric') == 'true';
     final userPin = await _storage.read(key: 'user_pin');
     final hasSeenPinSetup =

@@ -25,9 +25,9 @@ class CommunityDetailScreen extends ConsumerWidget {
     final member = ref.watch(authProvider).asData?.value;
     final isAdmin = member?.role == 'ADMIN' || member?.role == 'SUPER_ADMIN';
     final canEdit =
-        member != null && member.id == post.memberId && !post.isDeleted;
-    final canDelete = member != null && (isAdmin || member.id == post.memberId);
-    final canReport = member != null && !isAdmin && member.id != post.memberId;
+        member != null && !member.isDemo && member.id == post.memberId && !post.isDeleted;
+    final canDelete = member != null && !member.isDemo && (isAdmin || member.id == post.memberId);
+    final canReport = member != null && !member.isDemo && !isAdmin && member.id != post.memberId;
 
     if (post.isDeleted && !isAdmin) {
       return _DeletedPostScreen(reason: post.deletionReason);
