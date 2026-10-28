@@ -125,6 +125,12 @@ class _TestNoticeFeedNotifier extends NoticeFeedNotifier {
   final VoidCallback? onBuild;
 
   @override
+  Future<bool> refreshLoadedPages() async {
+    state = AsyncData(await build());
+    return true;
+  }
+
+  @override
   Future<NoticeFeedState> build() async {
     onBuild?.call();
     return NoticeFeedState(
@@ -353,6 +359,55 @@ void main() {
     expect(find.text(_post.title), findsOneWidget);
     expect(requestCount, 2);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('커뮤니티 여러 글 아래에서 상세 복귀 후에도 위치를 유지한다', (tester) async {
+    _setMobileViewport(tester);
+    var requests = 0;
+    final posts = List.generate(
+      30,
+      (i) => CommunityPost(
+        id: i,
+        category: 'FREE',
+        title: '목록 글 $i',
+        content: '내용',
+        anonymous: false,
+        authorName: '학생',
+        memberId: 2,
+        createdAt: '2026-10-28',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(_TestAuthNotifier.new),
+          communityPostsProvider.overrideWith((ref) async {
+            requests++;
+            await Future<void>.delayed(const Duration(milliseconds: 50));
+            return posts;
+          }),
+          communityNotifierProvider.overrideWith(_TestCommunityNotifier.new),
+          commentsProvider.overrideWith((ref, arg) async => []),
+          scrapsProvider.overrideWith((ref) async => []),
+          unreadNotificationCountProvider.overrideWithValue(0),
+        ],
+        child: const MaterialApp(home: CommunityListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('목록 글 15'),
+      400,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    final before = tester.getTopLeft(find.text('목록 글 15')).dy;
+    await tester.tap(find.text('목록 글 15'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('목록 글 15')).dy, closeTo(before, 1));
+    expect(requests, 2);
   });
 
   testWidgets('공지 상세는 본문과 댓글 흐름을 한 화면에 보여준다', (tester) async {

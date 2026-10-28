@@ -271,8 +271,15 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
                     targetType: 'NOTICE',
                     targetId: notice.id,
                   );
-                  if (result != null) {
-                    ref.invalidate(noticeFeedProvider);
+                  if (result != null && context.mounted) {
+                    final refreshed = await ref
+                        .read(noticeFeedProvider.notifier)
+                        .refreshLoadedPages();
+                    if (!refreshed && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('목록을 갱신하지 못했습니다. 당겨서 다시 시도해주세요.')),
+                      );
+                    }
                   }
                 },
               );
