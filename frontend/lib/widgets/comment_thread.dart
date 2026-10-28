@@ -1,3 +1,4 @@
+import 'app_confirmation_dialog.dart';
 import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -317,20 +318,21 @@ class _CommentItem extends ConsumerWidget {
       if (isMine) {
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('댓글 삭제'),
+          barrierColor: AppConfirmationDialog.barrierColor,
+          builder: (dialogContext) => AppConfirmationDialog(
+            icon: Icons.delete_outline_rounded,
+            primaryActionIndex: 0,
+            title: '댓글 삭제',
             content: const Text('이 댓글을 삭제하시겠습니까?'),
             actions: [
-              TextButton(
+              AppDialogAction(
+                label: '취소',
                 onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('취소'),
               ),
-              TextButton(
+              AppDialogAction(
+                label: '삭제',
                 onPressed: () => Navigator.pop(dialogContext, true),
-                child: const Text(
-                  '삭제',
-                  style: TextStyle(color: AppDesignTokens.coral),
-                ),
+                destructive: true,
               ),
             ],
           ),
@@ -342,6 +344,7 @@ class _CommentItem extends ConsumerWidget {
       } else if (isAdmin) {
         final reason = await showDialog<String>(
           context: context,
+          barrierColor: AppConfirmationDialog.barrierColor,
           builder: (_) => const DeletionReasonDialog(),
         );
         if (reason == null) return;

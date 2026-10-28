@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -100,11 +101,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'PIN 입력',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.lock_outline_rounded,
+        title: 'PIN 입력',
         content: TextField(
           controller: pinController,
           keyboardType: TextInputType.number,
@@ -116,11 +116,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => _forceLogout(),
-            child: const Text('로그아웃', style: TextStyle(color: Colors.red)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '로그아웃', onPressed: () => _forceLogout()),
+          AppDialogAction(
+            label: '확인',
             onPressed: () {
               if (pinController.text == correctPin) {
                 _isLocalAuthPassed = true; // 💡 로컬 인증 통과 설정
@@ -133,7 +131,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 pinController.clear();
               }
             },
-            child: const Text('확인'),
           ),
         ],
       ),

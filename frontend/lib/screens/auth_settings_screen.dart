@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -91,15 +92,10 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
     final controller = TextEditingController();
     final pin = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: const Text(
-          'PIN 설정',
-          style: TextStyle(
-            color: AppDesignTokens.navy,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (dialogContext) => AppConfirmationDialog(
+        icon: Icons.lock_outline_rounded,
+        title: 'PIN 설정',
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -121,23 +117,17 @@ class _AuthSettingsScreenState extends ConsumerState<AuthSettingsScreen> {
           ),
         ),
         actions: [
-          TextButton(
+          AppDialogAction(
+            label: '취소',
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('취소'),
           ),
-          FilledButton(
+          AppDialogAction(
+            label: '저장',
             onPressed: () {
               if (controller.text.length >= 4) {
                 Navigator.pop(dialogContext, controller.text);
               }
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppDesignTokens.blue,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('저장'),
           ),
         ],
       ),

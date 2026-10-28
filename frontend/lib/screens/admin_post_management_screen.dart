@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/community_post.dart';
@@ -518,20 +519,17 @@ class _AdminPostManagementScreenState
   void _confirmRestore(CommunityPost post) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          '게시글 복구',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.restore_rounded,
+        title: '게시글 복구',
         content: Text(
           '"${post.title}" 게시글을 다시 복구하시겠습니까?\n복구 시 모든 사용자가 다시 조회할 수 있게 됩니다.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '복구하기',
             onPressed: () async {
               Navigator.pop(context);
               _showLoading();
@@ -546,16 +544,6 @@ class _AdminPostManagementScreenState
                 _showErrorDialog('복구 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppDesignTokens.blue,
-            ),
-            child: const Text(
-              '복구하기',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),
@@ -567,11 +555,11 @@ class _AdminPostManagementScreenState
     final reasonController = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          '게시글 삭제',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.delete_outline_rounded,
+        primaryActionIndex: 0,
+        title: '게시글 삭제',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,11 +581,9 @@ class _AdminPostManagementScreenState
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '삭제하기',
             onPressed: () async {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) {
@@ -617,14 +603,7 @@ class _AdminPostManagementScreenState
                 _showErrorDialog('삭제 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              '삭제하기',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            destructive: true,
           ),
         ],
       ),
@@ -775,17 +754,13 @@ class _AdminPostManagementScreenState
   void _showErrorDialog(String error) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          '에러 발생',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.error_outline_rounded,
+        title: '에러 발생',
         content: Text(error),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
-          ),
+          AppDialogAction(label: '확인', onPressed: () => Navigator.pop(context)),
         ],
       ),
     );
@@ -1170,11 +1145,11 @@ class _AdminPostManagementScreenState
     final reasonController = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          '${report.targetType == 'POST' ? '게시글' : '댓글'} 블라인드 처리',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.visibility_off_outlined,
+        primaryActionIndex: 0,
+        title: '${report.targetType == 'POST' ? '게시글' : '댓글'} 블라인드 처리',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1196,11 +1171,9 @@ class _AdminPostManagementScreenState
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '블라인드 처리',
             onPressed: () async {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) {
@@ -1232,14 +1205,7 @@ class _AdminPostManagementScreenState
                 _showErrorDialog('블라인드 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              '블라인드 처리',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            destructive: true,
           ),
         ],
       ),
@@ -1252,22 +1218,20 @@ class _AdminPostManagementScreenState
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          isSuspending ? '작성자 차단' : '작성자 차단 해제',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.person_off_outlined,
+        primaryActionIndex: isSuspending ? 0 : 1,
+        title: isSuspending ? '작성자 차단' : '작성자 차단 해제',
         content: Text(
           isSuspending
               ? '"${report.authorName}" 유저를 차단(정지) 상태로 변경하시겠습니까?\n차단 시 해당 유저의 모든 API 요청이 거부됩니다.'
               : '"${report.authorName}" 유저의 차단(정지) 상태를 해제하시겠습니까?',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: isSuspending ? '차단하기' : '해제하기',
             onPressed: () async {
               Navigator.pop(context);
               _showLoading();
@@ -1290,18 +1254,7 @@ class _AdminPostManagementScreenState
                 _showErrorDialog('처리 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isSuspending
-                  ? AppDesignTokens.coral
-                  : AppDesignTokens.blue,
-            ),
-            child: Text(
-              isSuspending ? '차단하기' : '해제하기',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            destructive: isSuspending,
           ),
         ],
       ),
@@ -1311,20 +1264,17 @@ class _AdminPostManagementScreenState
   void _confirmDismissReport(AdminReportSummary report) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          '신고 기각 / 복구',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.restore_rounded,
+        title: '신고 기각 / 복구',
         content: Text(
           '해당 ${report.targetType == 'POST' ? '게시글' : '댓글'}에 대한 모든 신고 내역을 삭제하고, 만약 블라인드(삭제) 상태인 경우 다시 정상 복구합니다.\n\n진행하시겠습니까?',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '기각 및 복구',
             onPressed: () async {
               Navigator.pop(context);
               _showLoading();
@@ -1342,14 +1292,6 @@ class _AdminPostManagementScreenState
                 _showErrorDialog('신고 기각 실패: $e');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-            child: const Text(
-              '기각 및 복구',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),

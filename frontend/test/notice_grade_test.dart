@@ -133,7 +133,7 @@ void main() {
     testWidgets('확인이 필요하면 첫 설정 안내가 뜬다', (tester) async {
       await pumpPrompt(tester, member(confirmationRequired: true));
 
-      expect(find.text('공지 알림을 받을 학년을 선택해 주세요.'), findsOneWidget);
+      expect(find.text('알림을 받을 학년 선택'), findsOneWidget);
       expect(find.text('1학년'), findsOneWidget);
       expect(find.text('전체 공지만 받기'), findsOneWidget);
       expect(find.text('나중에'), findsOneWidget);
@@ -149,7 +149,7 @@ void main() {
         ),
       );
 
-      expect(find.text('올해 현재 학년을 확인해 주세요.'), findsOneWidget);
+      expect(find.text('올해 학년 확인'), findsOneWidget);
       expect(find.text('이전 선택: 1학년'), findsOneWidget);
     });
 
@@ -159,7 +159,7 @@ void main() {
         member(preference: 'GRADE_2', confirmedYear: 2027),
       );
 
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(NoticeGradeDialog), findsNothing);
     });
 
     testWidgets('서버가 학년도를 주지 않으면 단말기 날짜로 추측하지 않는다', (tester) async {
@@ -168,7 +168,7 @@ void main() {
         member(currentYear: null, confirmationRequired: true),
       );
 
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(NoticeGradeDialog), findsNothing);
     });
 
     testWidgets('나중에를 고르면 앱 사용을 막지 않고 같은 세션에서 다시 뜨지 않는다', (tester) async {
@@ -177,13 +177,13 @@ void main() {
       await tester.tap(find.text('나중에'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(NoticeGradeDialog), findsNothing);
       expect(find.text('홈'), findsOneWidget);
 
       // 화면이 다시 그려져도 같은 학년도에는 안내가 반복되지 않아야 한다.
       await tester.pump();
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(NoticeGradeDialog), findsNothing);
     });
   });
 
@@ -220,7 +220,7 @@ void main() {
 
       expect(find.text('저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'), findsOneWidget);
       // 대화상자가 닫히지 않아 사용자가 곧바로 재시도할 수 있어야 한다.
-      expect(find.text('올해 현재 학년을 확인해 주세요.'), findsOneWidget);
+      expect(find.text('올해 학년 확인'), findsOneWidget);
       expect(find.text('이전 선택: 1학년'), findsOneWidget);
     });
 
