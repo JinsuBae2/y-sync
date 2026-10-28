@@ -106,7 +106,7 @@ Widget _testApp() => ProviderScope(
   overrides: [
     adminMemberProvider.overrideWith(_TestAdminMemberNotifier.new),
     adminProvider.overrideWith(_TestAdminNotifier.new),
-    communityPostsProvider.overrideWith((ref) async => [_post]),
+    adminCommunityPostsProvider.overrideWith((ref) async => [_post]),
     adminReportsProvider.overrideWith((ref) async => []),
   ],
   child: const MaterialApp(home: AdminDashboardScreen()),
