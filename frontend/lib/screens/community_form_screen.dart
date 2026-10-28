@@ -12,6 +12,7 @@ import '../models/community_post.dart';
 import '../providers/community_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../widgets/selected_attachment_list.dart';
+import '../widgets/unsaved_form_guard.dart';
 
 class CommunityFormScreen extends ConsumerStatefulWidget {
   const CommunityFormScreen({super.key, this.post});
@@ -31,6 +32,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
   String _targetGrade = 'ALL';
   bool _anonymous = false;
   bool _isLoading = false;
+  bool _saved = false;
   final List<PlatformFile> _files = [];
 
   static const _categories = <(String, String)>[
@@ -57,6 +59,13 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       _anonymous = post.anonymous;
     }
   }
+
+  bool get _hasChanges => !_saved && (
+    _titleController.text != (widget.post?.title ?? '') ||
+    _contentController.text != (widget.post?.content ?? '') ||
+    _category != (widget.post?.category ?? 'FREE') ||
+    _targetGrade != (widget.post?.targetGrade ?? 'ALL') ||
+    _anonymous != (widget.post?.anonymous ?? false) || _files.isNotEmpty);
 
   @override
   void dispose() {
@@ -159,11 +168,16 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           ),
         ),
       );
-      Navigator.pop(context, true);
-    } catch (error) {
+      setState(() {
+        _saved = true;
+        _isLoading = false;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('저장 실패: $error')));
+          .showSnackBar(const SnackBar(content: Text('저장하지 못했습니다. 입력한 내용은 유지되니 다시 시도해주세요.')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -174,7 +188,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
     if (ref.watch(isDemoAccountProvider)) return const DemoReadOnlyScreen();
     final isEdit = widget.post != null;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
         backgroundColor: AppDesignTokens.background,
@@ -379,6 +393,12 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           ),
         ),
       ),
+    );
+    return UnsavedFormGuard(
+      controllers: [_titleController, _contentController],
+      hasChanges: () => _hasChanges,
+      saving: _isLoading,
+      child: scaffold,
     );
   }
 

@@ -11,6 +11,7 @@ import '../providers/feedback_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../widgets/selection_highlight.dart';
 import '../widgets/selected_attachment_list.dart';
+import '../widgets/unsaved_form_guard.dart';
 
 class FeedbackScreen extends ConsumerStatefulWidget {
   const FeedbackScreen({super.key});
@@ -100,7 +101,12 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) => ref.watch(isDemoAccountProvider)
-      ? const DemoReadOnlyScreen() : Scaffold(
+      ? const DemoReadOnlyScreen() : UnsavedFormGuard(
+    controllers: [_title, _content, _screen],
+    hasChanges: () => !_sent && (_title.text.isNotEmpty || _content.text.isNotEmpty ||
+      _screen.text.isNotEmpty || _category != 'BUG' || _images.isNotEmpty),
+    saving: _sending,
+    child: Scaffold(
     backgroundColor: AppDesignTokens.background,
     appBar: AppBar(
       title: const Text('의견 보내기'),
@@ -375,6 +381,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                 ),
               ),
       ),
+    ),
     ),
   );
 }
