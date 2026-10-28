@@ -6,6 +6,7 @@ import '../models/timetable_entry.dart';
 import '../providers/timetable_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/load_failure_view.dart';
 import '../widgets/selection_highlight.dart';
 
 // 💡 학과 공용 시간표와 학생 개인 시간표를 전환해 보여주는 뷰입니다.
@@ -107,13 +108,17 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
           child: CircularProgressIndicator(color: AppDesignTokens.blue),
         ),
       ),
-      error: (err, stack) => const SizedBox(
-        height: 240,
-        child: Center(
-          child: Text(
-            '시간표를 불러오지 못했습니다.',
-            style: TextStyle(color: AppDesignTokens.muted),
-          ),
+      error: (err, stack) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 240),
+        child: LoadFailureView(
+          message: '시간표를 불러오지 못했습니다.',
+          onRetry: () {
+            if (_isPersonal) {
+              ref.invalidate(personalTimetableEntriesProvider);
+            } else {
+              ref.invalidate(timetableEntriesProvider);
+            }
+          },
         ),
       ),
       data: (entries) {

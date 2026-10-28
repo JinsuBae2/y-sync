@@ -8,6 +8,7 @@ import 'package:y_sync/providers/admin_member_provider.dart';
 import 'package:y_sync/providers/admin_provider.dart';
 import 'package:y_sync/providers/community_provider.dart';
 import 'package:y_sync/screens/admin_dashboard_screen.dart';
+import 'package:y_sync/screens/admin_post_management_screen.dart';
 
 class _TestAdminMemberNotifier extends AdminMemberNotifier {
   @override
@@ -66,6 +67,28 @@ final _post = CommunityPost(
 );
 
 void main() {
+  testWidgets('관리자 목록 오류는 내부 예외를 숨기고 재시도한다', (tester) async {
+    var attempts = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          adminCommunityPostsProvider.overrideWith((ref) async {
+            if (++attempts == 1) throw Exception('private server error');
+            return <CommunityPost>[];
+          }),
+          adminReportsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AdminPostManagementScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('private server error'), findsNothing);
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(attempts, 2);
+  });
+
   testWidgets('관리자 모바일 화면은 회원·승인·콘텐츠를 짧은 탭으로 전환한다', (tester) async {
     _setViewport(tester, const Size(390, 844));
     await tester.pumpWidget(_testApp());
