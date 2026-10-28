@@ -1,3 +1,4 @@
+import '../widgets/browser_notification_permission_card.dart';
 import '../providers/demo_access_provider.dart';
 import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/foundation.dart';
@@ -124,34 +125,7 @@ class _NotificationSettingsScreenState
               const _NoticeGradeSection(),
               if (kIsWeb) ...[
                 const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppDesignTokens.paleBlue.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: AppDesignTokens.blue,
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '웹에서는 브라우저 알림 권한도 허용되어 있어야 푸시 알림을 받을 수 있습니다.',
-                          style: TextStyle(
-                            color: AppDesignTokens.muted,
-                            fontSize: 12,
-                            height: 1.45,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const BrowserNotificationPermissionCard(),
               ],
             ],
           ),
