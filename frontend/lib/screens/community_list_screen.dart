@@ -152,6 +152,13 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
           final keyword = ref.read(communitySearchKeywordProvider);
           return _EmptyCommunity(
             keyword: keyword,
+            hasFilters: selectedGrade != 'ALL' || ref.read(communityCategoryProvider) != 'ALL',
+            onReset: () {
+              _searchController.clear();
+              ref.read(communitySearchKeywordProvider.notifier).updateKeyword('');
+              ref.read(communityCategoryProvider.notifier).updateCategory('ALL');
+              ref.read(communityGradeProvider.notifier).updateGrade('ALL');
+            },
             onRefresh: () async => ref.invalidate(communityPostsProvider),
           );
         }
@@ -586,9 +593,11 @@ class _PostLabel extends StatelessWidget {
 }
 
 class _EmptyCommunity extends StatelessWidget {
-  const _EmptyCommunity({required this.keyword, required this.onRefresh});
+  const _EmptyCommunity({required this.keyword, required this.hasFilters, required this.onReset, required this.onRefresh});
 
   final String keyword;
+  final bool hasFilters;
+  final VoidCallback onReset;
   final Future<void> Function() onRefresh;
 
   @override
@@ -606,7 +615,7 @@ class _EmptyCommunity extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            keyword.isEmpty ? '아직 게시글이 없습니다.' : '검색 결과가 없습니다.',
+            hasFilters ? '조건에 맞는 게시글이 없습니다.' : keyword.isEmpty ? '아직 게시글이 없습니다.' : '검색 결과가 없습니다.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppDesignTokens.navy,
@@ -616,10 +625,12 @@ class _EmptyCommunity extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            keyword.isEmpty ? '첫 이야기를 남겨보세요.' : '다른 검색어를 입력해보세요.',
+            hasFilters ? '검색어나 필터를 바꿔보세요.' : keyword.isEmpty ? '첫 이야기를 남겨보세요.' : '다른 검색어를 입력해보세요.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppDesignTokens.muted, fontSize: 13),
           ),
+          if (hasFilters || keyword.trim().isNotEmpty)
+            TextButton(onPressed: onReset, child: const Text('검색·필터 초기화')),
         ],
       ),
     );

@@ -12,6 +12,7 @@ import '../models/notice.dart';
 import '../providers/notice_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../widgets/selected_attachment_list.dart';
+import '../widgets/unsaved_form_guard.dart';
 
 class NoticeFormScreen extends ConsumerStatefulWidget {
   const NoticeFormScreen({super.key, this.notice});
@@ -29,6 +30,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   String _noticeType = 'NEWS';
   String _targetGrade = 'ALL';
   bool _isLoading = false;
+  bool _saved = false;
   final List<PlatformFile> _files = [];
   bool _isEvent = false;
   DateTime _eventStartDate = DateTime.now();
@@ -59,6 +61,17 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       }
     }
   }
+
+  bool get _hasChanges => !_saved && (
+    _titleController.text != (widget.notice?.title ?? '') ||
+    _contentController.text != (widget.notice?.content ?? '') ||
+    _noticeType != (widget.notice?.noticeType ?? 'NEWS') ||
+    _targetGrade != (widget.notice?.targetGrade ?? 'ALL') ||
+    _isEvent != (widget.notice?.eventStartDate != null) ||
+    (_isEvent && (
+      _apiDate(_eventStartDate) != widget.notice?.eventStartDate ||
+      _apiDate(_eventEndDate) != (widget.notice?.eventEndDate ?? widget.notice?.eventStartDate))) ||
+    _files.isNotEmpty);
 
   @override
   void dispose() {
@@ -166,11 +179,16 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           ),
         ),
       );
-      Navigator.pop(context, true);
-    } catch (error) {
+      setState(() {
+        _saved = true;
+        _isLoading = false;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('저장 실패: $error')));
+          .showSnackBar(const SnackBar(content: Text('저장하지 못했습니다. 입력한 내용은 유지되니 다시 시도해주세요.')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -181,7 +199,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     if (ref.watch(isDemoAccountProvider)) return const DemoReadOnlyScreen();
     final isEdit = widget.notice != null;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
         backgroundColor: AppDesignTokens.background,
@@ -430,6 +448,12 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           ),
         ),
       ),
+    );
+    return UnsavedFormGuard(
+      controllers: [_titleController, _contentController],
+      hasChanges: () => _hasChanges,
+      saving: _isLoading,
+      child: scaffold,
     );
   }
 

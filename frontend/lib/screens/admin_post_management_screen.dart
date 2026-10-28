@@ -6,6 +6,7 @@ import '../providers/admin_provider.dart';
 import '../providers/comment_provider.dart';
 import 'community_detail_screen.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/load_failure_view.dart';
 
 class AdminPostManagementScreen extends ConsumerStatefulWidget {
   final bool isTabMode;
@@ -137,22 +138,9 @@ class _AdminPostManagementScreenState
             loading: () => const Center(
               child: CircularProgressIndicator(color: AppDesignTokens.blue),
             ),
-            error: (err, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '데이터 로드 실패: $err',
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                ],
-              ),
+            error: (err, stack) => LoadFailureView(
+              message: '콘텐츠 목록을 불러오지 못했습니다.',
+              onRetry: () => ref.invalidate(adminCommunityPostsProvider),
             ),
           ),
         ),
@@ -1171,7 +1159,10 @@ class _AdminPostManagementScreenState
       loading: () => const Center(
         child: CircularProgressIndicator(color: AppDesignTokens.blue),
       ),
-      error: (err, stack) => Center(child: Text('블랙리스트 로드 실패: $err')),
+      error: (err, stack) => LoadFailureView(
+        message: '신고 목록을 불러오지 못했습니다.',
+        onRetry: () => ref.invalidate(adminReportsProvider),
+      ),
     );
   }
 
