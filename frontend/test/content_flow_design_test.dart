@@ -135,6 +135,55 @@ class _TestNoticeFeedNotifier extends NoticeFeedNotifier {
 }
 
 void main() {
+  for (final notice in [true, false]) {
+    testWidgets('${notice ? '공지' : '커뮤니티'}: 필터로 빈 목록이면 조건 해제 안내', (
+      tester,
+    ) async {
+      _setMobileViewport(tester);
+      final container = ProviderContainer(
+        overrides: [
+          noticeFeedProvider.overrideWith(() => _TestNoticeFeedNotifier([])),
+          communityPostsProvider.overrideWith((ref) async => []),
+          myPageProvider.overrideWith(_TestMyPageNotifier.new),
+          unreadNotificationCountProvider.overrideWithValue(0),
+        ],
+      );
+      addTearDown(container.dispose);
+      if (notice) {
+        container.read(noticeGradeProvider.notifier).updateGrade('GRADE_2');
+      } else {
+        container.read(communityCategoryProvider.notifier).updateCategory('QA');
+        container.read(communityGradeProvider.notifier).updateGrade('GRADE_2');
+      }
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: notice
+                ? const NoticeListScreen()
+                : const CommunityListScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('조건에 맞는 ${notice ? '공지가' : '게시글이'} 없습니다.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('검색·필터 초기화'));
+      await tester.pumpAndSettle();
+      expect(
+        container.read(notice ? noticeGradeProvider : communityGradeProvider),
+        'ALL',
+      );
+      if (!notice) expect(container.read(communityCategoryProvider), 'ALL');
+      expect(
+        find.text(notice ? '등록된 공지가 없습니다.' : '아직 게시글이 없습니다.'),
+        findsOneWidget,
+      );
+    });
+  }
+
   testWidgets('공지 목록은 검색과 중요도를 먼저 보여준다', (tester) async {
     _setMobileViewport(tester);
 
@@ -178,10 +227,9 @@ void main() {
         overrides: [
           authProvider.overrideWith(_TestAuthNotifier.new),
           noticeFeedProvider.overrideWith(
-            () => _TestNoticeFeedNotifier(
-              [_notice],
-              onBuild: () => requestCount += 1,
-            ),
+            () => _TestNoticeFeedNotifier([
+              _notice,
+            ], onBuild: () => requestCount += 1),
           ),
           noticeNotifierProvider.overrideWith(_TestNoticeNotifier.new),
           myPageProvider.overrideWith(_TestMyPageNotifier.new),
