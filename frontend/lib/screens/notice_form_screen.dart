@@ -1,3 +1,6 @@
+import '../providers/session_provider.dart';
+import '../services/writing_draft.dart';
+import '../widgets/writing_draft_status.dart';
 import '../providers/demo_access_provider.dart';
 import 'dart:ui';
 
@@ -31,6 +34,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   String _targetGrade = 'ALL';
   bool _isLoading = false;
   bool _saved = false;
+  WritingDraft? _draft;
   final List<PlatformFile> _files = [];
   bool _isEvent = false;
   DateTime _eventStartDate = DateTime.now();
@@ -60,7 +64,46 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
         );
       }
     }
+    _initializeDraft();
   }
+
+  void _initializeDraft() {
+    final memberId = ref.read(sessionMemberIdProvider);
+    final store = ref.read(draftStoreProvider);
+    if (memberId == null || store == null || ref.read(isDemoAccountProvider)) return;
+    _draft = WritingDraft(store, memberId: memberId, kind: 'notice', postId: widget.notice?.id);
+    final data = _draft!.restore();
+    if (data != null) {
+      _titleController.text = data['title'] as String;
+      _contentController.text = data['content'] as String;
+      if (_grades.any((grade) => grade.$1 == data['targetGrade'])) {
+        _targetGrade = data['targetGrade'] as String;
+      }
+      if (['NEWS', 'NOTICE'].contains(data['noticeType'])) {
+        _noticeType = data['noticeType'] as String;
+      }
+      final start = DateTime.tryParse(data['eventStartDate'] is String ? data['eventStartDate'] as String : '');
+      final end = DateTime.tryParse(data['eventEndDate'] is String ? data['eventEndDate'] as String : '');
+      if (start != null && end != null && start.year >= 2025 && end.year <= 2030 && !end.isBefore(start)) {
+        _eventStartDate = start;
+        _eventEndDate = end;
+        _isEvent = data['isEvent'] == true;
+      }
+    }
+    _titleController.addListener(_saveDraft);
+    _contentController.addListener(_saveDraft);
+  }
+
+  void _saveDraft() => _draft?.save({
+    'title': _titleController.text,
+    'content': _contentController.text,
+    'targetGrade': _targetGrade,
+    'noticeType': _noticeType,
+    'isEvent': _isEvent,
+    'eventStartDate': _eventStartDate.toIso8601String(),
+    'eventEndDate': _eventEndDate.toIso8601String(),
+    'hasAttachments': _files.isNotEmpty,
+  }, hasChanges: _hasChanges);
 
   bool get _hasChanges => !_saved && (
     _titleController.text != (widget.notice?.title ?? '') ||
@@ -75,9 +118,17 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
 
   @override
   void dispose() {
+    _titleController.removeListener(_saveDraft);
+    _contentController.removeListener(_saveDraft);
+    _draft?.dispose();
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  void _updateDraft(VoidCallback update) {
+    setState(update);
+    _saveDraft();
   }
 
   Future<void> _pickFiles() async {
@@ -131,7 +182,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       );
       return;
     }
-    setState(() => _files.addAll(picked));
+    _updateDraft(() => _files.addAll(picked));
   }
 
   Future<void> _submit() async {
@@ -172,10 +223,11 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
         );
       }
       if (!mounted) return;
+      final draftCleared = _draft?.complete() ?? true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.notice == null ? '공지사항이 등록되었습니다.' : '공지사항이 수정되었습니다.',
+            (widget.notice == null ? '공지사항이 등록되었습니다.' : '공지사항이 수정되었습니다.') + (draftCleared ? '' : '\n게시 완료했지만 브라우저 초안을 지우지 못했습니다. 다시 게시하지 않도록 주의해주세요.'),
           ),
         ),
       );
@@ -221,6 +273,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
+              WritingDraftStatus(draft: _draft),
               const _FormSectionTitle(
                 title: '기본 정보',
                 subtitle: '학생이 목록에서 바로 이해할 수 있게 작성해주세요.',
@@ -259,7 +312,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               _OptionSelector(
                 options: const [('NEWS', '일반'), ('NOTICE', '중요')],
                 value: _noticeType,
-                onChanged: (value) => setState(() => _noticeType = value),
+                onChanged: (value) => _updateDraft(() => _noticeType = value),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -274,7 +327,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               _OptionSelector(
                 options: _grades,
                 value: _targetGrade,
-                onChanged: (value) => setState(() => _targetGrade = value),
+                onChanged: (value) => _updateDraft(() => _targetGrade = value),
               ),
               const SizedBox(height: 28),
               const _FormSectionTitle(title: '학사일정 연동'),
@@ -320,7 +373,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                         fontSize: 12,
                       ),
                     ),
-                    onChanged: (value) => setState(() => _isEvent = value),
+                    onChanged: (value) => _updateDraft(() => _isEvent = value),
                   ),
                 ),
               ),
@@ -399,7 +452,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 const SizedBox(height: 10),
                 SelectedAttachmentList(
                   files: _files,
-                  onRemove: (index) => setState(() => _files.removeAt(index)),
+                  onRemove: (index) => _updateDraft(() => _files.removeAt(index)),
                 ),
               ],
             ],
@@ -453,6 +506,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       controllers: [_titleController, _contentController],
       hasChanges: () => _hasChanges,
       saving: _isLoading,
+      onDiscard: () => _draft?.discard() ?? true,
+      discardMessage: _draft == null ? null : '게시하지 않은 내용이 있어요.\n버리면 이 브라우저에 저장된 초안도 삭제됩니다.',
       child: scaffold,
     );
   }
@@ -465,7 +520,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       lastDate: DateTime(2030),
     );
     if (!mounted || date == null) return;
-    setState(() {
+    _updateDraft(() {
       _eventStartDate = date;
       if (_eventEndDate.isBefore(date)) _eventEndDate = date;
     });
@@ -479,7 +534,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       lastDate: DateTime(2030),
     );
     if (!mounted || date == null) return;
-    setState(() => _eventEndDate = date);
+    _updateDraft(() => _eventEndDate = date);
   }
 
   static String _apiDate(DateTime date) {
