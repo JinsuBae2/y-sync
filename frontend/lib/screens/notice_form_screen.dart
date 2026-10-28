@@ -7,7 +7,8 @@ import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 
-import '../utils/platform_file_size.dart';
+import '../utils/attachment_selection_issue.dart';
+import '../widgets/attachment_selection_dialog.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -159,30 +160,10 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       ],
     );
     if (!mounted || picked.isEmpty) return;
-    if (_files.length + picked.length > 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('첨부파일은 최대 10개까지 선택할 수 있습니다.')),
-      );
-      return;
-    }
-    // 💡 크기를 알 수 없는 파일(null)은 클라이언트에서 한도를 검사할 수 없으므로 거절합니다.
-    //    서버가 최종 관문이지만, 업로드를 다 보낸 뒤 거절당하는 것보다 지금 막는 편이 낫습니다.
-    for (final file in picked) {
-      final size = await platformFileSize(file);
-      if (!mounted) return;
-      if (size == null || size > 20 * 1024 * 1024) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('파일 하나의 크기는 20MB 이하여야 합니다.')),
-        );
-        return;
-      }
-    }
-    final totalSize = await platformFilesTotalSize([..._files, ...picked]);
+    final issue = await attachmentSelectionIssue(existing: _files, picked: picked);
     if (!mounted) return;
-    if (totalSize == null || totalSize > 50 * 1024 * 1024) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('첨부파일 전체 크기는 50MB 이하여야 합니다.')),
-      );
+    if (issue != null) {
+      await showAttachmentSelectionIssue(context, issue);
       return;
     }
     _updateDraft(() => _files.addAll(picked));
