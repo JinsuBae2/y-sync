@@ -461,6 +461,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       ),
       bottomNavigationBar: SafeArea(
         top: false,
+        minimum: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),

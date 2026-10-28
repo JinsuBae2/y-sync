@@ -398,6 +398,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       ),
       bottomNavigationBar: SafeArea(
         top: false,
+        minimum: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
