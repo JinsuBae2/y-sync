@@ -1,3 +1,4 @@
+import '../widgets/upload_progress_label.dart';
 import '../providers/session_provider.dart';
 import '../services/writing_draft.dart';
 import '../widgets/writing_draft_status.dart';
@@ -35,6 +36,8 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
   String _targetGrade = 'ALL';
   bool _anonymous = false;
   bool _isLoading = false;
+  int? _sentBytes;
+  int? _totalBytes;
   bool _saved = false;
   WritingDraft? _draft;
   final List<PlatformFile> _files = [];
@@ -180,7 +183,11 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _sentBytes = null;
+      _totalBytes = null;
+    });
     try {
       final notifier = ref.read(communityNotifierProvider);
       if (widget.post == null) {
@@ -190,7 +197,8 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           content: content,
           anonymous: _anonymous,
           targetGrade: _targetGrade,
-          files: _files,
+          files: List.of(_files),
+          onSendProgress: _onSendProgress,
         );
       } else {
         await notifier.updatePost(
@@ -200,7 +208,8 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           content: content,
           anonymous: _anonymous,
           targetGrade: _targetGrade,
-          files: _files,
+          files: List.of(_files),
+          onSendProgress: _onSendProgress,
         );
       }
       if (!mounted) return;
@@ -227,6 +236,14 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
     }
   }
 
+  void _onSendProgress(int sent, int total) {
+    if (!mounted || !_isLoading) return;
+    setState(() {
+      _sentBytes = sent;
+      _totalBytes = total;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (ref.watch(isDemoAccountProvider)) return const DemoReadOnlyScreen();
@@ -245,7 +262,9 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
       ),
-      body: Align(
+      body: AbsorbPointer(
+        absorbing: _isLoading,
+        child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
@@ -330,6 +349,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
               const _SectionTitle(title: '내용'),
               const SizedBox(height: 12),
               TextField(
+                readOnly: _isLoading,
                 controller: _titleController,
                 maxLength: 100,
                 textInputAction: TextInputAction.next,
@@ -342,6 +362,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                readOnly: _isLoading,
                 controller: _contentController,
                 minLines: 10,
                 maxLines: 18,
@@ -396,6 +417,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           ),
         ),
       ),
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         minimum: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -415,20 +437,17 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppDesignTokens.blue,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppDesignTokens.subtle,
+                  disabledBackgroundColor: AppDesignTokens.paleBlue,
                   minimumSize: const Size.fromHeight(50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                    ? UploadProgressLabel(
+                        hasAttachments: _files.isNotEmpty,
+                        sent: _sentBytes,
+                        total: _totalBytes,
                       )
                     : Text(
                         isEdit ? '수정 완료' : '게시글 등록',

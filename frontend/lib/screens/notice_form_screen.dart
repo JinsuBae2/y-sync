@@ -1,3 +1,4 @@
+import '../widgets/upload_progress_label.dart';
 import '../providers/session_provider.dart';
 import '../services/writing_draft.dart';
 import '../widgets/writing_draft_status.dart';
@@ -33,6 +34,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   String _noticeType = 'NEWS';
   String _targetGrade = 'ALL';
   bool _isLoading = false;
+  int? _sentBytes;
+  int? _totalBytes;
   bool _saved = false;
   WritingDraft? _draft;
   final List<PlatformFile> _files = [];
@@ -194,7 +197,11 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _sentBytes = null;
+      _totalBytes = null;
+    });
     final startDate = _isEvent ? _apiDate(_eventStartDate) : null;
     final endDate = _isEvent ? _apiDate(_eventEndDate) : null;
 
@@ -206,7 +213,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           content,
           _noticeType,
           targetGrade: _targetGrade,
-          files: _files,
+          files: List.of(_files),
+          onSendProgress: _onSendProgress,
           eventStartDate: startDate,
           eventEndDate: endDate,
         );
@@ -217,7 +225,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           content,
           _noticeType,
           targetGrade: _targetGrade,
-          files: _files,
+          files: List.of(_files),
+          onSendProgress: _onSendProgress,
           eventStartDate: startDate,
           eventEndDate: endDate,
         );
@@ -246,6 +255,14 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     }
   }
 
+  void _onSendProgress(int sent, int total) {
+    if (!mounted || !_isLoading) return;
+    setState(() {
+      _sentBytes = sent;
+      _totalBytes = total;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (ref.watch(isDemoAccountProvider)) return const DemoReadOnlyScreen();
@@ -264,7 +281,9 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
       ),
-      body: Align(
+      body: AbsorbPointer(
+        absorbing: _isLoading,
+        child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
@@ -280,6 +299,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                readOnly: _isLoading,
                 controller: _titleController,
                 maxLength: 100,
                 textInputAction: TextInputAction.next,
@@ -292,6 +312,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                readOnly: _isLoading,
                 controller: _contentController,
                 minLines: 10,
                 maxLines: 18,
@@ -459,6 +480,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           ),
         ),
       ),
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         minimum: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -478,20 +500,17 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppDesignTokens.blue,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppDesignTokens.subtle,
+                  disabledBackgroundColor: AppDesignTokens.paleBlue,
                   minimumSize: const Size.fromHeight(50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                    ? UploadProgressLabel(
+                        hasAttachments: _files.isNotEmpty,
+                        sent: _sentBytes,
+                        total: _totalBytes,
                       )
                     : Text(
                         isEdit ? '수정 완료' : '공지 등록',
