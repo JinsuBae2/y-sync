@@ -1,3 +1,6 @@
+import '../providers/session_provider.dart';
+import '../services/writing_draft.dart';
+import '../widgets/writing_draft_status.dart';
 import '../providers/demo_access_provider.dart';
 import 'dart:ui';
 
@@ -33,6 +36,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
   bool _anonymous = false;
   bool _isLoading = false;
   bool _saved = false;
+  WritingDraft? _draft;
   final List<PlatformFile> _files = [];
 
   static const _categories = <(String, String)>[
@@ -58,7 +62,38 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       _targetGrade = post.targetGrade;
       _anonymous = post.anonymous;
     }
+    _initializeDraft();
   }
+
+  void _initializeDraft() {
+    final memberId = ref.read(sessionMemberIdProvider);
+    final store = ref.read(draftStoreProvider);
+    if (memberId == null || store == null || ref.read(isDemoAccountProvider)) return;
+    _draft = WritingDraft(store, memberId: memberId, kind: 'community', postId: widget.post?.id);
+    final data = _draft!.restore();
+    if (data != null) {
+      _titleController.text = data['title'] as String;
+      _contentController.text = data['content'] as String;
+      if (_grades.any((grade) => grade.$1 == data['targetGrade'])) {
+        _targetGrade = data['targetGrade'] as String;
+      }
+      if (_categories.any((category) => category.$1 == data['category'])) {
+        _category = data['category'] as String;
+      }
+      if (data['anonymous'] is bool) _anonymous = data['anonymous'] as bool;
+    }
+    _titleController.addListener(_saveDraft);
+    _contentController.addListener(_saveDraft);
+  }
+
+  void _saveDraft() => _draft?.save({
+    'title': _titleController.text,
+    'content': _contentController.text,
+    'targetGrade': _targetGrade,
+    'category': _category,
+    'anonymous': _anonymous,
+    'hasAttachments': _files.isNotEmpty,
+  }, hasChanges: _hasChanges);
 
   bool get _hasChanges => !_saved && (
     _titleController.text != (widget.post?.title ?? '') ||
@@ -69,9 +104,17 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
 
   @override
   void dispose() {
+    _titleController.removeListener(_saveDraft);
+    _contentController.removeListener(_saveDraft);
+    _draft?.dispose();
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  void _updateDraft(VoidCallback update) {
+    setState(update);
+    _saveDraft();
   }
 
   Future<void> _pickFiles() async {
@@ -125,7 +168,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       );
       return;
     }
-    setState(() => _files.addAll(picked));
+    _updateDraft(() => _files.addAll(picked));
   }
 
   Future<void> _savePost() async {
@@ -161,10 +204,11 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
         );
       }
       if (!mounted) return;
+      final draftCleared = _draft?.complete() ?? true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.post == null ? '게시글이 등록되었습니다.' : '게시글이 수정되었습니다.',
+            (widget.post == null ? '게시글이 등록되었습니다.' : '게시글이 수정되었습니다.') + (draftCleared ? '' : '\n게시 완료했지만 브라우저 초안을 지우지 못했습니다. 다시 게시하지 않도록 주의해주세요.'),
           ),
         ),
       );
@@ -210,6 +254,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
+              WritingDraftStatus(draft: _draft),
               const _SectionTitle(
                 title: '게시글 정보',
                 subtitle: '주제와 대상이 분명할수록 답변을 빠르게 받을 수 있어요.',
@@ -218,7 +263,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
               _OptionSelector(
                 options: _categories,
                 value: _category,
-                onChanged: (value) => setState(() => _category = value),
+                onChanged: (value) => _updateDraft(() => _category = value),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -233,7 +278,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
               _OptionSelector(
                 options: _grades,
                 value: _targetGrade,
-                onChanged: (value) => setState(() => _targetGrade = value),
+                onChanged: (value) => _updateDraft(() => _targetGrade = value),
               ),
               const SizedBox(height: 16),
               // 💡 그림자는 Container가, 배경색과 테두리는 Material이 그립니다.
@@ -277,7 +322,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                         fontSize: 12,
                       ),
                     ),
-                    onChanged: (value) => setState(() => _anonymous = value),
+                    onChanged: (value) => _updateDraft(() => _anonymous = value),
                   ),
                 ),
               ),
@@ -344,7 +389,7 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
                 const SizedBox(height: 10),
                 SelectedAttachmentList(
                   files: _files,
-                  onRemove: (index) => setState(() => _files.removeAt(index)),
+                  onRemove: (index) => _updateDraft(() => _files.removeAt(index)),
                 ),
               ],
             ],
@@ -398,6 +443,8 @@ class _CommunityFormScreenState extends ConsumerState<CommunityFormScreen> {
       controllers: [_titleController, _contentController],
       hasChanges: () => _hasChanges,
       saving: _isLoading,
+      onDiscard: () => _draft?.discard() ?? true,
+      discardMessage: _draft == null ? null : '게시하지 않은 내용이 있어요.\n버리면 이 브라우저에 저장된 초안도 삭제됩니다.',
       child: scaffold,
     );
   }

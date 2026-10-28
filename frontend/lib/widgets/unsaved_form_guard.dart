@@ -9,11 +9,15 @@ class UnsavedFormGuard extends StatefulWidget {
     required this.hasChanges,
     required this.child,
     this.saving = false,
+    this.onDiscard,
+    this.discardMessage,
   });
 
   final List<TextEditingController> controllers;
   final bool Function() hasChanges;
   final bool saving;
+  final bool Function()? onDiscard;
+  final String? discardMessage;
   final Widget child;
 
   @override
@@ -38,7 +42,7 @@ class _UnsavedFormGuardState extends State<UnsavedFormGuard> {
       builder: (context) => AppConfirmationDialog(
         icon: Icons.edit_note_rounded,
         title: '작성을 그만할까요?',
-        content: const Text('아직 저장하지 않은 내용이 있어요.\n지금 나가면 변경 내용이 사라집니다.'),
+        content: Text(widget.discardMessage ?? '아직 저장하지 않은 내용이 있어요.\n지금 나가면 변경 내용이 사라집니다.'),
         primaryActionIndex: 0,
         autofocusPrimary: true,
         onClose: () => Navigator.pop(context, false),
@@ -57,6 +61,12 @@ class _UnsavedFormGuardState extends State<UnsavedFormGuard> {
     );
     _asking = false;
     if (!mounted || discard != true) return;
+    if (widget.onDiscard?.call() == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('변경 내용을 버리지 못했습니다. 다시 시도해주세요.')),
+      );
+      return;
+    }
     setState(() => _discard = true);
     await WidgetsBinding.instance.endOfFrame;
     if (mounted) Navigator.of(context).pop(result);
