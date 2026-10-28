@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -244,8 +245,10 @@ class _ProfileContent extends ConsumerWidget {
     final reasonController = TextEditingController();
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('관리자 권한 신청'),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (dialogContext) => AppConfirmationDialog(
+        icon: Icons.admin_panel_settings_outlined,
+        title: '관리자 권한 신청',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,11 +266,12 @@ class _ProfileContent extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
+          AppDialogAction(
+            label: '취소',
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('취소'),
           ),
-          FilledButton(
+          AppDialogAction(
+            label: '신청',
             onPressed: () async {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) return;
@@ -280,15 +284,10 @@ class _ProfileContent extends ConsumerWidget {
                 );
               } catch (error) {
                 if (!dialogContext.mounted) return;
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('신청 실패: $error')));
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text('신청 실패: $error')));
               }
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppDesignTokens.navy,
-            ),
-            child: const Text('신청'),
           ),
         ],
       ),
@@ -298,15 +297,19 @@ class _ProfileContent extends ConsumerWidget {
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('로그아웃'),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (dialogContext) => AppConfirmationDialog(
+        icon: Icons.logout_rounded,
+        primaryActionIndex: 0,
+        title: '로그아웃',
         content: const Text('현재 기기에서 로그아웃하시겠습니까?'),
         actions: [
-          TextButton(
+          AppDialogAction(
+            label: '취소',
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('취소'),
           ),
-          TextButton(
+          AppDialogAction(
+            label: '로그아웃',
             onPressed: () {
               Navigator.pop(dialogContext);
               ref.read(authProvider.notifier).logout();
@@ -315,10 +318,7 @@ class _ProfileContent extends ConsumerWidget {
                 (route) => false,
               );
             },
-            child: const Text(
-              '로그아웃',
-              style: TextStyle(color: AppDesignTokens.coral),
-            ),
+            destructive: true,
           ),
         ],
       ),

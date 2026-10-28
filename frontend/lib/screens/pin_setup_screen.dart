@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -70,38 +71,29 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text(
-          '생체인증 사용',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (dialogContext) => AppConfirmationDialog(
+        icon: Icons.fingerprint_rounded,
+        title: '생체인증 사용',
         content: const Text('지문 또는 FaceID를 사용하여 다음 로그인 시 더욱 편리하게 인증하시겠습니까?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         actions: [
-          TextButton(
+          AppDialogAction(
+            label: '아니오',
             onPressed: () async {
               await storage.write(key: 'use_biometric', value: 'false');
               if (!mounted || !dialogContext.mounted) return;
               Navigator.pop(dialogContext);
               _navigateToMain();
             },
-            child: const Text('아니오', style: TextStyle(color: Colors.grey)),
           ),
-          ElevatedButton(
+          AppDialogAction(
+            label: '예',
             onPressed: () async {
               await storage.write(key: 'use_biometric', value: 'true');
               if (!mounted || !dialogContext.mounted) return;
               Navigator.pop(dialogContext);
               _navigateToMain();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppDesignTokens.blue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('예'),
           ),
         ],
       ),

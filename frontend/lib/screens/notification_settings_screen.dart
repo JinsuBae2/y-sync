@@ -1,4 +1,5 @@
 import '../providers/demo_access_provider.dart';
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -328,6 +329,7 @@ class _NoticeGradeSection extends ConsumerWidget {
                 onPressed: ref.watch(isDemoAccountProvider) ? null : () => showDialog<void>(
                   context: context,
                   barrierDismissible: false,
+                  barrierColor: AppConfirmationDialog.barrierColor,
                   builder: (_) => NoticeGradeDialog(member: member),
                 ),
                 child: const Text('알림 대상 변경'),

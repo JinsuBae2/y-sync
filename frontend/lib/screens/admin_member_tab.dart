@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -854,8 +855,10 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
   void _showPasswordResetEmailConfirm(Member member) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('비밀번호 재설정 안내'),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.mail_outline_rounded,
+        title: '비밀번호 재설정 안내',
         content: Text(
           '${member.name} (${member.loginId}) 학생의 등록된 학교 이메일로 '
           '비밀번호 재설정 인증번호를 보낼까요?\n\n'
@@ -863,11 +866,9 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
           style: const TextStyle(height: 1.5),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
-          ),
-          FilledButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '인증번호 발송',
             onPressed: () async {
               try {
                 await ref
@@ -881,7 +882,6 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                 _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
               }
             },
-            child: const Text('인증번호 발송'),
           ),
         ],
       ),
@@ -891,8 +891,11 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
   void _showRegistrationResetConfirm(Member member) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('계정 재등록 초기화'),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.restart_alt_rounded,
+        primaryActionIndex: 0,
+        title: '계정 재등록 초기화',
         content: Text(
           '정말 ${member.name} (${member.loginId}) 학생의 비밀번호를 지우고 가입 대기 상태로 리셋하시겠습니까?\n\n'
           '이 작업을 완료하면 등록 이메일과 비밀번호가 삭제되고, '
@@ -901,11 +904,9 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
           style: const TextStyle(height: 1.5),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '재등록 초기화',
             onPressed: () async {
               try {
                 await ref
@@ -919,11 +920,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                 _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade800,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('재등록 초기화'),
+            destructive: true,
           ),
         ],
       ),
@@ -934,11 +931,11 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
   void _showDeleteConfirm(Member member) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          '학생 탈퇴 처리',
-          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (context) => AppConfirmationDialog(
+        icon: Icons.person_remove_outlined,
+        primaryActionIndex: 0,
+        title: '학생 탈퇴 처리',
         content: Text(
           '${member.name} (${member.loginId}) 학생을 탈퇴 처리하시겠습니까?\n\n'
           '학번·이름·이메일이 지워지고 다시 로그인할 수 없게 됩니다. '
@@ -947,11 +944,9 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
           '이 작업은 되돌릴 수 없습니다.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+          AppDialogAction(
+            label: '탈퇴 처리',
             onPressed: () async {
               try {
                 await ref
@@ -965,11 +960,7 @@ class _AdminMemberTabState extends ConsumerState<AdminMemberTab> {
                 _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('탈퇴 처리'),
+            destructive: true,
           ),
         ],
       ),

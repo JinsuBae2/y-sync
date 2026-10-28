@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -71,24 +72,21 @@ class _AdminApprovalTabState extends ConsumerState<AdminApprovalTab> {
   Future<void> _reject(AdminRequest request) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: const Text(
-          '관리자 신청 거절',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (dialogContext) => AppConfirmationDialog(
+        icon: Icons.person_off_outlined,
+        primaryActionIndex: 0,
+        title: '관리자 신청 거절',
         content: Text('${request.requesterName}님의 신청을 거절하시겠습니까?'),
         actions: [
-          TextButton(
+          AppDialogAction(
+            label: '취소',
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('취소'),
           ),
-          TextButton(
+          AppDialogAction(
+            label: '거절',
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
-              '거절',
-              style: TextStyle(color: AppDesignTokens.coral),
-            ),
+            destructive: true,
           ),
         ],
       ),
