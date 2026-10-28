@@ -6,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import '../models/community_post.dart';
 import '../utils/platform_file_multipart.dart';
 import 'api_client_provider.dart';
+import 'session_provider.dart';
 
 // 💡 현재 선택된 커뮤니티 카테고리를 관리합니다. (Riverpod 3.x 호환 Notifier 사용)
 class CommunityCategoryNotifier extends Notifier<String> {
@@ -78,6 +79,16 @@ final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
   return data.map((json) => CommunityPost.fromJson(json)).toList();
 });
 
+// 관리자 목록은 커뮤니티의 검색·분류 상태를 공유하지 않습니다.
+final adminCommunityPostsProvider =
+    FutureProvider.autoDispose<List<CommunityPost>>((ref) async {
+      ref.watch(sessionMemberIdProvider);
+      final dio = ref.watch(dioProvider);
+      final response = await dio.get('/community');
+      final List<dynamic> data = response.data;
+      return data.map((json) => CommunityPost.fromJson(json)).toList();
+    });
+
 class CommunityNotifier {
   final Ref ref;
 
@@ -131,6 +142,7 @@ class CommunityNotifier {
 
     await dio.post('/community', data: formData);
     ref.invalidate(communityPostsProvider);
+    ref.invalidate(adminCommunityPostsProvider);
   }
 
   // 작성자 본인의 게시글을 수정하며 새 파일이 선택된 경우에만 기존 첨부를 교체합니다.
@@ -173,6 +185,7 @@ class CommunityNotifier {
 
     await dio.put('/community/$id', data: formData);
     ref.invalidate(communityPostsProvider);
+    ref.invalidate(adminCommunityPostsProvider);
   }
 
   // 💡 게시글 삭제
@@ -180,6 +193,7 @@ class CommunityNotifier {
     final dio = ref.read(dioProvider);
     await dio.delete('/community/$id');
     ref.invalidate(communityPostsProvider);
+    ref.invalidate(adminCommunityPostsProvider);
   }
 
   // 💡 관리자용 게시글 삭제 (소프트 딜리트)
@@ -187,6 +201,7 @@ class CommunityNotifier {
     final dio = ref.read(dioProvider);
     await dio.delete('/admin/posts/$id', data: {'reason': reason});
     ref.invalidate(communityPostsProvider);
+    ref.invalidate(adminCommunityPostsProvider);
   }
 
   // 💡 관리자용 게시글 복구 (소프트 딜리트 해제)
@@ -194,6 +209,7 @@ class CommunityNotifier {
     final dio = ref.read(dioProvider);
     await dio.post('/admin/posts/$id/restore');
     ref.invalidate(communityPostsProvider);
+    ref.invalidate(adminCommunityPostsProvider);
   }
 
   // 💡 게시글 또는 댓글 신고
@@ -208,6 +224,7 @@ class CommunityNotifier {
       data: {'targetType': targetType, 'targetId': targetId, 'reason': reason},
     );
     ref.invalidate(communityPostsProvider);
+    ref.invalidate(adminCommunityPostsProvider);
   }
 }
 

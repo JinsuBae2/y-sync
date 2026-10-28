@@ -43,7 +43,7 @@ class _AdminPostManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    final postsAsync = ref.watch(communityPostsProvider);
+    final postsAsync = ref.watch(adminCommunityPostsProvider);
     const themeColor = AppDesignTokens.blue;
 
     final content = Column(
@@ -209,7 +209,7 @@ class _AdminPostManagementScreenState
     }
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(communityPostsProvider),
+      onRefresh: () async => ref.refresh(adminCommunityPostsProvider.future),
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: posts.length,
@@ -383,7 +383,7 @@ class _AdminPostManagementScreenState
     }
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(communityPostsProvider),
+      onRefresh: () async => ref.refresh(adminCommunityPostsProvider.future),
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: deletedPosts.length,
@@ -1343,6 +1343,7 @@ class _AdminPostManagementScreenState
                     .dismissReport(report.targetType, report.targetId);
                 ref.invalidate(adminReportsProvider);
                 ref.invalidate(communityPostsProvider); // 게시글 목록도 갱신
+                ref.invalidate(adminCommunityPostsProvider);
                 _hideLoading();
                 _showSuccessToast('신고가 기각되고 정상 복구되었습니다.');
               } catch (e) {

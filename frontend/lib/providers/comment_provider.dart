@@ -61,6 +61,7 @@ class CommentNotifier {
       ref.invalidate(noticesProvider);
     } else {
       ref.invalidate(communityPostsProvider);
+      ref.invalidate(adminCommunityPostsProvider);
     }
   }
 
@@ -82,6 +83,7 @@ class CommentNotifier {
       ref.invalidate(noticesProvider);
     } else {
       ref.invalidate(communityPostsProvider);
+      ref.invalidate(adminCommunityPostsProvider);
     }
   }
 
@@ -102,6 +104,7 @@ class CommentNotifier {
       ref.invalidate(noticesProvider);
     } else {
       ref.invalidate(communityPostsProvider);
+      ref.invalidate(adminCommunityPostsProvider);
     }
   }
 }
