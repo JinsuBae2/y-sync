@@ -109,6 +109,7 @@ class CommunityNotifier {
     required bool anonymous,
     required String targetGrade,
     List<PlatformFile>? files,
+    ProgressCallback? onSendProgress,
   }) async {
     final dio = ref.read(dioProvider);
 
@@ -140,7 +141,7 @@ class CommunityNotifier {
       }
     }
 
-    await dio.post('/community', data: formData);
+    await dio.post('/community', data: formData, onSendProgress: onSendProgress);
     ref.invalidate(communityPostsProvider);
     ref.invalidate(adminCommunityPostsProvider);
   }
@@ -154,6 +155,7 @@ class CommunityNotifier {
     required bool anonymous,
     required String targetGrade,
     List<PlatformFile>? files,
+    ProgressCallback? onSendProgress,
   }) async {
     final dio = ref.read(dioProvider);
     final formData = FormData();
@@ -183,7 +185,7 @@ class CommunityNotifier {
       }
     }
 
-    await dio.put('/community/$id', data: formData);
+    await dio.put('/community/$id', data: formData, onSendProgress: onSendProgress);
     ref.invalidate(communityPostsProvider);
     ref.invalidate(adminCommunityPostsProvider);
   }
