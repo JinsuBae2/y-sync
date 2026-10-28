@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -134,7 +136,67 @@ class _TestNoticeFeedNotifier extends NoticeFeedNotifier {
   }
 }
 
+class _DelayedNoticeNotifier extends NoticeNotifier {
+  _DelayedNoticeNotifier(super.ref, this.load);
+  final Future<Notice> Function() load;
+  @override
+  Future<Notice> getNotice(int id) => load();
+}
+
 void main() {
+  for (final failFirst in [false, true]) {
+    testWidgets(
+      failFirst ? '상세 조회 실패 후 화면에서 재시도한다' : '상세 로딩 중 뒤로 가면 늦은 응답이 화면을 열지 않는다',
+      (tester) async {
+        final pending = Completer<Notice>();
+        var calls = 0;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              noticeFeedProvider.overrideWith(
+                () => _TestNoticeFeedNotifier([_notice]),
+              ),
+              noticeNotifierProvider.overrideWith(
+                (ref) => _DelayedNoticeNotifier(ref, () {
+                  calls++;
+                  return calls == 1 ? pending.future : Future.value(_notice);
+                }),
+              ),
+              myPageProvider.overrideWith(_TestMyPageNotifier.new),
+              authProvider.overrideWith(_TestAuthNotifier.new),
+              scrapsProvider.overrideWith((ref) async => []),
+              unreadNotificationCountProvider.overrideWithValue(0),
+              commentsProvider.overrideWith((ref, key) async => []),
+            ],
+            child: const MaterialApp(home: NoticeListScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_notice.title));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(BackButton), findsOneWidget);
+        if (failFirst) {
+          pending.completeError(Exception('network'));
+          await tester.pumpAndSettle();
+          expect(find.text('게시글을 불러올 수 없습니다.'), findsOneWidget);
+          await tester.tap(find.text('다시 시도'));
+          await tester.pumpAndSettle();
+          expect(find.byType(NoticeDetailScreen), findsOneWidget);
+          expect(calls, 2);
+        } else {
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+          pending.complete(_notice);
+          await tester.pumpAndSettle();
+          expect(find.byType(NoticeDetailScreen), findsNothing);
+          expect(find.byType(NoticeListScreen), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
+  }
+
   for (final notice in [true, false]) {
     testWidgets('${notice ? '공지' : '커뮤니티'}: 필터로 빈 목록이면 조건 해제 안내', (
       tester,
