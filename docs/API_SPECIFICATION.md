@@ -378,7 +378,12 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 
 ### 🔔 Notification Center (알림 센터)
 
-#### 1. 수신한 알림 내역 최신순 조회 (`GET /notifications`)
+#### 1. 수신한 알림 페이지 조회 (`GET /notifications/feed`)
+- 로그인한 회원의 알림만 작성 시각·ID 내림차순으로 반환합니다. 미인증 요청은 401입니다.
+- **Request Parameters**: `cursor` (첫 요청 생략, 이후 이전 nextCursor), `size` (기본 20, 1~50). 잘못된 커서·크기는 400입니다.
+- **Response (200 OK)**: `{ "items": [알림 DTO], "nextCursor": "...", "hasNext": true, "unreadCount": 70 }`
+- `unreadCount`는 현재 페이지가 아닌 해당 회원의 전체 미읽음 알림 수입니다. 마지막 페이지는 nextCursor=null, hasNext=false입니다.
+- 기존 구버전용 전체 조회 `GET /notifications`는 아래 DTO 배열 응답을 유지합니다.
 - **Response (200 OK)**
   ```json
   [
