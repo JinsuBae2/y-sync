@@ -32,6 +32,20 @@ public class CommunityController {
     private final CommunityService communityService;
     private final AuthUtil authUtil;
 
+    public record CommunityFeedResponse(List<CommunityResponse> items, String nextCursor, boolean hasNext) {}
+
+    @GetMapping("/feed")
+    public ResponseEntity<CommunityFeedResponse> getFeed(
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "ALL") com.ync.ysync.domain.Grade grade,
+            @RequestParam(required = false) String keyword) {
+        var feed = communityService.getFeed(cursor, size, category, grade, keyword);
+        return ResponseEntity.ok(new CommunityFeedResponse(
+                feed.items().stream().map(CommunityResponse::from).toList(), feed.nextCursor(), feed.hasNext()));
+    }
+
     // 💡 게시글 목록 조회 (카테고리 필터링 포함)
     @GetMapping
     public ResponseEntity<List<CommunityResponse>> getPosts(@RequestParam(required = false) String category) {

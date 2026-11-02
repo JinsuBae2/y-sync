@@ -74,6 +74,7 @@ class NoticeNotifier {
     String noticeType, {
     String targetGrade = 'ALL',
     List<PlatformFile>? files,
+    ProgressCallback? onSendProgress,
     String? eventStartDate,
     String? eventEndDate,
   }) async {
@@ -106,7 +107,7 @@ class NoticeNotifier {
       }
     }
 
-    await dio.post('/notices', data: formData);
+    await dio.post('/notices', data: formData, onSendProgress: onSendProgress);
     ref.invalidate(noticesProvider);
   }
 
@@ -117,6 +118,7 @@ class NoticeNotifier {
     String noticeType, {
     String targetGrade = 'ALL',
     List<PlatformFile>? files,
+    ProgressCallback? onSendProgress,
     String? eventStartDate,
     String? eventEndDate,
   }) async {
@@ -149,7 +151,7 @@ class NoticeNotifier {
       }
     }
 
-    await dio.put('/notices/$id', data: formData);
+    await dio.put('/notices/$id', data: formData, onSendProgress: onSendProgress);
     ref.invalidate(noticesProvider);
   }
 

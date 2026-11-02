@@ -45,6 +45,29 @@ TimetableEntry course(int id, String day, int start, int end) => TimetableEntry(
 );
 
 void main() {
+  testWidgets('시간표 조회 실패 후 다시 시도하면 현재 시간표를 재조회한다', (tester) async {
+    var attempts = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          authProvider.overrideWith(_StudentAuth.new),
+          timetableEntriesProvider.overrideWith((ref) async {
+            if (++attempts == 1) throw Exception('internal server detail');
+            return <TimetableEntry>[];
+          }),
+        ],
+        child: const MaterialApp(home: Scaffold(body: TimetableView())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('시간표를 불러오지 못했습니다.'), findsOneWidget);
+    await tester.tap(find.text('다시 시도'));
+    await tester.pumpAndSettle();
+    expect(attempts, 2);
+    expect(find.text('시간표를 불러오지 못했습니다.'), findsNothing);
+  });
+
   for (final width in [320.0, 390.0, 768.0, 321.0]) {
     testWidgets('${width.toInt()}px 주간 시간표의 모든 요일과 수업이 화면 안에 있다', (
       tester,

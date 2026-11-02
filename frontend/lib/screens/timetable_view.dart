@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import '../providers/demo_access_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import '../models/timetable_entry.dart';
 import '../providers/timetable_provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_design_tokens.dart';
+import '../widgets/load_failure_view.dart';
 import '../widgets/selection_highlight.dart';
 
 // 💡 학과 공용 시간표와 학생 개인 시간표를 전환해 보여주는 뷰입니다.
@@ -107,13 +109,17 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
           child: CircularProgressIndicator(color: AppDesignTokens.blue),
         ),
       ),
-      error: (err, stack) => const SizedBox(
-        height: 240,
-        child: Center(
-          child: Text(
-            '시간표를 불러오지 못했습니다.',
-            style: TextStyle(color: AppDesignTokens.muted),
-          ),
+      error: (err, stack) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 240),
+        child: LoadFailureView(
+          message: '시간표를 불러오지 못했습니다.',
+          onRetry: () {
+            if (_isPersonal) {
+              ref.invalidate(personalTimetableEntriesProvider);
+            } else {
+              ref.invalidate(timetableEntriesProvider);
+            }
+          },
         ),
       ),
       data: (entries) {
@@ -1037,11 +1043,13 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
     int classNumber = ref.read(selectedTimetableClassProvider);
     return showDialog<(String, int)>(
       context: context,
+      barrierColor: AppConfirmationDialog.barrierColor,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           final maxClass = grade == 'GRADE_3' ? 3 : 2;
-          return AlertDialog(
-            title: const Text('학년·반 선택'),
+          return AppConfirmationDialog(
+            icon: Icons.school_outlined,
+            title: '학년·반 선택',
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1086,11 +1094,12 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
               ],
             ),
             actions: [
-              TextButton(
+              AppDialogAction(
+                label: '취소',
                 onPressed: () => Navigator.pop(context),
-                child: const Text('취소'),
               ),
-              FilledButton(
+              AppDialogAction(
+                label: '수업 보기',
                 onPressed: () {
                   ref
                       .read(selectedTimetableGradeProvider.notifier)
@@ -1100,7 +1109,6 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                       .updateClass(classNumber);
                   Navigator.pop(context, (grade, classNumber));
                 },
-                child: const Text('수업 보기'),
               ),
             ],
           );
@@ -1380,15 +1388,16 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
   void _confirmDelete(int entryId, {required bool personal}) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('수업 삭제'),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (ctx) => AppConfirmationDialog(
+        icon: Icons.delete_outline_rounded,
+        primaryActionIndex: 0,
+        title: '수업 삭제',
         content: const Text('선택한 수업을 시간표에서 삭제하시겠습니까?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          TextButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(ctx)),
+          AppDialogAction(
+            label: '삭제',
             onPressed: () async {
               Navigator.pop(ctx);
               if (personal) {
@@ -1399,7 +1408,7 @@ class _TimetableViewState extends ConsumerState<TimetableView> {
                 await ref.read(timetableNotifierProvider).deleteEntry(entryId);
               }
             },
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            destructive: true,
           ),
         ],
       ),

@@ -10,6 +10,8 @@ import 'package:y_sync/models/member.dart';
 import 'package:y_sync/models/my_comment.dart';
 import 'package:y_sync/models/notice.dart';
 import 'package:y_sync/providers/api_client_provider.dart';
+import 'package:y_sync/providers/auth_provider.dart';
+import 'package:y_sync/providers/comment_provider.dart';
 import 'package:y_sync/providers/mypage_provider.dart';
 import 'package:y_sync/providers/notice_feed_provider.dart';
 import 'package:y_sync/providers/notification_provider.dart';
@@ -26,6 +28,8 @@ class _FakeFeedAdapter implements HttpClientAdapter {
   final List<String> requestedPaths = [];
   final List<String?> requestedCursors = [];
   int newCount = 0;
+  bool fail = false;
+  int viewCount = 0;
 
   @override
   Future<ResponseBody> fetch(
@@ -34,9 +38,14 @@ class _FakeFeedAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requestedPaths.add(options.path);
+    if (fail) throw StateError('offline');
 
     if (options.path.contains('feed-updates')) {
       return _json({'newCount': newCount});
+    }
+
+    if (RegExp(r'/notices/\d+$').hasMatch(options.path)) {
+      return _json(_noticeJson(int.parse(options.path.split('/').last)));
     }
 
     final cursor = options.queryParameters['cursor'] as String?;
@@ -66,7 +75,7 @@ class _FakeFeedAdapter implements HttpClientAdapter {
     'createdAt': DateTime(2026, 9, 1).toIso8601String(),
     'targetGrade': 'ALL',
     'isPinned': pinned,
-    'viewCount': 0,
+    'viewCount': viewCount,
     'commentCount': 0,
     'attachments': <dynamic>[],
   };
@@ -81,6 +90,11 @@ class _FakeFeedAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+class _TestAuthNotifier extends AuthNotifier {
+  @override
+  Future<Member?> build() async => null;
 }
 
 class _TestMyPageNotifier extends MyPageNotifier {
@@ -150,6 +164,23 @@ void main() {
       expect(feed.nextCursor, isNull);
     });
 
+    test('복귀 갱신은 읽은 페이지와 조회수를 유지하며 실패하면 기존 목록을 남긴다', () async {
+      final adapter = _FakeFeedAdapter();
+      final container = _container(adapter);
+      await container.read(noticeFeedProvider.future);
+      final notifier = container.read(noticeFeedProvider.notifier);
+      await notifier.loadMore();
+      adapter.viewCount = 3;
+      expect(await notifier.refreshLoadedPages(), isTrue);
+      final updated = container.read(noticeFeedProvider).value!;
+      expect(updated.items, hasLength(15));
+      expect(updated.items.last.viewCount, 3);
+      expect(updated.hasNext, isFalse);
+      adapter.fail = true;
+      expect(await notifier.refreshLoadedPages(), isFalse);
+      expect(container.read(noticeFeedProvider).value, same(updated));
+    });
+
     test('마지막 페이지에 도달하면 더 요청하지 않는다', () async {
       final adapter = _FakeFeedAdapter();
       final container = _container(adapter);
@@ -194,6 +225,8 @@ void main() {
         ProviderScope(
           overrides: [
             dioProvider.overrideWithValue(dio),
+            authProvider.overrideWith(_TestAuthNotifier.new),
+            commentsProvider.overrideWith((ref, arg) async => []),
             myPageProvider.overrideWith(_TestMyPageNotifier.new),
             scrapsProvider.overrideWith((ref) async => []),
             unreadNotificationCountProvider.overrideWithValue(0),
@@ -207,6 +240,26 @@ void main() {
       );
       await tester.pumpAndSettle();
     }
+
+    testWidgets('두 번째 페이지 글을 읽고 돌아와도 읽던 위치와 목록을 유지한다', (tester) async {
+      await pumpScreen(tester, _FakeFeedAdapter());
+      await tester.scrollUntilVisible(
+        find.text('공지 88'),
+        450,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      final list = tester.widget<ListView>(find.byType(ListView));
+      final before = list.controller!.offset;
+      final beforeY = tester.getTopLeft(find.text('공지 88')).dy;
+      await tester.tap(find.text('공지 88'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(list.controller!.offset, closeTo(before, 1));
+      expect(find.text('공지 88'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('공지 88')).dy, closeTo(beforeY, 1));
+    });
 
     testWidgets('바닥 가까이 스크롤하면 다음 페이지를 이어 받는다', (tester) async {
       final adapter = _FakeFeedAdapter();

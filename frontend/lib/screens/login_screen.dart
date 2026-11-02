@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -225,20 +226,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // 💡 비활성화된 소셜 인증 API를 호출하지 않고 향후 지원 예정임을 안내합니다.
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        title: const Text(
-          '소셜 로그인 준비 중',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (dialogContext) => AppConfirmationDialog(
+        icon: Icons.info_outline_rounded,
+        title: '소셜 로그인 준비 중',
         content: const Text(
           'Google 로그인은 추후 업데이트에서 제공할 예정입니다.\n지금은 학번으로 로그인해 주세요.',
           style: TextStyle(height: 1.5),
         ),
         actions: [
-          TextButton(
+          AppDialogAction(
+            label: '확인',
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('확인'),
           ),
         ],
       ),

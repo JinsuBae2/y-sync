@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -254,6 +255,7 @@ class CommunityDetailScreen extends ConsumerWidget {
       if (isAdmin) {
         final reason = await showDialog<String>(
           context: context,
+          barrierColor: AppConfirmationDialog.barrierColor,
           builder: (_) => const DeletionReasonDialog(),
         );
         if (reason == null) return;
@@ -263,20 +265,21 @@ class CommunityDetailScreen extends ConsumerWidget {
       } else {
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('게시글 삭제'),
+          barrierColor: AppConfirmationDialog.barrierColor,
+          builder: (dialogContext) => AppConfirmationDialog(
+            icon: Icons.delete_outline_rounded,
+            primaryActionIndex: 0,
+            title: '게시글 삭제',
             content: const Text('이 게시글을 삭제하시겠습니까?'),
             actions: [
-              TextButton(
+              AppDialogAction(
+                label: '취소',
                 onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('취소'),
               ),
-              TextButton(
+              AppDialogAction(
+                label: '삭제',
                 onPressed: () => Navigator.pop(dialogContext, true),
-                child: const Text(
-                  '삭제',
-                  style: TextStyle(color: AppDesignTokens.coral),
-                ),
+                destructive: true,
               ),
             ],
           ),

@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/notice_grade_prompt_provider.dart';
 import '../theme/app_design_tokens.dart';
 import 'notice_grade_selector.dart';
+import 'app_confirmation_dialog.dart';
 
 /// 💡 학년 확인이 필요한 회원에게 안내를 한 번 보여주는 래퍼입니다.
 ///
@@ -55,6 +56,7 @@ class _NoticeGradePromptState extends ConsumerState<NoticeGradePrompt> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
+      barrierColor: AppConfirmationDialog.barrierColor,
       builder: (_) => NoticeGradeDialog(member: member),
     ).whenComplete(() => _isDialogOpen = false);
   }
@@ -113,17 +115,9 @@ class _NoticeGradeDialogState extends ConsumerState<NoticeGradeDialog> {
   Widget build(BuildContext context) {
     final previous = widget.member.noticeGradePreference;
 
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      title: Text(
-        _isFirstSetup ? '공지 알림을 받을 학년을 선택해 주세요.' : '올해 현재 학년을 확인해 주세요.',
-        style: const TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.w800,
-          color: AppDesignTokens.navy,
-        ),
-      ),
+    return AppConfirmationDialog(
+      icon: Icons.school_outlined,
+      title: _isFirstSetup ? '알림을 받을 학년 선택' : '올해 학년 확인',
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -162,24 +156,15 @@ class _NoticeGradeDialogState extends ConsumerState<NoticeGradeDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          // '나중에'를 골라도 앱 사용을 막지 않습니다. 다음 앱 실행이나 로그인 때 다시 안내됩니다.
+        AppDialogAction(
+          label: '나중에',
+          // 다음 앱 실행이나 로그인 때 다시 안내합니다.
           onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-          child: const Text('나중에'),
         ),
-        FilledButton(
-          // 저장 중에는 버튼을 비활성화해 중복 제출을 막습니다.
+        AppDialogAction(
+          label: '저장',
+          isLoading: _isSaving,
           onPressed: _selected == null || _isSaving ? null : _save,
-          child: _isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('저장'),
         ),
       ],
     );

@@ -1,9 +1,14 @@
+import '../widgets/upload_progress_label.dart';
+import '../providers/session_provider.dart';
+import '../services/writing_draft.dart';
+import '../widgets/writing_draft_status.dart';
 import '../providers/demo_access_provider.dart';
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 
-import '../utils/platform_file_size.dart';
+import '../utils/attachment_selection_issue.dart';
+import '../widgets/attachment_selection_dialog.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +17,7 @@ import '../models/notice.dart';
 import '../providers/notice_provider.dart';
 import '../theme/app_design_tokens.dart';
 import '../widgets/selected_attachment_list.dart';
+import '../widgets/unsaved_form_guard.dart';
 
 class NoticeFormScreen extends ConsumerStatefulWidget {
   const NoticeFormScreen({super.key, this.notice});
@@ -29,6 +35,10 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
   String _noticeType = 'NEWS';
   String _targetGrade = 'ALL';
   bool _isLoading = false;
+  int? _sentBytes;
+  int? _totalBytes;
+  bool _saved = false;
+  WritingDraft? _draft;
   final List<PlatformFile> _files = [];
   bool _isEvent = false;
   DateTime _eventStartDate = DateTime.now();
@@ -58,13 +68,71 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
         );
       }
     }
+    _initializeDraft();
   }
+
+  void _initializeDraft() {
+    final memberId = ref.read(sessionMemberIdProvider);
+    final store = ref.read(draftStoreProvider);
+    if (memberId == null || store == null || ref.read(isDemoAccountProvider)) return;
+    _draft = WritingDraft(store, memberId: memberId, kind: 'notice', postId: widget.notice?.id);
+    final data = _draft!.restore();
+    if (data != null) {
+      _titleController.text = data['title'] as String;
+      _contentController.text = data['content'] as String;
+      if (_grades.any((grade) => grade.$1 == data['targetGrade'])) {
+        _targetGrade = data['targetGrade'] as String;
+      }
+      if (['NEWS', 'NOTICE'].contains(data['noticeType'])) {
+        _noticeType = data['noticeType'] as String;
+      }
+      final start = DateTime.tryParse(data['eventStartDate'] is String ? data['eventStartDate'] as String : '');
+      final end = DateTime.tryParse(data['eventEndDate'] is String ? data['eventEndDate'] as String : '');
+      if (start != null && end != null && start.year >= 2025 && end.year <= 2030 && !end.isBefore(start)) {
+        _eventStartDate = start;
+        _eventEndDate = end;
+        _isEvent = data['isEvent'] == true;
+      }
+    }
+    _titleController.addListener(_saveDraft);
+    _contentController.addListener(_saveDraft);
+  }
+
+  void _saveDraft() => _draft?.save({
+    'title': _titleController.text,
+    'content': _contentController.text,
+    'targetGrade': _targetGrade,
+    'noticeType': _noticeType,
+    'isEvent': _isEvent,
+    'eventStartDate': _eventStartDate.toIso8601String(),
+    'eventEndDate': _eventEndDate.toIso8601String(),
+    'hasAttachments': _files.isNotEmpty,
+  }, hasChanges: _hasChanges);
+
+  bool get _hasChanges => !_saved && (
+    _titleController.text != (widget.notice?.title ?? '') ||
+    _contentController.text != (widget.notice?.content ?? '') ||
+    _noticeType != (widget.notice?.noticeType ?? 'NEWS') ||
+    _targetGrade != (widget.notice?.targetGrade ?? 'ALL') ||
+    _isEvent != (widget.notice?.eventStartDate != null) ||
+    (_isEvent && (
+      _apiDate(_eventStartDate) != widget.notice?.eventStartDate ||
+      _apiDate(_eventEndDate) != (widget.notice?.eventEndDate ?? widget.notice?.eventStartDate))) ||
+    _files.isNotEmpty);
 
   @override
   void dispose() {
+    _titleController.removeListener(_saveDraft);
+    _contentController.removeListener(_saveDraft);
+    _draft?.dispose();
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  void _updateDraft(VoidCallback update) {
+    setState(update);
+    _saveDraft();
   }
 
   Future<void> _pickFiles() async {
@@ -92,33 +160,13 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       ],
     );
     if (!mounted || picked.isEmpty) return;
-    if (_files.length + picked.length > 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('첨부파일은 최대 10개까지 선택할 수 있습니다.')),
-      );
-      return;
-    }
-    // 💡 크기를 알 수 없는 파일(null)은 클라이언트에서 한도를 검사할 수 없으므로 거절합니다.
-    //    서버가 최종 관문이지만, 업로드를 다 보낸 뒤 거절당하는 것보다 지금 막는 편이 낫습니다.
-    for (final file in picked) {
-      final size = await platformFileSize(file);
-      if (!mounted) return;
-      if (size == null || size > 20 * 1024 * 1024) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('파일 하나의 크기는 20MB 이하여야 합니다.')),
-        );
-        return;
-      }
-    }
-    final totalSize = await platformFilesTotalSize([..._files, ...picked]);
+    final issue = await attachmentSelectionIssue(existing: _files, picked: picked);
     if (!mounted) return;
-    if (totalSize == null || totalSize > 50 * 1024 * 1024) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('첨부파일 전체 크기는 50MB 이하여야 합니다.')),
-      );
+    if (issue != null) {
+      await showAttachmentSelectionIssue(context, issue);
       return;
     }
-    setState(() => _files.addAll(picked));
+    _updateDraft(() => _files.addAll(picked));
   }
 
   Future<void> _submit() async {
@@ -130,7 +178,11 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _sentBytes = null;
+      _totalBytes = null;
+    });
     final startDate = _isEvent ? _apiDate(_eventStartDate) : null;
     final endDate = _isEvent ? _apiDate(_eventEndDate) : null;
 
@@ -142,7 +194,8 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           content,
           _noticeType,
           targetGrade: _targetGrade,
-          files: _files,
+          files: List.of(_files),
+          onSendProgress: _onSendProgress,
           eventStartDate: startDate,
           eventEndDate: endDate,
         );
@@ -153,27 +206,42 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           content,
           _noticeType,
           targetGrade: _targetGrade,
-          files: _files,
+          files: List.of(_files),
+          onSendProgress: _onSendProgress,
           eventStartDate: startDate,
           eventEndDate: endDate,
         );
       }
       if (!mounted) return;
+      final draftCleared = _draft?.complete() ?? true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.notice == null ? '공지사항이 등록되었습니다.' : '공지사항이 수정되었습니다.',
+            (widget.notice == null ? '공지사항이 등록되었습니다.' : '공지사항이 수정되었습니다.') + (draftCleared ? '' : '\n게시 완료했지만 브라우저 초안을 지우지 못했습니다. 다시 게시하지 않도록 주의해주세요.'),
           ),
         ),
       );
-      Navigator.pop(context, true);
-    } catch (error) {
+      setState(() {
+        _saved = true;
+        _isLoading = false;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('저장 실패: $error')));
+          .showSnackBar(const SnackBar(content: Text('저장하지 못했습니다. 입력한 내용은 유지되니 다시 시도해주세요.')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _onSendProgress(int sent, int total) {
+    if (!mounted || !_isLoading) return;
+    setState(() {
+      _sentBytes = sent;
+      _totalBytes = total;
+    });
   }
 
   @override
@@ -181,7 +249,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
     if (ref.watch(isDemoAccountProvider)) return const DemoReadOnlyScreen();
     final isEdit = widget.notice != null;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: AppDesignTokens.background,
       appBar: AppBar(
         backgroundColor: AppDesignTokens.background,
@@ -194,7 +262,9 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
         ),
       ),
-      body: Align(
+      body: AbsorbPointer(
+        absorbing: _isLoading,
+        child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
@@ -203,12 +273,14 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
+              WritingDraftStatus(draft: _draft),
               const _FormSectionTitle(
                 title: '기본 정보',
                 subtitle: '학생이 목록에서 바로 이해할 수 있게 작성해주세요.',
               ),
               const SizedBox(height: 12),
               TextField(
+                readOnly: _isLoading,
                 controller: _titleController,
                 maxLength: 100,
                 textInputAction: TextInputAction.next,
@@ -221,6 +293,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                readOnly: _isLoading,
                 controller: _contentController,
                 minLines: 10,
                 maxLines: 18,
@@ -241,7 +314,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               _OptionSelector(
                 options: const [('NEWS', '일반'), ('NOTICE', '중요')],
                 value: _noticeType,
-                onChanged: (value) => setState(() => _noticeType = value),
+                onChanged: (value) => _updateDraft(() => _noticeType = value),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -256,7 +329,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
               _OptionSelector(
                 options: _grades,
                 value: _targetGrade,
-                onChanged: (value) => setState(() => _targetGrade = value),
+                onChanged: (value) => _updateDraft(() => _targetGrade = value),
               ),
               const SizedBox(height: 28),
               const _FormSectionTitle(title: '학사일정 연동'),
@@ -302,7 +375,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                         fontSize: 12,
                       ),
                     ),
-                    onChanged: (value) => setState(() => _isEvent = value),
+                    onChanged: (value) => _updateDraft(() => _isEvent = value),
                   ),
                 ),
               ),
@@ -381,15 +454,17 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 const SizedBox(height: 10),
                 SelectedAttachmentList(
                   files: _files,
-                  onRemove: (index) => setState(() => _files.removeAt(index)),
+                  onRemove: (index) => _updateDraft(() => _files.removeAt(index)),
                 ),
               ],
             ],
           ),
         ),
       ),
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
+        minimum: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
         child: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
@@ -406,20 +481,17 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppDesignTokens.blue,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppDesignTokens.subtle,
+                  disabledBackgroundColor: AppDesignTokens.paleBlue,
                   minimumSize: const Size.fromHeight(50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                    ? UploadProgressLabel(
+                        hasAttachments: _files.isNotEmpty,
+                        sent: _sentBytes,
+                        total: _totalBytes,
                       )
                     : Text(
                         isEdit ? '수정 완료' : '공지 등록',
@@ -431,6 +503,14 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
         ),
       ),
     );
+    return UnsavedFormGuard(
+      controllers: [_titleController, _contentController],
+      hasChanges: () => _hasChanges,
+      saving: _isLoading,
+      onDiscard: () => _draft?.discard() ?? true,
+      discardMessage: _draft == null ? null : '게시하지 않은 내용이 있어요.\n버리면 이 브라우저에 저장된 초안도 삭제됩니다.',
+      child: scaffold,
+    );
   }
 
   Future<void> _selectStartDate() async {
@@ -441,7 +521,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       lastDate: DateTime(2030),
     );
     if (!mounted || date == null) return;
-    setState(() {
+    _updateDraft(() {
       _eventStartDate = date;
       if (_eventEndDate.isBefore(date)) _eventEndDate = date;
     });
@@ -455,7 +535,7 @@ class _NoticeFormScreenState extends ConsumerState<NoticeFormScreen> {
       lastDate: DateTime(2030),
     );
     if (!mounted || date == null) return;
-    setState(() => _eventEndDate = date);
+    _updateDraft(() => _eventEndDate = date);
   }
 
   static String _apiDate(DateTime date) {

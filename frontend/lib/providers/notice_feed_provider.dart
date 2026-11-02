@@ -163,6 +163,40 @@ class NoticeFeedNotifier extends AsyncNotifier<NoticeFeedState> {
     }
   }
 
+  /// 상세 복귀 시 기존 목록을 유지한 채 이미 읽은 범위까지 갱신합니다.
+  Future<bool> refreshLoadedPages() async {
+    final current = state.value;
+    if (current == null || state.isLoading) return true;
+    try {
+      final first = await _fetch(cursor: null);
+      if (!ref.mounted || state.isLoading || !identical(state.value, current)) return true;
+      var last = first;
+      final items = [...first.items];
+      final cursors = <String>{};
+      while (items.length < current.items.length &&
+          last.hasNext &&
+          last.nextCursor != null &&
+          cursors.add(last.nextCursor!)) {
+        last = await _fetch(cursor: last.nextCursor);
+        if (!ref.mounted || state.isLoading || !identical(state.value, current)) return true;
+        final ids = items.map((notice) => notice.id).toSet();
+        items.addAll(last.items.where((notice) => ids.add(notice.id)));
+      }
+      state = AsyncData(
+        first.copyWith(
+          items: items,
+          nextCursor: last.nextCursor,
+          hasNext: last.hasNext,
+          clearNextCursor: last.nextCursor == null,
+        ),
+      );
+      return true;
+    } catch (_) {
+      // 읽던 목록을 오류 화면이나 첫 페이지로 대체하지 않습니다.
+      return false;
+    }
+  }
+
   /// 목록을 처음부터 다시 불러옵니다. 당겨서 새로고침과 "새 공지" 칩이 함께 씁니다.
   Future<void> refresh() async {
     state = const AsyncLoading();

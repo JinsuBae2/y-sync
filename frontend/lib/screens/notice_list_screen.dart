@@ -230,6 +230,12 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
         if (feed.isEmpty) {
           return _EmptyNoticeList(
             hasKeyword: ref.read(searchKeywordProvider).trim().isNotEmpty,
+            hasFilters: ref.read(noticeGradeProvider) != 'ALL',
+            onReset: () {
+              _searchController.clear();
+              ref.read(searchKeywordProvider.notifier).updateKeyword('');
+              ref.read(noticeGradeProvider.notifier).updateGrade('ALL');
+            },
             onRefresh: () => ref.read(noticeFeedProvider.notifier).refresh(),
           );
         }
@@ -265,8 +271,15 @@ class _NoticeListScreenState extends ConsumerState<NoticeListScreen>
                     targetType: 'NOTICE',
                     targetId: notice.id,
                   );
-                  if (result != null) {
-                    ref.invalidate(noticeFeedProvider);
+                  if (result != null && context.mounted) {
+                    final refreshed = await ref
+                        .read(noticeFeedProvider.notifier)
+                        .refreshLoadedPages();
+                    if (!refreshed && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('목록을 갱신하지 못했습니다. 당겨서 다시 시도해주세요.')),
+                      );
+                    }
                   }
                 },
               );
@@ -706,9 +719,11 @@ class _NoticeLabel extends StatelessWidget {
 }
 
 class _EmptyNoticeList extends StatelessWidget {
-  const _EmptyNoticeList({required this.hasKeyword, required this.onRefresh});
+  const _EmptyNoticeList({required this.hasKeyword, required this.hasFilters, required this.onReset, required this.onRefresh});
 
   final bool hasKeyword;
+  final bool hasFilters;
+  final VoidCallback onReset;
   final Future<void> Function() onRefresh;
 
   @override
@@ -727,7 +742,7 @@ class _EmptyNoticeList extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            hasKeyword ? '검색 결과가 없습니다.' : '등록된 공지가 없습니다.',
+            hasFilters ? '조건에 맞는 공지가 없습니다.' : hasKeyword ? '검색 결과가 없습니다.' : '등록된 공지가 없습니다.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppDesignTokens.navy,
@@ -737,10 +752,12 @@ class _EmptyNoticeList extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            hasKeyword ? '다른 검색어를 입력해보세요.' : '새 공지가 등록되면 알려드릴게요.',
+            hasFilters ? '검색어나 필터를 바꿔보세요.' : hasKeyword ? '다른 검색어를 입력해보세요.' : '새 공지가 등록되면 알려드릴게요.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppDesignTokens.muted, fontSize: 13),
           ),
+          if (hasFilters || hasKeyword)
+            TextButton(onPressed: onReset, child: const Text('검색·필터 초기화')),
         ],
       ),
     );

@@ -152,30 +152,78 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
           final keyword = ref.read(communitySearchKeywordProvider);
           return _EmptyCommunity(
             keyword: keyword,
-            onRefresh: () async => ref.invalidate(communityPostsProvider),
+            hasFilters:
+                selectedGrade != 'ALL' ||
+                ref.read(communityCategoryProvider) != 'ALL',
+            onReset: () {
+              _searchController.clear();
+              ref
+                  .read(communitySearchKeywordProvider.notifier)
+                  .updateKeyword('');
+              ref
+                  .read(communityCategoryProvider.notifier)
+                  .updateCategory('ALL');
+              ref.read(communityGradeProvider.notifier).updateGrade('ALL');
+            },
+            onRefresh: () =>
+                ref.read(communityPostsProvider.notifier).refresh(),
           );
         }
 
+        final pagination = ref.read(communityPostsProvider.notifier);
         return RefreshIndicator(
           color: AppDesignTokens.blue,
-          onRefresh: () async => ref.invalidate(communityPostsProvider),
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            itemCount: posts.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) => CommunityPostCard(
-              post: posts[index],
-              onOpen: () async {
-                final result = await openContentDetail(
-                  context,
-                  ref,
-                  targetType: 'COMMUNITY',
-                  targetId: posts[index].id,
-                );
-                if (result != null) {
-                  ref.invalidate(communityPostsProvider);
-                }
-              },
+          onRefresh: () => ref.read(communityPostsProvider.notifier).refresh(),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 400 &&
+                  !pagination.loadMoreFailed) {
+                pagination.loadMore();
+              }
+              return false;
+            },
+            child: ListView.separated(
+              key: ValueKey((
+                ref.watch(communityCategoryProvider),
+                selectedGrade,
+                ref.watch(communitySearchKeywordProvider),
+              )),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+              itemCount: posts.length + (pagination.hasNext ? 1 : 0),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) => index == posts.length
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: pagination.isLoadingMore
+                          ? const Center(child: CircularProgressIndicator())
+                          : TextButton.icon(
+                              onPressed: pagination.loadMore,
+                              icon: Icon(
+                                pagination.loadMoreFailed
+                                    ? Icons.refresh
+                                    : Icons.expand_more,
+                              ),
+                              label: Text(
+                                pagination.loadMoreFailed
+                                    ? '더 불러오지 못했습니다. 다시 시도'
+                                    : '더 보기',
+                              ),
+                            ),
+                    )
+                  : CommunityPostCard(
+                      post: posts[index],
+                      onOpen: () async {
+                        final result = await openContentDetail(
+                          context,
+                          ref,
+                          targetType: 'COMMUNITY',
+                          targetId: posts[index].id,
+                        );
+                        if (result != null) {
+                          ref.invalidate(communityPostsProvider);
+                        }
+                      },
+                    ),
             ),
           ),
         );
@@ -586,9 +634,11 @@ class _PostLabel extends StatelessWidget {
 }
 
 class _EmptyCommunity extends StatelessWidget {
-  const _EmptyCommunity({required this.keyword, required this.onRefresh});
+  const _EmptyCommunity({required this.keyword, required this.hasFilters, required this.onReset, required this.onRefresh});
 
   final String keyword;
+  final bool hasFilters;
+  final VoidCallback onReset;
   final Future<void> Function() onRefresh;
 
   @override
@@ -606,7 +656,7 @@ class _EmptyCommunity extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            keyword.isEmpty ? '아직 게시글이 없습니다.' : '검색 결과가 없습니다.',
+            hasFilters ? '조건에 맞는 게시글이 없습니다.' : keyword.isEmpty ? '아직 게시글이 없습니다.' : '검색 결과가 없습니다.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppDesignTokens.navy,
@@ -616,10 +666,12 @@ class _EmptyCommunity extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            keyword.isEmpty ? '첫 이야기를 남겨보세요.' : '다른 검색어를 입력해보세요.',
+            hasFilters ? '검색어나 필터를 바꿔보세요.' : keyword.isEmpty ? '첫 이야기를 남겨보세요.' : '다른 검색어를 입력해보세요.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppDesignTokens.muted, fontSize: 13),
           ),
+          if (hasFilters || keyword.trim().isNotEmpty)
+            TextButton(onPressed: onReset, child: const Text('검색·필터 초기화')),
         ],
       ),
     );

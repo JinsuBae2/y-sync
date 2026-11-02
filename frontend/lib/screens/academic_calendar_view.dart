@@ -1,3 +1,4 @@
+import '../widgets/app_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -546,20 +547,21 @@ class _AcademicCalendarViewState extends ConsumerState<AcademicCalendarView> {
   void _confirmDelete(int eventId) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('일정 삭제'),
+      barrierColor: AppConfirmationDialog.barrierColor,
+      builder: (ctx) => AppConfirmationDialog(
+        icon: Icons.event_busy_rounded,
+        primaryActionIndex: 0,
+        title: '일정 삭제',
         content: const Text('선택한 학사 일정을 삭제하시겠습니까?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
-          ),
-          TextButton(
+          AppDialogAction(label: '취소', onPressed: () => Navigator.pop(ctx)),
+          AppDialogAction(
+            label: '삭제',
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(calendarNotifierProvider).deleteEvent(eventId);
             },
-            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+            destructive: true,
           ),
         ],
       ),

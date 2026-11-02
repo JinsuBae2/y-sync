@@ -1,3 +1,4 @@
+import 'app_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 
 class DeletionReasonDialog extends StatefulWidget {
@@ -27,8 +28,10 @@ class _DeletionReasonDialogState extends State<DeletionReasonDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('관리자 권한 삭제', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+    return AppConfirmationDialog(
+      icon: Icons.delete_outline_rounded,
+      primaryActionIndex: 0,
+      title: '관리자 권한 삭제',
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -49,18 +52,24 @@ class _DeletionReasonDialogState extends State<DeletionReasonDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: _reasons
-                    .map((reason) => RadioListTile<String>(
-                          title: Text(reason),
-                          value: reason,
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ))
+                    .map(
+                      (reason) => RadioListTile<String>(
+                        title: Text(reason),
+                        value: reason,
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                    )
                     .toList(),
               ),
             ),
             if (_selectedReason == '기타')
               Padding(
-                padding: const EdgeInsets.only(top: 8.0, left: 16.0, right: 16.0),
+                padding: const EdgeInsets.only(
+                  top: 8.0,
+                  left: 16.0,
+                  right: 16.0,
+                ),
                 child: TextField(
                   controller: _customReasonController,
                   decoration: const InputDecoration(
@@ -74,30 +83,26 @@ class _DeletionReasonDialogState extends State<DeletionReasonDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('취소', style: TextStyle(color: Colors.grey)),
-        ),
-        ElevatedButton(
-          onPressed: _selectedReason == null ? null : () {
-            String finalReason = _selectedReason!;
-            if (finalReason == '기타') {
-              final custom = _customReasonController.text.trim();
-              if (custom.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('사유를 입력해주세요.')),
-                );
-                return;
-              }
-              finalReason = '기타($custom)';
-            }
-            Navigator.pop(context, finalReason);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('삭제'),
+        AppDialogAction(label: '취소', onPressed: () => Navigator.pop(context)),
+        AppDialogAction(
+          label: '삭제',
+          onPressed: _selectedReason == null
+              ? null
+              : () {
+                  String finalReason = _selectedReason!;
+                  if (finalReason == '기타') {
+                    final custom = _customReasonController.text.trim();
+                    if (custom.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('사유를 입력해주세요.')),
+                      );
+                      return;
+                    }
+                    finalReason = '기타($custom)';
+                  }
+                  Navigator.pop(context, finalReason);
+                },
+          destructive: true,
         ),
       ],
     );
