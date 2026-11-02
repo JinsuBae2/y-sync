@@ -152,37 +152,78 @@ class _CommunityListScreenState extends ConsumerState<CommunityListScreen> {
           final keyword = ref.read(communitySearchKeywordProvider);
           return _EmptyCommunity(
             keyword: keyword,
-            hasFilters: selectedGrade != 'ALL' || ref.read(communityCategoryProvider) != 'ALL',
+            hasFilters:
+                selectedGrade != 'ALL' ||
+                ref.read(communityCategoryProvider) != 'ALL',
             onReset: () {
               _searchController.clear();
-              ref.read(communitySearchKeywordProvider.notifier).updateKeyword('');
-              ref.read(communityCategoryProvider.notifier).updateCategory('ALL');
+              ref
+                  .read(communitySearchKeywordProvider.notifier)
+                  .updateKeyword('');
+              ref
+                  .read(communityCategoryProvider.notifier)
+                  .updateCategory('ALL');
               ref.read(communityGradeProvider.notifier).updateGrade('ALL');
             },
-            onRefresh: () async => ref.invalidate(communityPostsProvider),
+            onRefresh: () =>
+                ref.read(communityPostsProvider.notifier).refresh(),
           );
         }
 
+        final pagination = ref.read(communityPostsProvider.notifier);
         return RefreshIndicator(
           color: AppDesignTokens.blue,
-          onRefresh: () async => ref.invalidate(communityPostsProvider),
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            itemCount: posts.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) => CommunityPostCard(
-              post: posts[index],
-              onOpen: () async {
-                final result = await openContentDetail(
-                  context,
-                  ref,
-                  targetType: 'COMMUNITY',
-                  targetId: posts[index].id,
-                );
-                if (result != null) {
-                  ref.invalidate(communityPostsProvider);
-                }
-              },
+          onRefresh: () => ref.read(communityPostsProvider.notifier).refresh(),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 400 &&
+                  !pagination.loadMoreFailed) {
+                pagination.loadMore();
+              }
+              return false;
+            },
+            child: ListView.separated(
+              key: ValueKey((
+                ref.watch(communityCategoryProvider),
+                selectedGrade,
+                ref.watch(communitySearchKeywordProvider),
+              )),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+              itemCount: posts.length + (pagination.hasNext ? 1 : 0),
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) => index == posts.length
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: pagination.isLoadingMore
+                          ? const Center(child: CircularProgressIndicator())
+                          : TextButton.icon(
+                              onPressed: pagination.loadMore,
+                              icon: Icon(
+                                pagination.loadMoreFailed
+                                    ? Icons.refresh
+                                    : Icons.expand_more,
+                              ),
+                              label: Text(
+                                pagination.loadMoreFailed
+                                    ? '더 불러오지 못했습니다. 다시 시도'
+                                    : '더 보기',
+                              ),
+                            ),
+                    )
+                  : CommunityPostCard(
+                      post: posts[index],
+                      onOpen: () async {
+                        final result = await openContentDetail(
+                          context,
+                          ref,
+                          targetType: 'COMMUNITY',
+                          targetId: posts[index].id,
+                        );
+                        if (result != null) {
+                          ref.invalidate(communityPostsProvider);
+                        }
+                      },
+                    ),
             ),
           ),
         );

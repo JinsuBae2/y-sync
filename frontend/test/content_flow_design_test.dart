@@ -211,7 +211,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           noticeFeedProvider.overrideWith(() => _TestNoticeFeedNotifier([])),
-          communityPostsProvider.overrideWith((ref) async => []),
+          communityPostsProvider.overrideWithBuild((ref, notifier) async => []),
           myPageProvider.overrideWith(_TestMyPageNotifier.new),
           unreadNotificationCountProvider.overrideWithValue(0),
         ],
@@ -334,7 +334,7 @@ void main() {
       ProviderScope(
         overrides: [
           authProvider.overrideWith(_TestAuthNotifier.new),
-          communityPostsProvider.overrideWith((ref) async {
+          communityPostsProvider.overrideWithBuild((ref, notifier) async {
             requestCount += 1;
             return [_post];
           }),
@@ -381,7 +381,7 @@ void main() {
       ProviderScope(
         overrides: [
           authProvider.overrideWith(_TestAuthNotifier.new),
-          communityPostsProvider.overrideWith((ref) async {
+          communityPostsProvider.overrideWithBuild((ref, notifier) async {
             requests++;
             await Future<void>.delayed(const Duration(milliseconds: 50));
             return posts;

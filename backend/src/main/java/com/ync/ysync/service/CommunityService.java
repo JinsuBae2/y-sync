@@ -25,6 +25,23 @@ public class CommunityService {
     private final FileService fileService;
     private final PostDeletionCleaner postDeletionCleaner;
 
+    public record CommunityFeed(List<CommunityPost> items, String nextCursor, boolean hasNext) {}
+
+    public CommunityFeed getFeed(String cursor, int size, String category, Grade grade, String keyword) {
+        if (size < 1 || size > 50) throw new IllegalArgumentException("페이지 크기는 1~50이어야 합니다.");
+        CommunityCursor after = cursor == null || cursor.isBlank() ? null : CommunityCursor.decode(cursor);
+        String filter = category == null || category.isBlank() || category.equals("ALL") ? null : category;
+        List<CommunityPost> rows = communityPostRepository.findFeed(filter, grade == null ? Grade.ALL : grade,
+                keyword == null ? "" : keyword.trim(), after != null && after.pinned(),
+                after == null ? null : after.createdAt(), after == null ? null : after.id(),
+                org.springframework.data.domain.PageRequest.of(0, size + 1));
+        boolean hasNext = rows.size() > size;
+        List<CommunityPost> items = List.copyOf(rows.subList(0, Math.min(size, rows.size())));
+        CommunityPost last = items.isEmpty() ? null : items.getLast();
+        String next = hasNext ? new CommunityCursor(last.isPinned(), last.getCreatedAt(), last.getId()).encode() : null;
+        return new CommunityFeed(items, next, hasNext);
+    }
+
     // 💡 카테고리별 혹은 전체 목록 조회 (고정글 우선, 최신순 필터링)
     public List<CommunityPost> getPosts(String category) {
         if (category == null || category.equals("ALL") || category.isEmpty()) {

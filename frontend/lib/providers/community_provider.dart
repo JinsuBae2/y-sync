@@ -1,8 +1,10 @@
 import 'dart:convert';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
+
 import '../models/community_post.dart';
 import '../utils/platform_file_multipart.dart';
 import 'api_client_provider.dart';
@@ -54,30 +56,128 @@ final communityGradeProvider = NotifierProvider<CommunityGradeNotifier, String>(
   },
 );
 
-final communityPostsProvider = FutureProvider<List<CommunityPost>>((ref) async {
-  final dio = ref.watch(dioProvider);
-  final category = ref.watch(communityCategoryProvider);
-  final keyword = ref.watch(communitySearchKeywordProvider);
-
-  String path = '/community';
-  Map<String, dynamic> queryParams = {};
-
-  if (category != 'ALL') {
-    queryParams['category'] = category;
-  }
-  if (keyword.trim().isNotEmpty) {
-    path = '/community/search';
-    queryParams['keyword'] = keyword.trim();
-  }
-
-  final response = await dio.get(
-    path,
-    queryParameters: queryParams.isEmpty ? null : queryParams,
-  );
-
-  final List<dynamic> data = response.data;
-  return data.map((json) => CommunityPost.fromJson(json)).toList();
+typedef _CommunityFilters = ({
+  String category,
+  String grade,
+  String keyword,
+  int? memberId,
 });
+
+class CommunityPostsNotifier extends AsyncNotifier<List<CommunityPost>> {
+  static const pageSize = 20;
+  _CommunityFilters? _filters;
+  String? _cursor;
+  int _generation = 0;
+  int _loadedCount = pageSize;
+  bool isLoadingMore = false;
+  bool loadMoreFailed = false;
+  bool get hasNext => _cursor != null;
+
+  @override
+  Future<List<CommunityPost>> build() async {
+    final filters = (
+      category: ref.watch(communityCategoryProvider),
+      grade: ref.watch(communityGradeProvider),
+      keyword: ref.watch(communitySearchKeywordProvider).trim(),
+      memberId: ref.watch(sessionMemberIdProvider),
+    );
+    if (_filters != filters) _loadedCount = pageSize;
+    _filters = filters;
+    final generation = ++_generation;
+    isLoadingMore = false;
+    loadMoreFailed = false;
+    // 상세 복귀나 댓글 갱신에서도 이미 읽은 범위까지 받아 한 번에 교체합니다.
+    final items = <CommunityPost>[];
+    final ids = <int>{};
+    String? cursor;
+    do {
+      final page = await _fetch(filters, cursor);
+      items.addAll(page.items.where((post) => ids.add(post.id)));
+      cursor = page.cursor;
+    } while (items.length < _loadedCount &&
+        cursor != null &&
+        ref.mounted &&
+        generation == _generation);
+    if (ref.mounted && generation == _generation) {
+      _cursor = cursor;
+      _loadedCount = items.length;
+    }
+    return items;
+  }
+
+  Future<({List<CommunityPost> items, String? cursor})> _fetch(
+    _CommunityFilters filters,
+    String? cursor,
+  ) async {
+    final response = await ref
+        .read(dioProvider)
+        .get(
+          '/community/feed',
+          queryParameters: {
+            'size': pageSize,
+            'category': filters.category,
+            'grade': filters.grade,
+            if (filters.keyword.isNotEmpty) 'keyword': filters.keyword,
+            'cursor': ?cursor,
+          },
+        );
+    final data = response.data as Map<String, dynamic>;
+    return (
+      items: (data['items'] as List)
+          .map((json) => CommunityPost.fromJson(json as Map<String, dynamic>))
+          .toList(),
+      cursor: data['hasNext'] == true ? data['nextCursor'] as String? : null,
+    );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null ||
+        state.isLoading ||
+        isLoadingMore ||
+        !hasNext ||
+        _filters == null) {
+      return;
+    }
+    final generation = _generation;
+    isLoadingMore = true;
+    loadMoreFailed = false;
+    state = AsyncData(List.of(current));
+    try {
+      final page = await _fetch(_filters!, _cursor);
+      if (!ref.mounted || generation != _generation || state.isLoading) return;
+      final ids = current.map((post) => post.id).toSet();
+      final merged = [
+        ...current,
+        ...page.items.where((post) => ids.add(post.id)),
+      ];
+      _cursor = page.cursor;
+      _loadedCount = merged.length;
+      isLoadingMore = false;
+      state = AsyncData(merged);
+    } catch (_) {
+      if (!ref.mounted || generation != _generation || state.isLoading) return;
+      isLoadingMore = false;
+      loadMoreFailed = true;
+      state = AsyncData(List.of(current));
+    }
+  }
+
+  Future<void> refresh() async {
+    _loadedCount = pageSize;
+    ref.invalidateSelf();
+    try {
+      await future;
+    } catch (_) {
+      // 최초 페이지 오류는 화면의 재시도 안내로 표시합니다.
+    }
+  }
+}
+
+final communityPostsProvider =
+    AsyncNotifierProvider<CommunityPostsNotifier, List<CommunityPost>>(
+      CommunityPostsNotifier.new,
+    );
 
 // 관리자 목록은 커뮤니티의 검색·분류 상태를 공유하지 않습니다.
 final adminCommunityPostsProvider =
@@ -141,7 +241,11 @@ class CommunityNotifier {
       }
     }
 
-    await dio.post('/community', data: formData, onSendProgress: onSendProgress);
+    await dio.post(
+      '/community',
+      data: formData,
+      onSendProgress: onSendProgress,
+    );
     ref.invalidate(communityPostsProvider);
     ref.invalidate(adminCommunityPostsProvider);
   }
@@ -185,7 +289,11 @@ class CommunityNotifier {
       }
     }
 
-    await dio.put('/community/$id', data: formData, onSendProgress: onSendProgress);
+    await dio.put(
+      '/community/$id',
+      data: formData,
+      onSendProgress: onSendProgress,
+    );
     ref.invalidate(communityPostsProvider);
     ref.invalidate(adminCommunityPostsProvider);
   }

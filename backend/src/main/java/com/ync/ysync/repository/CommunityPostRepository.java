@@ -10,6 +10,22 @@ import java.util.List;
 
 // 💡 커뮤니티 게시글 관련 DB 접근 인터페이스입니다.
 public interface CommunityPostRepository extends JpaRepository<CommunityPost, Long> {
+    @Query("""
+            SELECT p FROM CommunityPost p
+            WHERE p.isDeleted = false
+              AND (:category IS NULL OR p.category = :category)
+              AND (:grade = com.ync.ysync.domain.Grade.ALL OR p.targetGrade = com.ync.ysync.domain.Grade.ALL OR p.targetGrade = :grade)
+              AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:createdAt IS NULL
+                   OR (:pinned = true AND p.isPinned = false)
+                   OR (p.isPinned = :pinned AND (p.createdAt < :createdAt OR (p.createdAt = :createdAt AND p.id < :id))))
+            ORDER BY p.isPinned DESC, p.createdAt DESC, p.id DESC
+            """)
+    List<CommunityPost> findFeed(@Param("category") String category,
+            @Param("grade") com.ync.ysync.domain.Grade grade, @Param("keyword") String keyword,
+            @Param("pinned") boolean pinned, @Param("createdAt") java.time.LocalDateTime createdAt,
+            @Param("id") Long id, org.springframework.data.domain.Pageable pageable);
+
     @Modifying
     @Query("UPDATE CommunityPost p SET p.commentCount = p.commentCount + 1 WHERE p.id = :id")
     int incrementCommentCount(@Param("id") Long id);

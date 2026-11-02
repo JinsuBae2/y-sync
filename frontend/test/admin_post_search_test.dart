@@ -96,19 +96,11 @@ void main() {
         onRequest: (options, handler) {
           final category = options.queryParameters['category'];
           final keyword = options.queryParameters['keyword'] as String?;
-          handler.resolve(
-            Response(
-              requestOptions: options,
-              data: posts
-                  .where(
-                    (post) =>
-                        (category == null || post['category'] == category) &&
-                        (keyword == null ||
-                            (post['title'] as String).contains(keyword)),
-                  )
-                  .toList(),
-            ),
-          );
+          final matches = posts.where((post) =>
+            (category == null || category == 'ALL' || post['category'] == category) &&
+            (keyword == null || (post['title'] as String).contains(keyword))).toList();
+          handler.resolve(Response(requestOptions: options, data:
+            options.path == '/community/feed' ? {'items': matches, 'hasNext': false} : matches));
         },
       ),
     );

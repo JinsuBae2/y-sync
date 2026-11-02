@@ -200,9 +200,12 @@ Y-Sync 플랫폼의 백엔드와 프론트엔드가 교신하는 REST API 명세
 
 ### 💬 Community & Comments (커뮤니티 및 댓글)
 
-#### 1. 커뮤니티 목록 및 검색 (`GET /community`)
-- **Request Parameters**: `targetGrade` (Optional), `category` (Optional), `keyword` (Optional)
-- **Response (200 OK)**: 게시글 DTO Array 반환
+#### 1. 커뮤니티 목록 (`GET /community/feed`)
+- **Request Parameters**: `cursor` (이전 응답의 nextCursor, 첫 요청 생략), `size` (기본 20, 1~50), `category` (기본 전체), `grade` (기본 ALL), `keyword` (선택)
+- **Response (200 OK)**: `{ "items": [게시글 DTO], "nextCursor": "...", "hasNext": true }`. 마지막 페이지는 nextCursor=null, hasNext=false.
+- 삭제되지 않은 글을 고정 여부·작성 시각·ID 내림차순으로 조회합니다. 학년 선택 시 해당 학년과 ALL 글을 함께 포함합니다. 제목·내용 검색과 필터를 페이지 조회 전에 적용합니다.
+- 검색·필터 변경 시 cursor 없이 다시 요청합니다. 잘못된 cursor/size는 400으로 응답합니다.
+- 기존 관리자·구버전용 `GET /community` (category 선택) 및 `GET /community/search` (keyword, category)는 DTO 배열 응답을 유지합니다.
 
 #### 2. 게시글 작성/수정 (`POST /community`, `PUT /community/{id}`)
 - **Content-Type**: `multipart/form-data`
