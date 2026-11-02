@@ -96,8 +96,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          communityPostsProvider.overrideWith(
-            (ref) async => [_imagePost, _post],
+          communityPostsProvider.overrideWithBuild(
+            (ref, notifier) async => [_imagePost, _post],
           ),
           scrapsProvider.overrideWith((ref) async => []),
           unreadNotificationCountProvider.overrideWithValue(0),

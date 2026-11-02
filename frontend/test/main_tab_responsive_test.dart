@@ -74,7 +74,7 @@ void main() {
           homeNoticesProvider.overrideWith((ref) async => []),
           homeCalendarEventsProvider.overrideWith((ref) async => []),
           homeCommunityPostsProvider.overrideWith((ref) async => []),
-          communityPostsProvider.overrideWith((ref) async => []),
+          communityPostsProvider.overrideWithBuild((ref, notifier) async => []),
           scrapsProvider.overrideWith((ref) async => []),
           calendarEventsProvider.overrideWith((ref) async => []),
           timetableEntriesProvider.overrideWith((ref) async => []),

@@ -31,7 +31,7 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         authProvider.overrideWith(DemoAuth.new),
-        communityPostsProvider.overrideWith((ref) async => []),
+        communityPostsProvider.overrideWithBuild((ref, notifier) async => []),
       ],
       child: const MaterialApp(home: CommunityListScreen()),
     ));
