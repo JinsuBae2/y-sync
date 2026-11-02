@@ -20,7 +20,6 @@ on:
           - all
           - backend
           - frontend
-          - diagnose
 
 permissions:
   contents: read
@@ -32,37 +31,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  diagnose_firebase_identity:
-    name: Check Firebase Deployment Identity
-    if: github.event_name == 'workflow_dispatch' && inputs.component == 'diagnose'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Compare configured identity without exposing credentials
-        env:
-          FIREBASE_DEPLOY_CREDENTIAL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_Y_SYNC_31C03 }}
-        run: |
-          python3 - <<'PYTHON'
-          import json
-          import os
-          import sys
-
-          try:
-              credential = json.loads(os.environ.get("FIREBASE_DEPLOY_CREDENTIAL", ""))
-              if not isinstance(credential, dict):
-                  raise ValueError()
-          except (ValueError, TypeError):
-              print("Credential is valid JSON object: false")
-              sys.exit(1)
-
-          print("Credential is valid JSON object: true")
-          print("Project matches y-sync-31c03:", credential.get("project_id") == "y-sync-31c03")
-          email = credential.get("client_email")
-          print("Matches GitHub Actions account:", email == "github-action-1180456488@y-sync-31c03.iam.gserviceaccount.com")
-          print("Matches Firebase Admin SDK account:", email == "firebase-adminsdk-fbsvc@y-sync-31c03.iam.gserviceaccount.com")
-          print("Credential type is service_account:", credential.get("type") == "service_account")
-          PYTHON
-
   detect_changes:
     name: Detect Changes
     runs-on: ubuntu-latest
