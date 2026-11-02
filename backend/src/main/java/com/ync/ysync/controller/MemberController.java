@@ -1,7 +1,6 @@
 package com.ync.ysync.controller;
 
 import com.ync.ysync.config.JwtUtil;
-import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.domain.NoticeGradePreference;
 import com.ync.ysync.repository.MemberRepository;
@@ -12,7 +11,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -141,20 +139,6 @@ public class MemberController {
         }
     }
 
-    @PostMapping("/social-login")
-    @Operation(summary = "소셜 로그인 (비활성화)", description = "이메일 인증 가입 도입으로 인해 비활성화된 API입니다.")
-    public ResponseEntity<?> socialLogin(@RequestBody SocialLoginRequest request) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", "소셜 로그인 기능은 비활성화되었습니다. 학번 로그인을 이용해 주세요."));
-    }
-
-    @PostMapping("/social-signup")
-    @Operation(summary = "소셜 회원가입 (비활성화)", description = "이메일 인증 가입 도입으로 인해 비활성화된 API입니다.")
-    public ResponseEntity<?> socialSignup(@RequestBody SocialSignupRequest request) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("message", "소셜 회원가입 기능은 비활성화되었습니다. 학번 로그인을 이용해 주세요."));
-    }
-
     @PostMapping("/logout")
     public ResponseEntity<String> logout() {
         String loginId = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -221,18 +205,4 @@ public class MemberController {
         private String newPassword;
     }
 
-    @Data
-    public static class SocialLoginRequest {
-        private String accessToken;
-        private AuthProvider provider;
-    }
-
-    @Data
-    public static class SocialSignupRequest {
-        private String loginId;
-        private String name;
-        private String socialId;
-        private AuthProvider provider;
-        private String password;
-    }
 }

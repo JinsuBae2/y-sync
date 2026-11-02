@@ -1,6 +1,5 @@
 package com.ync.ysync.service;
 
-import com.ync.ysync.domain.AuthProvider;
 import com.ync.ysync.domain.Member;
 import com.ync.ysync.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,22 +57,6 @@ public class MemberService {
         }
 
         return member;
-    }
-
-    /**
-     * 소셜 로그인 (비활성화 및 deprecate 경고용)
-     */
-    @Transactional(readOnly = true)
-    public Member socialLogin(String socialId, AuthProvider provider) {
-        throw new UnsupportedOperationException("소셜 로그인 기능은 비활성화되었습니다. 학번 기반 로그인을 이용해 주세요.");
-    }
-
-    /**
-     * 소셜 회원가입 (비활성화 및 deprecate 경고용)
-     */
-    @Transactional
-    public Member socialSignup(String loginId, String name, String socialId, AuthProvider provider, String password) {
-        throw new UnsupportedOperationException("소셜 회원가입 기능은 비활성화되었습니다. 학번 기반 로그인을 이용해 주세요.");
     }
 
     @Transactional(readOnly = true)
