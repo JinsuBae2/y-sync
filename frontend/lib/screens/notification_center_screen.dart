@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/notification.dart';
 import '../providers/notification_provider.dart';
+import '../providers/session_provider.dart';
 import '../theme/app_design_tokens.dart';
 import 'deep_link_loading_screen.dart';
 
@@ -29,7 +30,7 @@ class NotificationCenterScreen extends ConsumerWidget {
         actions: [
           notificationsAsync.maybeWhen(
             data: (notifications) =>
-                notifications.any((notification) => !notification.isRead)
+                ref.watch(unreadNotificationCountProvider) > 0
                 ? IconButton(
                     tooltip: '모두 읽음',
                     onPressed: ref.watch(isDemoAccountProvider) ? null : () => _markAllAsRead(context, ref),
@@ -48,7 +49,9 @@ class NotificationCenterScreen extends ConsumerWidget {
             maxWidth: AppDesignTokens.contentMaxWidth,
           ),
           child: notificationsAsync.when(
-            data: (notifications) => notifications.isEmpty
+            data: (notifications) =>
+                notifications.isEmpty &&
+                    !ref.read(notificationsProvider.notifier).hasNext
                 ? const _EmptyNotifications()
                 : _NotificationList(notifications: notifications),
             loading: () => const Center(
@@ -86,34 +89,70 @@ class _NotificationList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unreadCount = notifications
-        .where((notification) => !notification.isRead)
-        .length;
-
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+    final pagination = ref.read(notificationsProvider.notifier);
     return RefreshIndicator(
       color: AppDesignTokens.blue,
-      onRefresh: () async {
-        final _ = await ref.refresh(notificationsProvider.future);
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          Text(
-            unreadCount == 0 ? '새로운 알림이 없습니다' : '읽지 않은 알림 $unreadCount개',
-            style: const TextStyle(
-              color: AppDesignTokens.muted,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          for (var index = 0; index < notifications.length; index++) ...[
-            _NotificationRow(notification: notifications[index]),
-            if (index < notifications.length - 1)
-              const Divider(height: 1, color: AppDesignTokens.divider),
-          ],
-        ],
+      onRefresh: pagination.refresh,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.extentAfter < 400 &&
+              !pagination.loadMoreFailed) {
+            pagination.loadMore();
+          }
+          return false;
+        },
+        child: ListView.builder(
+          key: PageStorageKey((
+            'notification-list',
+            ref.watch(sessionMemberIdProvider),
+          )),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          itemCount: notifications.length + 1 + (pagination.hasNext ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  unreadCount == 0 ? '새로운 알림이 없습니다' : '읽지 않은 알림 $unreadCount개',
+                  style: const TextStyle(
+                    color: AppDesignTokens.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            }
+            if (index > notifications.length) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: pagination.isLoadingMore
+                    ? const Center(child: CircularProgressIndicator())
+                    : TextButton.icon(
+                        onPressed: pagination.loadMore,
+                        icon: Icon(
+                          pagination.loadMoreFailed
+                              ? Icons.refresh
+                              : Icons.expand_more,
+                        ),
+                        label: Text(
+                          pagination.loadMoreFailed
+                              ? '더 불러오지 못했습니다. 다시 시도'
+                              : '더 보기',
+                        ),
+                      ),
+              );
+            }
+            return Column(
+              children: [
+                _NotificationRow(notification: notifications[index - 1]),
+                if (index < notifications.length)
+                  const Divider(height: 1, color: AppDesignTokens.divider),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -28,6 +28,7 @@ void main() {
                 'endPeriod': 1,
               },
             ],
+            '/notifications/feed' => {'items': [], 'nextCursor': null, 'hasNext': false, 'unreadCount': 0},
             '/timetable/GRADE_1' => <Map<String, dynamic>>[],
             _ => <Map<String, dynamic>>[],
           };
@@ -67,7 +68,7 @@ void main() {
 
     expect(second.single.subjectName, '계정 2 수업');
     expect(calls['/timetable/personal'], 2);
-    expect(calls['/notifications'], 2);
+    expect(calls['/notifications/feed'], 2);
     expect(calls['/scraps'], 2);
     expect(calls['/timetable/GRADE_1'], 1);
   });

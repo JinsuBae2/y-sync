@@ -22,6 +22,18 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final AuthUtil authUtil;
 
+    public record NotificationFeedResponse(List<NotificationResponse> items, String nextCursor, boolean hasNext, long unreadCount) {}
+
+    @GetMapping("/feed")
+    public ResponseEntity<?> getFeed(@RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "20") int size) {
+        Long memberId = authUtil.getLoginMemberId();
+        if (memberId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        var feed = notificationService.getFeed(memberId, cursor, size);
+        return ResponseEntity.ok(new NotificationFeedResponse(
+                feed.items().stream().map(NotificationResponse::from).toList(), feed.nextCursor(), feed.hasNext(), feed.unreadCount()));
+    }
+
     /**
      * 💡 회원이 수신한 알림 내역 최신순 조회
      */
