@@ -12,7 +12,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByLoginId(String loginId);
     List<Member> findAllByLoginIdIn(Collection<String> loginIds);
     Optional<Member> findByEmail(String email);
-    Optional<Member> findBySocialIdAndProvider(String socialId, com.ync.ysync.domain.AuthProvider provider);
     Page<Member> findByLoginIdContainingOrNameContaining(String loginId, String name, Pageable pageable);
 
     // 💡 관리자 회원 목록은 사전 등록 명단을 겸하므로 탈퇴 처리된 계정을 보여주지 않습니다.
