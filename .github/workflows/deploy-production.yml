@@ -266,6 +266,7 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_Y_SYNC_31C03 }}
+          firebaseToolsVersion: '15.32.1'
           projectId: y-sync-31c03
           entryPoint: frontend
           channelId: live
