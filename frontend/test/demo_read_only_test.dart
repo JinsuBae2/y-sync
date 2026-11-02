@@ -56,10 +56,10 @@ void main() {
     final dio = Dio();
     dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
       calls.add(options.method);
-      handler.resolve(Response(requestOptions: options, data: options.method == 'GET' ? [
+      handler.resolve(Response(requestOptions: options, data: options.method == 'GET' ? {'items': [
         {'id': 1, 'title': '공지', 'body': '내용', 'targetType': 'NOTICE', 'targetId': 1,
          'isRead': false, 'createdAt': '2026-10-06T00:00:00'},
-      ] : null));
+      ], 'hasNext': false, 'unreadCount': 1} : null));
     }));
     final container = ProviderContainer(overrides: [
       dioProvider.overrideWithValue(dio), authProvider.overrideWith(DemoAuth.new),

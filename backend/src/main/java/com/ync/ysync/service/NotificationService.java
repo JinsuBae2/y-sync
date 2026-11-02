@@ -22,6 +22,21 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final MemberRepository memberRepository;
 
+    public record NotificationFeed(List<Notification> items, String nextCursor, boolean hasNext, long unreadCount) {}
+
+    public NotificationFeed getFeed(Long memberId, String cursor, int size) {
+        if (size < 1 || size > 50) throw new IllegalArgumentException("페이지 크기는 1~50이어야 합니다.");
+        NotificationCursor after = cursor == null || cursor.isBlank() ? null : NotificationCursor.decode(cursor);
+        List<Notification> rows = notificationRepository.findFeed(memberId,
+                after == null ? null : after.createdAt(), after == null ? null : after.id(),
+                org.springframework.data.domain.PageRequest.of(0, size + 1));
+        boolean hasNext = rows.size() > size;
+        List<Notification> items = List.copyOf(rows.subList(0, Math.min(size, rows.size())));
+        Notification last = items.isEmpty() ? null : items.getLast();
+        String next = hasNext ? new NotificationCursor(last.getCreatedAt(), last.getId()).encode() : null;
+        return new NotificationFeed(items, next, hasNext, notificationRepository.countByMemberIdAndIsReadFalse(memberId));
+    }
+
     /**
      * 회원의 알림 내역 최신순 조회
      */
