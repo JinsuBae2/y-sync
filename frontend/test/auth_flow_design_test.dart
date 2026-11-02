@@ -6,7 +6,7 @@ import 'package:y_sync/screens/pin_setup_screen.dart';
 import 'package:y_sync/screens/signup_screen.dart';
 
 void main() {
-  testWidgets('로그인은 학번 로그인과 Google 로그인을 구분해 제공한다', (tester) async {
+  testWidgets('로그인은 사용 가능한 학번 인증만 제공한다', (tester) async {
     _setMobileViewport(tester);
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: LoginScreen())),
@@ -16,25 +16,9 @@ void main() {
     expect(find.bySemanticsLabel('Y-Sync 천마 로고'), findsOneWidget);
     expect(find.text('학번'), findsOneWidget);
     expect(find.text('로그인'), findsOneWidget);
-    expect(find.text('Google 로그인 (준비 중)'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Google 로그인은 추후 기능 추가 안내를 표시한다', (tester) async {
-    _setMobileViewport(tester);
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: LoginScreen())),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Google 로그인 (준비 중)'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('소셜 로그인 준비 중'), findsOneWidget);
-    expect(
-      find.text('Google 로그인은 추후 업데이트에서 제공할 예정입니다.\n지금은 학번으로 로그인해 주세요.'),
-      findsOneWidget,
-    );
+    expect(find.text('Google 로그인 (준비 중)'), findsNothing);
+    expect(find.text('회원가입하기'), findsOneWidget);
+    expect(find.text('비밀번호를 잊으셨나요?'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
